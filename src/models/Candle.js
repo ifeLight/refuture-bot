@@ -38,6 +38,10 @@ const candleSchema = mongoose.Schema({
         type: String,
         required: true,
     },
+    exchangeName: {
+        type: String,
+        required: true,
+    }
 },{ timestamps: { 
     createdAt: 'createdAt', 
     updatedAt : "updatedAt" 
@@ -45,11 +49,13 @@ const candleSchema = mongoose.Schema({
 });
 
 class CandleAction {
-    static async fetchCandleByTimeDifference(period, from, to = Date.now()) {
+    static async fetchCandleByTimeDifference(period, exchangeName, symbol, from, to = Date.now()) {
         const thisTime = new Date(to);
         const laterTime = new Date(from);
         const res = await this.find({
             period,
+            exchangeName,
+            symbol,
             $and : [
                 {time: {$gte: laterTime}},
                 {time: {$lte: thisTime}},
@@ -59,12 +65,14 @@ class CandleAction {
 
     }
 
-    static async fetchCandlesByNumber(period, number= 200) {
+    static async fetchCandlesByNumber(period, exchangeName, symbol, number= 200) {
         const timeDifference = periodToTimeDiff(period);
         const thisTime = new Date(Date.now());
         const laterTime = new Date(Date.now() - (timeDifference * number));
         const res = await this.find({
             period,
+            exchangeName,
+            symbol,
             $and : [
                 {time: {$gte: laterTime}},
                 {time: {$lte: thisTime}},
@@ -73,16 +81,16 @@ class CandleAction {
         return _.uniqBy(res, 'time')
     }
 
-    static async addCandle({time, open, high, close, low, volume, period}) {
-        const candle = { time, open, high, close, low, volume, period };
+    static async addCandle({time, open, high, close, low, volume, period, exchangeName, symbol}) {
+        const candle = { time, open, high, close, low, volume, period, exchangeName, symbol };
         const candles = [candles]
-        const matchFields = ['period', 'time'];
+        const matchFields = ['period', 'time', 'exchangeName', 'symbol'];
         const result = await this.upsertMany(candles, matchFields);
         return candle;
     }
 
     static async addCandles(candles) {
-        const matchFields = ['period', 'time'];
+        const matchFields = ['period', 'time', 'exchangeName', 'symbol'];
         //Perform bulk operation
         const result = await this.upsertMany(candles, matchFields);
         return candles;

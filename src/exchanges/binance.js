@@ -8,13 +8,10 @@ module.exports = class BinanceExchange {
         this.name = 'binance';
     }
 
-    getName () {
+    get name () {
         return this.name;
     }
 
-    setName (name) {
-        this.name = name;
-    }
 
     init(config) {
         const { apiKey, apiSecret } = config.get('exchange.binance');
@@ -37,5 +34,32 @@ module.exports = class BinanceExchange {
         } catch (error) {
             Logger.errorLogger(error);
         }
+    }
+
+    async fetchCandles(symbol, period, since, to = new Date()) {
+        let sinceTimestamp = new Date(since).getTime();
+        let toTimestamp = new Date(to).getTime();
+        let ohlcv = [];
+        const exchangeName = this.exchange.name;
+        while (sinceTimestamp < toTimestamp) {
+            const fetchedCandles = await this.exchange.fetchOHLCV(symbol, period, since);
+            ohlcv = [...ohlcv, ...fetchedCandles];
+            sinceTimestamp = fetchedCandles[fetchedCandles.length - 1][0];
+        }
+
+        const mappedCandles = ohlcv.map(function (candle) {
+            return {
+                period,
+                exchangeName,
+                symbol,
+                time: candle[0],
+                open: Number(candle[1]),
+                high: Number(candle[2]),
+                low: Number(candle[3]),
+                close: Number(candle[4]),
+                volume: Number(candle[5]),
+            }
+        })
+        return mappedCandles;
     }
 }

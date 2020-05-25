@@ -1,5 +1,10 @@
 module.exports = class ExchangePair {
-    constructor (baseAsset, quoteAsset, exchange) {
+    constructor (symbol, exchange) {
         this.exchange = exchange;
+        this.symbol = symbol
+    }
+
+    async setup() {
+
     }
 }
