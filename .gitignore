@@ -242,3 +242,6 @@ Temporary Items
 # /bot.db
 # /bot.db-shm
 # /bot.db-wal
+
+# Manual test codes
+t.js

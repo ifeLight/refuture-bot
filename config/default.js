@@ -4,18 +4,27 @@ const dotenv = require('dotenv');
 dotenv.config()
 
 const {
-
+    BINANCE_API_KEY,
+    BINANCE_API_SECRET,
+    BINANCE_FUTURES_API_KEY,
+    BINANCE_FUTURES_API_SECRET,
+    OKEX_API_KEY,
+    OKEX_API_SECRET,
 } = process.env;
 
 module.exports = {
     exchange: {
         binance: {
-            apiKey: '',
-            apiSecret: ''
+            apiKey: BINANCE_API_KEY,
+            apiSecret: BINANCE_API_SECRET
         },
         binance_futures: {
-            apiKey: '',
-            apiSecret: ''
+            apiKey: BINANCE_FUTURES_API_KEY,
+            apiSecret: BINANCE_FUTURES_API_SECRET
+        },
+        okex: {
+            apiKey: OKEX_API_KEY,
+            apiSecret: OKEX_API_SECRET
         }
     },
     db: {
@@ -23,7 +32,7 @@ module.exports = {
         port: 21017,
         username: "",
         password: "",
-        dbname: "tradecharm",
+        dbname: "refuture",
         optionsCollection: process.env.OPTIONS_COLLECTION_NAME || 'options',
         uri: defer(function () {
             const { host, port, username, password, dbname} = this.db;

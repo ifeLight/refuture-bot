@@ -1,5 +1,5 @@
 module.exports = class Candle {
-    constructor ({open, close, high, low, openTime, volume, closeTime, period="5m"}) {
+    constructor (openTime, open, high, low, close, volume, period="1m") {
         this.open = open;
         this.close = close;
         this.high = high;
@@ -8,7 +8,6 @@ module.exports = class Candle {
         this.period = period;
         this.volume = volume;
         this.openTime = openTime;
-        this.closeTime = closeTime
     }
 
     getAverage() {}
