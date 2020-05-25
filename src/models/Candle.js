@@ -93,8 +93,7 @@ candleSchema.loadClass(CandleAction);
 
 //candleSchema.plugin(mongoosePaginate);
 
-const Candle = mongoose.model('Candle', candleSchema);
+const CandleModel = mongoose.model('Candle', candleSchema);
 
-Candle.find({})
-
+module.exports = CandleModel
 
