@@ -1,6 +1,7 @@
 const ccxt = require ('ccxt'); //The bulk exchange library
 const logger = require('../utils/logger')
 const BinanceApiNode = require('binance-api-node').default;
+const PairInfo = require('../modules/pair/PairInfo')
 
 module.exports = class BinanceExchange {
     constructor (eventEmitter) {
@@ -23,14 +24,20 @@ module.exports = class BinanceExchange {
 
     }
 
-    async fetchMarket(symbol) {
+    async fetchPairInfo(symbol) {
         try {
-            if (this.markets) {
-                const market = this.markets.find((market) => market.symbol == symbol);
-                return market;
+            if (!this.markets) {
+                this.markets = await this.exchange.fetchMarkets();
             } 
-        this.markets = await this.exchange.fetchMarkets();
-        return this.markets.find((market) => market.symbol == symbol);
+            const pairInfoFromMarket = this.markets.find((market) => market.symbol == symbol);
+            const { percentage, taker, maker } = this.exchange.fees.trading;
+            const fees = {
+                percentage,
+                taker,
+                maker
+            }
+            return new PairInfo({...pairInfoFromMarket, fees})
+
         } catch (error) {
             throw error;
         }
