@@ -1,5 +1,5 @@
 module.exports = class ExchangePair {
-    constructor (symbol, exchange) {
+    constructor (exchange, symbol) {
         this.exchange = exchange;
         this.symbol = symbol
     }

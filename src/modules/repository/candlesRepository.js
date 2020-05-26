@@ -3,7 +3,7 @@ const Candle = require('../../classes/Candle');
 
 const periodToTimeDiff = require('../../utils/periodToTimeDiff');
 
-module.exports = class CandleRepository {
+module.exports = class CandlesRepository {
     constructor(eventEmitter, exchange, symbol, period) {
         this.exchange = exchange;
         this.period = period;

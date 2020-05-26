@@ -1,6 +1,6 @@
 const ccxt = require ('ccxt'); //The bulk exchange library
 const logger = require('../utils/logger')
-const BinanceApiNode = require('binance-api-node');
+const BinanceApiNode = require('binance-api-node').default;
 
 module.exports = class BinanceExchange {
     constructor (eventEmitter) {
@@ -8,11 +8,6 @@ module.exports = class BinanceExchange {
         this.ccxt = ccxt;
         this.name = 'binance';
     }
-
-    get name () {
-        return this.name;
-    }
-
 
     init(config) {
         const { apiKey, apiSecret } = config.get('exchange.binance');
