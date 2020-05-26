@@ -4,10 +4,17 @@ const Candle = require('../../classes/Candle');
 const periodToTimeDiff = require('../../utils/periodToTimeDiff');
 
 module.exports = class CandleRepository {
-    constructor(exchange, symbol, period) {
+    constructor(eventEmitter, exchange, symbol, period) {
         this.exchange = exchange;
         this.period = period;
         this.symbol = symbol;
+        this.eventEmitter = eventEmitter
+        this.exchangeName = this.exchange.name;
+        this.exchange.addCandleEvent(symbol, period);
+        const candleEventName = `candle_${this.exchangeName}_${symbol}_${period}`;
+        this.eventEmitter.on(candleEventName, async function (candle) {
+            await CandleModel.addCandle(candle)
+        })
     }
 
     async fetchCandlesByTimeDifference(startTime, endTime) {
