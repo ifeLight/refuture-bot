@@ -5,6 +5,7 @@ const logger = require('../utils/logger')
 
 const PairInfo = require('../modules/pair/PairInfo')
 const Ticker = require('../modules/pair/Ticker');
+const OrderBook = require('../modules/pair/OrderBook');
 
 module.exports = class BinanceExchange {
     constructor (eventEmitter) {
@@ -80,7 +81,7 @@ module.exports = class BinanceExchange {
     addCandleEvent (symbol, period) {
         try {
             const exchangeName = this.exchange.name
-            const retouchedSymbol = symbol.search('/') < 0 ? symbol : symbol.split('/')[0] + symbol.split('/')[1]; //Retouched for binance api node module
+            const retouchedSymbol = this.retouchSymbol(symbol);
             this.exchange.binanceApiNode.ws.candles(retouchedSymbol, period, function (candle) {
                 const retouchedCandle = {
                     period,
@@ -102,14 +103,14 @@ module.exports = class BinanceExchange {
 
     async fetchTicker (symbol) {
         try {
-            const tickerFromxchange = await this.exchange.fetchTicker(symbol);
+            const tickerFromExchange = await this.exchange.fetchTicker(symbol);
             const {
                 bid: bidPrice,
                 ask: askPrice,
                 bidVolume: bidQty,
                 askVolume: askQty,
                 last: lastPrice
-            } = tickerFromxchange;
+            } = tickerFromExchange;
             return new Ticker({
                 bidPrice,
                 askPrice,
@@ -122,10 +123,10 @@ module.exports = class BinanceExchange {
         }
     }
 
-    async addTickerEvent(symbol) {
+    addTickerEvent(symbol) {
         try {
             const exchangeName = this.exchange.name
-            const retouchedSymbol = symbol.search('/') < 0 ? symbol : symbol.split('/')[0] + symbol.split('/')[1]; //Retouched for binance api node module
+            const retouchedSymbol = this.retouchSymbol(symbol);
             this.exchange.binanceApiNode.ws.ticker(retouchedSymbol, function (ticker) {
                 const {
                     bestBid: bidPrice,
@@ -148,4 +149,70 @@ module.exports = class BinanceExchange {
             throw error;
         }
     }
+
+    async fetchOrderBook (symbol) {
+        try {
+            const orderBookFromExchange = await this.exchange.fetchOrderBook(symbol);
+            let {
+                bids, asks
+            } = orderBookFromExchange;
+
+            bids = bids.map((bid) => {
+                return {
+                    price: Number(bid[0]),
+                    quantity: Number(bid[1])
+                }
+            })
+
+            asks = asks.map((ask) => {
+                return {
+                    price: Number(ask[0]),
+                    quantity: Number(ask[1])
+                }
+            })
+            return new OrderBook(bids, asks) 
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    addOrderBookEvent(symbol) {
+        try {
+            const exchangeName = this.exchange.name
+            const retouchedSymbol = this.retouchSymbol(symbol);
+            this.exchange.binanceApiNode.ws.depth(retouchedSymbol, function (depth) {
+                let {
+                    bidDepth: bids,
+                    askDepth: asks
+                } = depth;
+
+                bids = bids.map((bid) => {
+                    return {
+                        price: Number(bid.price),
+                        quantity: Number(bid.quantity)
+                    }
+                })
+    
+                asks = asks.map((ask) => {
+                    return {
+                        price: Number(ask.price),
+                        quantity: Number(ask.quantity)
+                    }
+                })
+
+                const newOrderBook = new OrderBook(bids, asks);
+                this.eventEmitter.emit(`orderbook_${exchangeName}_${symbol}`, newOrderBook);
+            })
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Private Functions
+     */
+    retouchSymbol(symbol) {
+        return symbol.search('/') < 0 ? symbol : symbol.split('/')[0] + symbol.split('/')[1]; //Retouched for binance api node module
+    }
+
 }

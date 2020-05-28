@@ -15,11 +15,15 @@ module.exports = class ExchangePair {
         const { symbol, exchangeName } = this
         this.info = await this.exchange.fetchPairInfo(symbol);
         this.ticker = await this.exchange.fetchTicker(symbol);
+        this.orderBook = await this.exchange.fetchOrderBook(symbol)
         this.lastPrice = this.ticker.lastPrice;
         self = this;
         this.eventEmitter.on(`ticker_${exchangeName}_${symbol}`, function(ticker) {
             self.ticker = ticker;
             self.lastPrice = ticker.lastPrice;
+        })
+        this.eventEmitter.on(`orderbook_${exchangeName}_${symbol}`, function(orderBook) {
+            self.orderBook = orderBook;
         })
     }
 
@@ -29,5 +33,9 @@ module.exports = class ExchangePair {
 
     getLastPrice () {
         return this.lastPrice
+    }
+
+    getOrderBook () {
+        return this.orderBook;
     }
 }
