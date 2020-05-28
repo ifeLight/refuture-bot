@@ -1,7 +1,10 @@
 const ccxt = require ('ccxt'); //The bulk exchange library
-const logger = require('../utils/logger')
 const BinanceApiNode = require('binance-api-node').default;
+
+const logger = require('../utils/logger')
+
 const PairInfo = require('../modules/pair/PairInfo')
+const Ticker = require('../modules/pair/Ticker');
 
 module.exports = class BinanceExchange {
     constructor (eventEmitter) {
@@ -91,6 +94,55 @@ module.exports = class BinanceExchange {
                     volume: Number(candle.volume),
                 }
                 this.eventEmitter.emit(`candle_${exchangeName}_${symbol}_${period}`, retouchedCandle);
+            })
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async fetchTicker (symbol) {
+        try {
+            const tickerFromxchange = await this.exchange.fetchTicker(symbol);
+            const {
+                bid: bidPrice,
+                ask: askPrice,
+                bidVolume: bidQty,
+                askVolume: askQty,
+                last: lastPrice
+            } = tickerFromxchange;
+            return new Ticker({
+                bidPrice,
+                askPrice,
+                bidQty,
+                askQty,
+                lastPrice
+            }) 
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async addTickerEvent(symbol) {
+        try {
+            const exchangeName = this.exchange.name
+            const retouchedSymbol = symbol.search('/') < 0 ? symbol : symbol.split('/')[0] + symbol.split('/')[1]; //Retouched for binance api node module
+            this.exchange.binanceApiNode.ws.ticker(retouchedSymbol, function (ticker) {
+                const {
+                    bestBid: bidPrice,
+                    bestAsk: askPrice,
+                    bestBidQnt: bidQty,
+                    bestAskQnt: askQty,
+                    curDayClose: lastPrice
+                } = ticker;
+
+                const newTicker = new Ticker({
+                    bidPrice,
+                    askPrice,
+                    bidQty,
+                    askQty,
+                    lastPrice
+                }) 
+                this.eventEmitter.emit(`ticker_${exchangeName}_${symbol}`, newTicker);
             })
         } catch (error) {
             throw error;
