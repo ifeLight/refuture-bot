@@ -241,6 +241,24 @@ module.exports = class BinanceExchange {
         }
     }
 
+
+    // TODO: Working on the order structure
+    createMarketOrder(symbol, side, amount) {
+        try {
+            await this.exchange.createMarketSellOrder (symbol, amount[, params])
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    createLimitOrder(symbol, side, amount, price) {
+        try {
+            const order = await exchange.createOrder (symbol, 'limit', 'buy', amount, price)
+        } catch (error) {
+            throw error;
+        }
+    }
+
     /**
      * Private Functions
      */
