@@ -38,4 +38,8 @@ module.exports = class ExchangePair {
     getOrderBook () {
         return this.orderBook;
     }
+    
+    getBalance () {
+        
+    }
 }

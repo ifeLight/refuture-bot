@@ -6,6 +6,7 @@ const logger = require('../utils/logger')
 const PairInfo = require('../modules/pair/PairInfo')
 const Ticker = require('../modules/pair/Ticker');
 const OrderBook = require('../modules/pair/OrderBook');
+const Balance = require('../classes/Balance')
 
 module.exports = class BinanceExchange {
     constructor (eventEmitter) {
@@ -18,7 +19,7 @@ module.exports = class BinanceExchange {
         const { apiKey, apiSecret } = config.get('exchange.binance');
         this.exchange = new ccxt.binance({
             apiKey,
-            apiSecret,
+            secret: apiSecret,
             timeout: 30000,
             enableRateLimit: true
         })
@@ -202,6 +203,38 @@ module.exports = class BinanceExchange {
 
                 const newOrderBook = new OrderBook(bids, asks);
                 this.eventEmitter.emit(`orderbook_${exchangeName}_${symbol}`, newOrderBook);
+            })
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async fetchBalance(asset) {
+        try {
+            if (!this.balances) {
+                const fetchedBalances = (await this.exchange.fetchBalance()).info.balances;
+                this.balances = {};
+                this.addBalanceEvent(); //To trigger the balance Websocket event
+                fetchedBalances.forEach(bal => {
+                    const { asset, free, locked } = bal
+                    this.balances[asset] = new Balance(asset, free, locked);
+                });
+                return this.balances[asset];
+            }
+            return this.balances[asset];
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    addBalanceEvent () {
+        try {
+            const clean = await this.exchange.binanceApiNode.ws.user(response => {
+                const balances = response.balances;
+                Object.keys(balances).forEach((asset) => {
+                    const { available: free, locked}
+                    this.balances[asset] = new Balance(asset, free, locked );
+                })
             })
         } catch (error) {
             throw error;
