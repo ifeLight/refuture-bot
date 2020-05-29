@@ -6,7 +6,8 @@ const logger = require('../utils/logger')
 const PairInfo = require('../modules/pair/PairInfo')
 const Ticker = require('../modules/pair/Ticker');
 const OrderBook = require('../modules/pair/OrderBook');
-const Balance = require('../classes/Balance')
+const Balance = require('../classes/Balance');
+const Order = require('../modules/pair/Order');
 
 module.exports = class BinanceExchange {
     constructor (eventEmitter) {
@@ -229,10 +230,10 @@ module.exports = class BinanceExchange {
 
     addBalanceEvent () {
         try {
-            const clean = await this.exchange.binanceApiNode.ws.user(response => {
+            this.exchange.binanceApiNode.ws.user(response => {
                 const balances = response.balances;
                 Object.keys(balances).forEach((asset) => {
-                    const { available: free, locked}
+                    const { available: free, locked} = balances[asset];
                     this.balances[asset] = new Balance(asset, free, locked );
                 })
             })
@@ -243,21 +244,75 @@ module.exports = class BinanceExchange {
 
 
     // TODO: Working on the order structure
-    createMarketOrder(symbol, side, amount) {
+    async createMarketOrder(symbol, side, amount) {
         try {
-            await this.exchange.createMarketSellOrder (symbol, amount[, params])
+            const order = await this.exchange.createOrder(symbol, 'market', side, amount);
+            return order;
         } catch (error) {
             throw error;
         }
     }
 
-    createLimitOrder(symbol, side, amount, price) {
+    async createLimitOrder(symbol, side, amount, price) {
         try {
-            const order = await exchange.createOrder (symbol, 'limit', 'buy', amount, price)
+            const order = await this.exchange.createOrder(symbol, 'limit', side, amount, price);
+            return order;
         } catch (error) {
             throw error;
         }
     }
+    async fetchActiveOrders(symbol) {
+        try {
+            const fetchedOrders = await b.exchange.fetchOpenOrders(symbol);
+            const orders = fetchedOrders.map((order) => {
+                return new Order({
+                    ...order,
+                    time: order.timestamp
+                })
+            })
+
+            return orders;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async cancelActiveOrder(orderId, symbol) {
+        try {
+            return await this.exchange.cancelOrder(orderId, symbol)
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async cancelActiveOrders(symbol) {
+        try {
+            const activeOrders = await this.exchange.fetchOpenOrders(symbol);
+            for (const order of activeOrders) {
+                await this.exchange.cancelOrder(order.id, symbol)
+            }
+            return true;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async fetchPositions(symbol) {
+        try {
+            //const order = await exchange.createOrder(symbol, 'limit', side, amount, price)
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async closePositions (symbol) {
+        try {
+            //const order = await exchange.createOrder(symbol, 'limit', side, amount, price)
+        } catch (error) {
+            throw error;
+        }
+    }
+ 
 
     /**
      * Private Functions
