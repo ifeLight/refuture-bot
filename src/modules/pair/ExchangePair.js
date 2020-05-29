@@ -16,6 +16,7 @@ module.exports = class ExchangePair {
         this.info = await this.exchange.fetchPairInfo(symbol);
         this.ticker = await this.exchange.fetchTicker(symbol);
         this.orderBook = await this.exchange.fetchOrderBook(symbol)
+        this.markPrice = await this.exchange.fetchMarkPrice(symbol);
         this.lastPrice = this.ticker.lastPrice;
         self = this;
         this.eventEmitter.on(`ticker_${exchangeName}_${symbol}`, function(ticker) {
@@ -24,6 +25,9 @@ module.exports = class ExchangePair {
         })
         this.eventEmitter.on(`orderbook_${exchangeName}_${symbol}`, function(orderBook) {
             self.orderBook = orderBook;
+        })
+        this.eventEmitter.on(`markprice_${exchangeName}_${symbol}`, function(markPrice) {
+            self.markPrice = markPrice;
         })
     }
 
@@ -38,8 +42,12 @@ module.exports = class ExchangePair {
     getOrderBook () {
         return this.orderBook;
     }
+
+    getMarkPrice() {
+
+    }
     
     getBalance () {
-        
+
     }
 }

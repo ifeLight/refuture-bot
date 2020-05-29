@@ -164,7 +164,27 @@ module.exports = class BinanceExchange {
     }
 
     async fetchMarkPrice(symbol) {
-        
+        try {
+            const retouchedSymbol = this.retouchSymbol(symbol);
+            this.addMarkPriceEvent(symbol);
+            const {markPrice} = await this.exchange.nodeBinanceApi.futuresMarkPrice( retouchedSymbol )
+            return markPrice
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    addMarkPriceEvent(symbol) {
+        try {
+            const exchangeName = this.exchange.name
+            const retouchedSymbol = this.retouchSymbol(symbol);
+            this.exchange.nodeBinanceApi.futuresMarkPriceStream(retouchedSymbol, function (stream) {
+                const {markPrice} = stream;
+                this.eventEmitter.emit(`markprice_${exchangeName}_${symbol}`, markPrice);
+            })
+        } catch (error) {
+            throw error;
+        }
     }
 
     async fetchOrderBook (symbol) {

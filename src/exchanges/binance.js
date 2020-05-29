@@ -152,6 +152,14 @@ module.exports = class BinanceExchange {
         }
     }
 
+    async fetchMarkPrice(symbol) {
+
+    }
+
+    addMarkPriceEvent(symbol) {
+        
+    }
+
     async fetchOrderBook (symbol) {
         try {
             const orderBookFromExchange = await this.exchange.fetchOrderBook(symbol);
