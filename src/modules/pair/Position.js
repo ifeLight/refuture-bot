@@ -9,4 +9,8 @@ module.exports = class Position {
         this.marginType = marginType;
         this.positionSide = this.entryPrice >= liquidationPrice ? 'LONG' : 'SHORT';
     }
+
+    // closePosition () {}
+    // changeToLongPosition() {}
+    // changeToShortPosition() {}
 }

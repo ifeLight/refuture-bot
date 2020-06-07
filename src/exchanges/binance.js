@@ -11,7 +11,7 @@ const Order = require('../modules/pair/Order');
 
 module.exports = class BinanceExchange {
     constructor (eventEmitter, logger) {
-        this.eventEmitter = EventEmitter;
+        this.eventEmitter = eventEmitter;
         this.logger = logger;
         this.ccxt = ccxt;
         this.name = 'binance';
@@ -31,6 +31,7 @@ module.exports = class BinanceExchange {
 
         try {
             await this.exchange.checkRequiredCredentials();
+            await this.userWebsocket();
         } catch (error) {
             this.logger.info(`Binance Futures: Incomplete required credentials: ${error.message}`)
         }
@@ -230,7 +231,6 @@ module.exports = class BinanceExchange {
             if (!this.balances) {
                 const fetchedBalances = (await this.exchange.fetchBalance()).info.balances;
                 this.balances = {};
-                this.addBalanceEvent(); //To trigger the balance Websocket event
                 fetchedBalances.forEach(bal => {
                     const { asset, free, locked } = bal
                     this.balances[asset] = new Balance(asset, free, locked);
@@ -242,23 +242,6 @@ module.exports = class BinanceExchange {
             throw error;
         }
     }
-
-    addBalanceEvent () {
-        try {
-            this.exchange.binanceApiNode.ws.user(response => {
-                if (response.eventType && response.eventType == 'account') {
-                    const balances = response.balances;
-                    Object.keys(balances).forEach((asset) => {
-                        const { available: free, locked} = balances[asset];
-                        this.balances[asset] = new Balance(asset, free, locked );
-                    })
-                }
-            })
-        } catch (error) {
-            throw error;
-        }
-    }
-
 
     async createMarketOrder(symbol, side, amount) {
         try {
@@ -279,17 +262,12 @@ module.exports = class BinanceExchange {
     }
     async fetchActiveOrders(symbol) {
         try {
-            const fetchedOrders = await b.exchange.fetchOpenOrders(symbol);
-            const orders = fetchedOrders.map((order) => {
-                return new Order({
-                    ...order,
-                    time: order.timestamp
-                })
-            })
-            this.orders = orders;
-            return orders;
+            if (!this.orders) {
+                await syncWebsocketOrders();
+            }
+            return this.orders[symbol];
         } catch (error) {
-            throw error;
+            this.logger.info(`Binance: Failed to fetch active orders (${error.message})`)
         }
     }
 
@@ -337,4 +315,57 @@ module.exports = class BinanceExchange {
         return symbol.search('/') < 0 ? symbol : symbol.split('/')[0] + symbol.split('/')[1]; //Retouched for binance api node module
     }
 
+    async userWebsocket () {
+        try {
+            const self = this;
+            this.exchange.binanceApiNode.ws.user(async (response) => {
+                if (response.eventType && response.eventType == 'account') {
+                    const balances = response.balances;
+                    Object.keys(balances).forEach((asset) => {
+                        const { available: free, locked} = balances[asset];
+                        if (!self.balances) {
+                            self.balances = {};
+                        }
+                        self.balances[asset] = new Balance(asset, free, locked );
+                    })
+                }
+
+                if (response.eventType && response.eventType == 'executionReport') {
+                    await self.syncWebsocketOrders();
+                }
+            })
+        } catch (error) {
+            this.logger.error(`Binance: Failed to start User Websocket (${error.message})`)
+        }
+    }
+
+    async syncWebsocketOrders () {
+        try {
+            const self = this;
+            if (!this.orders) {
+                this.orders = {};
+            }
+            const fetchedOrders = await this.exchange.fetchOpenOrders();
+            const mappedOrders = fetchedOrders.map((order) => {
+                return new Order({
+                    ...order,
+                    time: order.timestamp
+                })
+            })
+            mappedOrders.forEach((order) => {
+                const { symbol } = order;
+                if (self.orders[symbol] && Array.isArray(self.orders[symbol])) {
+                    self.orders[symbol].push(order)
+                } else {
+                    self.orders[symbol] = [order];
+                }
+            })
+            this.orders[symbol] =  symbolOrders;
+            
+        } catch (error) {
+            this.logger.info(`Binance: Failed to sync websocket orders (${error.message})`)
+        }
+      }
+
 }
+

@@ -1,6 +1,7 @@
 module.exports = class ExchangePair {
-    constructor (eventEmitter) {
+    constructor (eventEmitter, logger) {
         this.eventEmitter = eventEmitter;
+        this.logger = logger;
     }
 
     init(exchange, symbol) {
@@ -12,23 +13,30 @@ module.exports = class ExchangePair {
     }
 
     async setup() {
-        const { symbol, exchangeName } = this
-        this.info = await this.exchange.fetchPairInfo(symbol);
-        this.ticker = await this.exchange.fetchTicker(symbol);
-        this.orderBook = await this.exchange.fetchOrderBook(symbol)
-        this.markPrice = await this.exchange.fetchMarkPrice(symbol);
-        this.lastPrice = this.ticker.lastPrice;
-        self = this;
-        this.eventEmitter.on(`ticker_${exchangeName}_${symbol}`, function(ticker) {
-            self.ticker = ticker;
-            self.lastPrice = ticker.lastPrice;
-        })
-        this.eventEmitter.on(`orderbook_${exchangeName}_${symbol}`, function(orderBook) {
-            self.orderBook = orderBook;
-        })
-        this.eventEmitter.on(`markprice_${exchangeName}_${symbol}`, function(markPrice) {
-            self.markPrice = markPrice;
-        })
+        try {
+            const { symbol, exchangeName } = this;
+            self = this;
+            this.info = await this.exchange.fetchPairInfo(symbol);
+            this.ticker = await this.exchange.fetchTicker(symbol);
+            this.orderBook = await this.exchange.fetchOrderBook(symbol)
+            if (this.exchange.isFutures) {
+                this.markPrice = await this.exchange.fetchMarkPrice(symbol);
+                this.eventEmitter.on(`markprice_${exchangeName}_${symbol}`, function(markPrice) {
+                    self.markPrice = markPrice;
+                })
+            }
+            
+            this.lastPrice = this.ticker.lastPrice;
+            this.eventEmitter.on(`ticker_${exchangeName}_${symbol}`, function(ticker) {
+                self.ticker = ticker;
+                self.lastPrice = ticker.lastPrice;
+            })
+            this.eventEmitter.on(`orderbook_${exchangeName}_${symbol}`, function(orderBook) {
+                self.orderBook = orderBook;
+            })
+        } catch (error) {
+            this.logger.error(`Pair(${this.symbol}): Unable to setup the Pair`)
+        }
     }
 
     getTicker() {
@@ -47,7 +55,32 @@ module.exports = class ExchangePair {
         return this.markPrice;
     }
     
-    getBalance () {
+    /**
+     * Private Trade Functions
+     */
+    async getBalance (asset) {
+        try {
+            return await this.exchange.fetchBalance(asset);
+        } catch (error) {
+            this.logger(`Pair(${this.symbol}): Unable to fetch balance for ${this.asset}`);
+        }
+    }
 
+    async getActiveOrders() {
+        try {
+            const orders = await this.exchange.fetchActiveOrders(this.symbol);
+            return orders;
+        } catch (error) {
+            this.logger(`Pair(${this.symbol}): Unable to Get Orders (${error.message})`);
+        }
+    }
+
+    async getPositions() {
+        try {
+            const positions = await this.exchange.fetchPositions(this.symbol);
+            return positions;
+        } catch (error) {
+            this.logger(`Pair(${this.symbol}): Unable to Get Positions (${error.message})`);
+        }
     }
 }

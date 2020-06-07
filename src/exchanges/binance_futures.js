@@ -475,6 +475,7 @@ module.exports = class BinanceFuturesExchange {
 
       async syncWebsocketPositions () {
           try {
+            const self = this;
             this.positions = {};
             const response = await this.exchange.fapiPrivateGetPositionRisk();
             const mappedPositions = response.map((pos) => {
@@ -489,10 +490,10 @@ module.exports = class BinanceFuturesExchange {
             })
             mappedPositions.forEach((pos) => {
                 const { symbol } = pos;
-                if (this.positions[symbol] && Array.isArray(this.positions[symbol])) {
-                    this.positions[symbol].push(pos)
+                if (self.positions[symbol] && Array.isArray(self.positions[symbol])) {
+                    self.positions[symbol].push(pos)
                 } else {
-                    this.positions[symbol] = [pos];
+                    self.positions[symbol] = [pos];
                 }
             })
           } catch (error) {
