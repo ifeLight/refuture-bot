@@ -44,7 +44,7 @@ module.exports = class ExchangePair {
     }
 
     getMarkPrice() {
-
+        return this.markPrice;
     }
     
     getBalance () {

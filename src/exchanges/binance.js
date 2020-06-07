@@ -10,13 +10,14 @@ const Balance = require('../classes/Balance');
 const Order = require('../modules/pair/Order');
 
 module.exports = class BinanceExchange {
-    constructor (eventEmitter) {
-        // this.eventEmitter = EventEmmitter;
+    constructor (eventEmitter, logger) {
+        this.eventEmitter = EventEmitter;
+        this.logger = logger;
         this.ccxt = ccxt;
         this.name = 'binance';
     }
 
-    init(config) {
+    async init(config) {
         const { apiKey, apiSecret } = config.get('exchange.binance');
         this.exchange = new ccxt.binance({
             apiKey,
@@ -27,6 +28,12 @@ module.exports = class BinanceExchange {
         this.exchange.binanceApiNode = BinanceApiNode({
             apiKey, apiSecret
         })
+
+        try {
+            await this.exchange.checkRequiredCredentials();
+        } catch (error) {
+            this.logger.info(`Binance Futures: Incomplete required credentials: ${error.message}`)
+        }
 
     }
 
@@ -157,7 +164,7 @@ module.exports = class BinanceExchange {
     }
 
     addMarkPriceEvent(symbol) {
-        
+
     }
 
     async fetchOrderBook (symbol) {
@@ -239,11 +246,13 @@ module.exports = class BinanceExchange {
     addBalanceEvent () {
         try {
             this.exchange.binanceApiNode.ws.user(response => {
-                const balances = response.balances;
-                Object.keys(balances).forEach((asset) => {
-                    const { available: free, locked} = balances[asset];
-                    this.balances[asset] = new Balance(asset, free, locked );
-                })
+                if (response.eventType && response.eventType == 'account') {
+                    const balances = response.balances;
+                    Object.keys(balances).forEach((asset) => {
+                        const { available: free, locked} = balances[asset];
+                        this.balances[asset] = new Balance(asset, free, locked );
+                    })
+                }
             })
         } catch (error) {
             throw error;
@@ -251,7 +260,6 @@ module.exports = class BinanceExchange {
     }
 
 
-    // TODO: Working on the order structure
     async createMarketOrder(symbol, side, amount) {
         try {
             const order = await this.exchange.createOrder(symbol, 'market', side, amount);
@@ -278,7 +286,7 @@ module.exports = class BinanceExchange {
                     time: order.timestamp
                 })
             })
-
+            this.orders = orders;
             return orders;
         } catch (error) {
             throw error;
