@@ -10,6 +10,8 @@ const Balance = require('../classes/Balance');
 const Order = require('../modules/pair/Order');
 const Position = require('../modules/pair/Position');
 
+console.info(__dirname);
+
 module.exports = class BinanceFuturesExchange {
     constructor (eventEmitter, logger) {
         this.eventEmitter = eventEmitter;
@@ -285,7 +287,6 @@ module.exports = class BinanceFuturesExchange {
     }
 
 
-    // TODO: Working on the order structure
     async createMarketOrder(symbol, side, amount) {
         try {
             const order = await this.exchange.createOrder(symbol, 'market', side, amount);
