@@ -1,5 +1,6 @@
 const config = require('config');
 const mongoose = require('mongoose')
+const logger = require('../utils/logger');
 
 const connectionUri = config.get('db.uri');
 
@@ -32,18 +33,16 @@ mongoose.connect(connectionUri, {
  * Mongoose Connection Events
  */
 mongoose.connection.on("connected", function () {
-    console.log(" Mongo Database Connected");
+    logger.info(`Mongo Database: Database Connected`);
 })
 
 mongoose.connection.on("disconnected", function () {
-    console.log(" Mongo Database Disconnected...");
-    console.log("Exiting, because of mongoose no connection");
+    logger.error(`Mongo Database: Database Disconnected, Exiting...`);
     process.exit(0);
 })
 
-mongoose.connection.on("error", function (err) {
-    console.error("An error occured with Mongo DB Connection");
-    console.error(err);
+mongoose.connection.on("error", function (error) {
+    logger.error(`Mongo Database: An Error occured (${error.message})`);
     process.exit();
 })
 
@@ -51,11 +50,10 @@ mongoose.connection.on("error", function (err) {
  * Close Mongoose Conection When app shuts down
  */
 process.on("SIGINT", function () {
-    console.log(" Closing Mongo Database ....");
+    logger.error(`Mongo Database: Closing Mongo Database....`);
     mongoose.connection.close(function (err) {
-        if (err) console.error(err);
-        if (!err) {
-            console.log("Mongo Database now Closed");
+        if (err) {
+            logger.error(`Mongo Database: Connection now closed (${error.message})`);
             process.exit(0);
         }
     })

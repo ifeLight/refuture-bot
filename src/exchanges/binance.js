@@ -89,25 +89,32 @@ module.exports = class BinanceExchange {
     }
 
     addCandleEvent (symbol, period) {
+        const candleEventId = symbol + period; ///To prevent duplicate candle event registration
+        if (!this.candleEventsList) {
+            this.candleEventsList = []
+        }
         try {
-            const exchangeName = this.exchange.name
-            const retouchedSymbol = this.retouchSymbol(symbol);
-            this.exchange.binanceApiNode.ws.candles(retouchedSymbol, period, function (candle) {
-                const retouchedCandle = {
-                    period,
-                    exchangeName,
-                    symbol,
-                    time: candle.eventTime,
-                    open: Number(candle.open),
-                    high: Number(candle.high),
-                    low: Number(candle.low),
-                    close: Number(candle.close),
-                    volume: Number(candle.volume),
-                }
-                this.eventEmitter.emit(`candle_${exchangeName}_${symbol}_${period}`, retouchedCandle);
-            })
+            if (this.candleEventsList.indexOf(candleEventId) < 0) {
+                this.candleEventsList.push(candleEventId);
+                const exchangeName = this.exchange.name
+                const retouchedSymbol = this.retouchSymbol(symbol);
+                this.exchange.binanceApiNode.ws.candles(retouchedSymbol, period, function (candle) {
+                    const retouchedCandle = {
+                        period,
+                        exchangeName,
+                        symbol,
+                        time: candle.eventTime,
+                        open: Number(candle.open),
+                        high: Number(candle.high),
+                        low: Number(candle.low),
+                        close: Number(candle.close),
+                        volume: Number(candle.volume),
+                    }
+                    this.eventEmitter.emit(`candle_${exchangeName}_${symbol}_${period}`, retouchedCandle);
+                })
+            }
         } catch (error) {
-            throw error;
+            this.logger.info(`Binance: Problem adding candle event [${symbol} - ${period}] (${error.message})`)
         }
     }
 

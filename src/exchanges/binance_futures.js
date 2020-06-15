@@ -10,8 +10,6 @@ const Balance = require('../classes/Balance');
 const Order = require('../modules/pair/Order');
 const Position = require('../modules/pair/Position');
 
-console.info(__dirname);
-
 module.exports = class BinanceFuturesExchange {
     constructor (eventEmitter, logger) {
         this.eventEmitter = eventEmitter;
@@ -99,27 +97,34 @@ module.exports = class BinanceFuturesExchange {
     }
 
     addCandleEvent (symbol, period) {
+        const candleEventId = symbol + period; ///To prevent duplicate candle event registration
+        if (!this.candleEventsList) {
+            this.candleEventsList = []
+        }
         try {
-            const exchangeName = this.exchange.name
-            const retouchedSymbol = this.retouchSymbol(symbol);
-            const query = retouchedSymbol.toLowerCase() + '@kline_' + period;
-            this.exchange.nodeBinanceApi.futuresSubscribe(query, function (kline) {
-                const {t, o, c, h, l, v } = kline.k;
-                const retouchedCandle = {
-                    period,
-                    exchangeName,
-                    symbol,
-                    time: t,
-                    open: Number(o),
-                    high: Number(h),
-                    low: Number(l),
-                    close: Number(c),
-                    volume: Number(v),
-                }
-                this.eventEmitter.emit(`candle_${exchangeName}_${symbol}_${period}`, retouchedCandle);
-            })
+            if (this.candleEventsList.indexOf(candleEventId) < 0) {
+                this.candleEventsList.push(candleEventId);
+                const exchangeName = this.exchange.name
+                const retouchedSymbol = this.retouchSymbol(symbol);
+                const query = retouchedSymbol.toLowerCase() + '@kline_' + period;
+                this.exchange.nodeBinanceApi.futuresSubscribe(query, function (kline) {
+                    const {t, o, c, h, l, v } = kline.k;
+                    const retouchedCandle = {
+                        period,
+                        exchangeName,
+                        symbol,
+                        time: t,
+                        open: Number(o),
+                        high: Number(h),
+                        low: Number(l),
+                        close: Number(c),
+                        volume: Number(v),
+                    }
+                    this.eventEmitter.emit(`candle_${exchangeName}_${symbol}_${period}`, retouchedCandle);
+                })
+            }
         } catch (error) {
-            throw error;
+            this.logger.info(`Binance Futures: Problem adding candle event [${symbol} - ${period}] (${error.message})`);
         }
     }
 
