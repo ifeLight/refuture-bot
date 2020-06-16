@@ -22,7 +22,7 @@ module.exports = class Candles {
         try {
             this.candlesRepositiory.init(this.exchange, this.symbol, this.period);
             const result = await this.candlesRepositiory.fetchCandlesByNumberFromNow(parseInt(this.candlesLength))
-            console.log(result);
+            console.info(result.length);
             return result;
         } catch (error) {
             logger.info(`${this.getName()} Builder: indicator builder Failed [${this.symbol}] (${error.message})`);

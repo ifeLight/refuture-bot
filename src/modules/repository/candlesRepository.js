@@ -19,9 +19,9 @@ module.exports = class CandlesRepository {
         const candleEventName = `candle_${this.exchangeName}_${symbol}_${period}`;
 
         if (this.eventListenerIds.indexOf(candleEventName) < 0) {
-            this.eventEmitter.on(candleEventName, async function (candle) {
+            this.eventEmitter.on(candleEventName, async (candle) => {
                 try {
-                    await CandleModel.addCandle(candle)
+                    await CandleModel.addCandle(candle);
                 } catch (error) {
                     this.logger.info(`Candles Repository: Error adding Candle (${error.message})`)
                 }
@@ -33,7 +33,7 @@ module.exports = class CandlesRepository {
         try {
             const { period, symbol } = this;
             const exchangeName = this.exchange.name;
-            const fromDatabase = await CandleModel.fetchCandleByTimeDifference(period, exchangeName, symbol, startTime, endTime);
+            const fromDatabase = await CandleModel.fetchCandles({period, exchangeName, symbol, from: startTime, to: endTime});
             const timeDifference = periodToTimeDiff(period);
             const startTimeTimestamp = new Date(startTime).getTime();
             const endTimeTimestamp = new Date(endTime).getTime();
@@ -44,9 +44,9 @@ module.exports = class CandlesRepository {
             } else {
                 return fromDatabase;
             }
-        return CandleModel.fetchCandleByTimeDifference(period, exchangeName, symbol, startTime, endTime);
+        return CandleModel.fetchCandles({period, exchangeName, symbol, from: startTime, to: endTime});
         } catch (error) {
-            this.logger.error(`Candles Repository (fetchCandlesByTimeDifference): Error Fetchig Candles [${this.exchange.name}: ${this.symbol}] (${error.message})`);
+            this.logger.error(`Candles Repository (fetchCandlesByTimeDifference): Error Fetching Candles [${this.exchange.name}: ${this.symbol}] (${error.message})`);
             return undefined;
         }
     }
@@ -55,23 +55,16 @@ module.exports = class CandlesRepository {
         try {
             const { period, symbol } = this;
             const exchangeName = this.exchange.name;
-            const fromDatabase = await CandleModel.fetchCandlesByNumber(period, exchangeName, symbol, numberOfCandlesFromNow);
+            const fromDatabase = await CandleModel.fetchCandles({period, exchangeName, symbol, number: numberOfCandlesFromNow});
             if (fromDatabase.length < numberOfCandlesFromNow) {
-                console.log(`Database lenth: ${fromDatabase.length}`);
-                console.log(`Number of candles: ${numberOfCandlesFromNow}`);
                 const timeDifference = periodToTimeDiff(period);
-                console.log(`Time Difference: ${timeDifference}`);
                 const startTime = new Date(Date.now() - (timeDifference * numberOfCandlesFromNow));
-                console.log(`Start time: ${new Date(startTime).toDateString()}`);
                 const fromExchange = await this.exchange.fetchCandles(symbol, period, startTime);
-                console.log(`From exchange length: ${fromExchange.length}`);
                 const storeToDatabase = await CandleModel.addCandles(fromExchange);
-                // console.log(fromExchange);
             } else {
-                console.log(`From database length: ${fromDatabase.length}`);
                 return fromDatabase;
             }
-            return CandleModel.fetchCandlesByNumber(period, exchangeName, symbol, numberOfCandlesFromNow);
+            return CandleModel.fetchCandles({period, exchangeName, symbol, number: numberOfCandlesFromNow});
         } catch (error) {
             this.logger.error(`Candles Repository (fetchCandlesByNumberFromNow): Error Fetching Candles [${this.exchange.name}: ${this.symbol}] (${error.message})`);
         }
