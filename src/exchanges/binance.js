@@ -9,6 +9,8 @@ const OrderBook = require('../modules/pair/OrderBook');
 const Balance = require('../classes/Balance');
 const Order = require('../modules/pair/Order');
 
+const periodToTimeDiff = require('../utils/periodToTimeDiff');
+
 module.exports = class BinanceExchange {
     constructor (eventEmitter, logger) {
         this.eventEmitter = eventEmitter;
@@ -62,11 +64,12 @@ module.exports = class BinanceExchange {
             let sinceTimestamp = new Date(since).getTime();
             let toTimestamp = new Date(to).getTime();
             let ohlcv = [];
+            const timeDifference = periodToTimeDiff(period);
             const exchangeName = this.exchange.name;
-            while (sinceTimestamp < toTimestamp) {
+            while (sinceTimestamp < (toTimestamp - timeDifference) ) {
                 const fetchedCandles = await this.exchange.fetchOHLCV(symbol, period, since);
                 ohlcv = [...ohlcv, ...fetchedCandles];
-                sinceTimestamp = fetchedCandles[fetchedCandles.length - 1][0];
+                sinceTimestamp = fetchedCandles[fetchedCandles.length - 1][0]; 
             }
 
             const mappedCandles = ohlcv.map(function (candle) {
@@ -84,7 +87,8 @@ module.exports = class BinanceExchange {
             })
             return mappedCandles;
         } catch (error) {
-            throw error;
+            this.logger.warn(`Binance: Unable to fetch Candles [${symbol}:${period}] (${error.message})`);
+            return undefined;
         }
     }
 

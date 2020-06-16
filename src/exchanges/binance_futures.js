@@ -10,6 +10,8 @@ const Balance = require('../classes/Balance');
 const Order = require('../modules/pair/Order');
 const Position = require('../modules/pair/Position');
 
+const periodToTimeDiff = require('../utils/periodToTimeDiff');
+
 module.exports = class BinanceFuturesExchange {
     constructor (eventEmitter, logger) {
         this.eventEmitter = eventEmitter;
@@ -61,7 +63,8 @@ module.exports = class BinanceFuturesExchange {
             return new PairInfo({...pairInfoFromMarket, fees})
 
         } catch (error) {
-            throw error;
+            this.logger.warn(`Binance Futures: Unable to fetch Pair Info [${symbol}] (${error.message})`);
+            return undefined;
         }
     }
 
@@ -70,11 +73,12 @@ module.exports = class BinanceFuturesExchange {
             let sinceTimestamp = new Date(since).getTime();
             let toTimestamp = new Date(to).getTime();
             let ohlcv = [];
+            const timeDifference = periodToTimeDiff(period);
             const exchangeName = this.exchange.name;
-            while (sinceTimestamp < toTimestamp) {
+            while (sinceTimestamp < (toTimestamp - timeDifference) ) {
                 const fetchedCandles = await this.exchange.fetchOHLCV(symbol, period, since);
                 ohlcv = [...ohlcv, ...fetchedCandles];
-                sinceTimestamp = fetchedCandles[fetchedCandles.length - 1][0];
+                sinceTimestamp = fetchedCandles[fetchedCandles.length - 1][0]; 
             }
 
             const mappedCandles = ohlcv.map(function (candle) {
@@ -92,7 +96,8 @@ module.exports = class BinanceFuturesExchange {
             })
             return mappedCandles;
         } catch (error) {
-            throw error;
+            this.logger.warn(`Binance Futures: Unable to fetch Candles [${symbol}:${period}] (${error.message})`);
+            return undefined;
         }
     }
 
@@ -124,7 +129,7 @@ module.exports = class BinanceFuturesExchange {
                 });
             }
         } catch (error) {
-            this.logger.info(`Binance Futures: Problem adding candle event [${symbol} - ${period}] (${error.message})`);
+            this.logger.warn(`Binance Futures: Problem adding candle event [${symbol} - ${period}] (${error.message})`);
         }
     }
 
@@ -146,7 +151,8 @@ module.exports = class BinanceFuturesExchange {
                 lastPrice
             }) 
         } catch (error) {
-            throw error;
+            this.logger.warn(`Binance Futures: Unable to fetch Ticker [${symbol}] (${error.message})`);
+            return undefined;
         }
     }
 
@@ -174,7 +180,7 @@ module.exports = class BinanceFuturesExchange {
                 this.eventEmitter.emit(`ticker_${exchangeName}_${symbol}`, newTicker);
             })
         } catch (error) {
-            throw error;
+            this.logger.warn(`Binance Futures: Unable to fetch Mark Price [${symbol}] (${error.message})`);
         }
     }
 
@@ -185,7 +191,7 @@ module.exports = class BinanceFuturesExchange {
             const {markPrice} = await this.exchange.nodeBinanceApi.futuresMarkPrice( retouchedSymbol )
             return markPrice
         } catch (error) {
-            throw error;
+            this.logger.warn(`Binance Futures: Unable to fetch Mark Price [${symbol}] (${error.message})`);
         }
     }
 
@@ -198,7 +204,7 @@ module.exports = class BinanceFuturesExchange {
                 this.eventEmitter.emit(`markprice_${exchangeName}_${symbol}`, markPrice);
             })
         } catch (error) {
-            throw error;
+            this.logger.warn(`Binance Futures: Unable to fetch order book [${symbol}] (${error.message})`);
         }
     }
 
@@ -224,7 +230,8 @@ module.exports = class BinanceFuturesExchange {
             })
             return new OrderBook(bids, asks) 
         } catch (error) {
-            throw error;
+            this.logger.warn(`Binance Futures: Unable to fetch order book [${symbol}] (${error.message})`);
+            return undefined
         }
     }
     
@@ -258,7 +265,7 @@ module.exports = class BinanceFuturesExchange {
                 this.eventEmitter.emit(`orderbook_${exchangeName}_${symbol}`, newOrderBook);
             })
         } catch (error) {
-            throw error;
+            this.logger.error(`Binance Futures: Unable to add order book [${symbol}] (${error.message})`);
         }
     }
 
@@ -277,7 +284,8 @@ module.exports = class BinanceFuturesExchange {
             }
             return this.balances[asset];
         } catch (error) {
-            throw error;
+            this.logger.error(`Binance Futures: Unable to fetch Balance [${asset}] (${error.message})`);
+            return undefined;
         }
     }
 
@@ -287,7 +295,7 @@ module.exports = class BinanceFuturesExchange {
             const leverageNumber = Number(leverage);
             await this.exchange.nodeBinanceApi.futuresLeverage( retouchedSymbol, leverageNumber )
         } catch (error) {
-            this.logger.error('Binance Futures: Unable to change leverage')
+            this.logger.error(`Binance Futures: Unable to change leverage [${symbol}:${leverage}] (${error.message})`)
         }
     }
 
@@ -297,7 +305,8 @@ module.exports = class BinanceFuturesExchange {
             const order = await this.exchange.createOrder(symbol, 'market', side, amount);
             return order;
         } catch (error) {
-            throw error;
+            this.logger.info(`Binance Futures: Unable to create Limit Order [${symbol}:${side}:${amount}] (${error.message})`);
+            return undefined;
         }
     }
 
@@ -306,7 +315,8 @@ module.exports = class BinanceFuturesExchange {
             const order = await this.exchange.createOrder(symbol, 'limit', side, amount, price);
             return order;
         } catch (error) {
-            throw error;
+            this.logger.info(`Binance Futures: Unable to create Limit Order [${symbol}:${side}:${amount}:${price}] (${error.message})`);
+            return;
         }
     }
     async fetchActiveOrders(symbol) {
@@ -326,7 +336,8 @@ module.exports = class BinanceFuturesExchange {
             return this.orders[symbol];
             
         } catch (error) {
-            this.logger.info(`Binance Futures: Failed to fetch active orders (${error.message})`)
+            this.logger.info(`Binance Futures: Failed to fetch active orders [${symbol}] (${error.message})`);
+            return undefined;
         }
     }
 
@@ -334,7 +345,8 @@ module.exports = class BinanceFuturesExchange {
         try {
             return await this.exchange.cancelOrder(orderId, symbol)
         } catch (error) {
-            throw error;
+            this.logger.info(`Binance Futures: Failed to Cancel Active Order [${symbol}:${orderId}] (${error.message})`);
+            return undefined;
         }
     }
 
@@ -346,7 +358,8 @@ module.exports = class BinanceFuturesExchange {
             }
             return true;
         } catch (error) {
-            throw error;
+            this.logger.info(`Binance Futures: Failed to Cancel Active Orders [${symbol}] (${error.message})`);
+            return undefined
         }
     }
 
@@ -366,7 +379,8 @@ module.exports = class BinanceFuturesExchange {
         try {
             //const order = await exchange.createOrder(symbol, 'limit', side, amount, price)
         } catch (error) {
-            throw error;
+            this.logger.info(`Binance Futures: Failed to close Positions (${error.message})`);
+            return undefined;
         }
     }
  
@@ -503,7 +517,7 @@ module.exports = class BinanceFuturesExchange {
                 }
             })
           } catch (error) {
-            this.logger.info(`Binance Futures: Failed to sync websocket Positions (${error.message})`)
+            this.logger.info(`Binance Futures: Failed to sync websocket Positions (${error.message})`);
           }
       }
 
