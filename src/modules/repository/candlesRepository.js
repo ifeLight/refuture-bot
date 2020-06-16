@@ -57,7 +57,8 @@ module.exports = class CandlesRepository {
             const exchangeName = this.exchange.name;
             const fromDatabase = await CandleModel.fetchCandlesByNumber(period, exchangeName, symbol, numberOfCandlesFromNow);
             if (fromDatabase.length < numberOfCandlesFromNow) {
-                const laterTime = new Date(Date.now() - (timeDifference * numberOfCandlesFromNow));
+                const timeDifference = periodToTimeDiff(period);
+                const startTime = new Date(Date.now() - (timeDifference * numberOfCandlesFromNow));
                 const fromExchange = await this.exchange.fetchCandles(symbol, period, startTime);
                 const storeToDatabase = await CandleModel.addCandles(fromExchange);
             } else {

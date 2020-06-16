@@ -20,7 +20,7 @@ module.exports = class BinanceFuturesExchange {
     }
 
     async init(config) {
-        const { apiKey, apiSecret } = config.get('exchange.binance');
+        const { apiKey, apiSecret } = config.get('exchange.binance_futures');
         this.exchange = new ccxt.binance({
             apiKey,
             secret: apiSecret,
@@ -107,7 +107,7 @@ module.exports = class BinanceFuturesExchange {
                 const exchangeName = this.exchange.name
                 const retouchedSymbol = this.retouchSymbol(symbol);
                 const query = retouchedSymbol.toLowerCase() + '@kline_' + period;
-                this.exchange.nodeBinanceApi.futuresSubscribe(query, function (kline) {
+                this.exchange.nodeBinanceApi.futuresSubscribe(query, (kline) => {
                     const {t, o, c, h, l, v } = kline.k;
                     const retouchedCandle = {
                         period,
@@ -121,7 +121,7 @@ module.exports = class BinanceFuturesExchange {
                         volume: Number(v),
                     }
                     this.eventEmitter.emit(`candle_${exchangeName}_${symbol}_${period}`, retouchedCandle);
-                })
+                });
             }
         } catch (error) {
             this.logger.info(`Binance Futures: Problem adding candle event [${symbol} - ${period}] (${error.message})`);

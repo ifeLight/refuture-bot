@@ -29,7 +29,7 @@ module.exports = {
     },
     db: {
         host: "localhost",
-        port: 21017,
+        port: 27017,
         username: "",
         password: "",
         dbname: "refuture",

@@ -53,7 +53,7 @@ process.on("SIGINT", function () {
     logger.error(`Mongo Database: Closing Mongo Database....`);
     mongoose.connection.close(function (err) {
         if (err) {
-            logger.error(`Mongo Database: Connection now closed (${error.message})`);
+            logger.info(`Mongo Database: Connection now closed (${error.message})`);
             process.exit(0);
         }
     })
