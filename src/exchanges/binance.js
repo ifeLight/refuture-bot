@@ -65,7 +65,7 @@ module.exports = class BinanceExchange {
             let toTimestamp = new Date(to).getTime();
             let ohlcv = [];
             const timeDifference = periodToTimeDiff(period);
-            const exchangeName = this.exchange.name;
+            const exchangeName = this.name;
             while (sinceTimestamp < (toTimestamp - timeDifference) ) {
                 const fetchedCandles = await this.exchange.fetchOHLCV(symbol, period, since);
                 ohlcv = [...ohlcv, ...fetchedCandles];
@@ -100,7 +100,7 @@ module.exports = class BinanceExchange {
         try {
             if (this.candleEventsList.indexOf(candleEventId) < 0) {
                 this.candleEventsList.push(candleEventId);
-                const exchangeName = this.exchange.name
+                const exchangeName = this.name;
                 const retouchedSymbol = this.retouchSymbol(symbol);
                 this.exchange.binanceApiNode.ws.candles(retouchedSymbol, period, function (candle) {
                     const retouchedCandle = {
@@ -146,7 +146,7 @@ module.exports = class BinanceExchange {
 
     addTickerEvent(symbol) {
         try {
-            const exchangeName = this.exchange.name
+            const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
             this.exchange.binanceApiNode.ws.ticker(retouchedSymbol, function (ticker) {
                 const {
@@ -207,7 +207,7 @@ module.exports = class BinanceExchange {
 
     addOrderBookEvent(symbol) {
         try {
-            const exchangeName = this.exchange.name
+            const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
             this.exchange.binanceApiNode.ws.depth(retouchedSymbol, function (depth) {
                 let {

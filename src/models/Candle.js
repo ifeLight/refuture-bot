@@ -4,8 +4,6 @@ const _ = require('lodash')
 const upsertMany = require('@meanie/mongoose-upsert-many');
 
 const periodToTimeDiff = require('../utils/periodToTimeDiff')
- 
-mongoose.plugin(upsertMany);
 
 const Types = mongoose.Schema.Types;
 
@@ -47,6 +45,9 @@ const candleSchema = mongoose.Schema({
     updatedAt : "updatedAt" 
 }
 });
+
+// Upsert Many Plugin
+mongoose.plugin(upsertMany);
 
 class CandleAction {
     static async fetchCandleByTimeDifference(period, exchangeName, symbol, from, to = Date.now()) {
@@ -93,6 +94,7 @@ class CandleAction {
         const matchFields = ['period', 'time', 'exchangeName', 'symbol'];
         //Perform bulk operation
         const result = await this.upsertMany(candles, matchFields);
+        console.info(result);
         return candles;
     }
 }

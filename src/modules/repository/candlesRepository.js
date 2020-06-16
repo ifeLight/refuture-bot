@@ -66,6 +66,7 @@ module.exports = class CandlesRepository {
                 const fromExchange = await this.exchange.fetchCandles(symbol, period, startTime);
                 console.log(`From exchange length: ${fromExchange.length}`);
                 const storeToDatabase = await CandleModel.addCandles(fromExchange);
+                // console.log(fromExchange);
             } else {
                 console.log(`From database length: ${fromDatabase.length}`);
                 return fromDatabase;

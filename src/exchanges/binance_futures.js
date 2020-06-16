@@ -74,7 +74,7 @@ module.exports = class BinanceFuturesExchange {
             let toTimestamp = new Date(to).getTime();
             let ohlcv = [];
             const timeDifference = periodToTimeDiff(period);
-            const exchangeName = this.exchange.name;
+            const exchangeName = this.name;
             while (sinceTimestamp < (toTimestamp - timeDifference) ) {
                 const fetchedCandles = await this.exchange.fetchOHLCV(symbol, period, since);
                 ohlcv = [...ohlcv, ...fetchedCandles];
@@ -109,7 +109,7 @@ module.exports = class BinanceFuturesExchange {
         try {
             if (this.candleEventsList.indexOf(candleEventId) < 0) {
                 this.candleEventsList.push(candleEventId);
-                const exchangeName = this.exchange.name
+                const exchangeName = this.name;
                 const retouchedSymbol = this.retouchSymbol(symbol);
                 const query = retouchedSymbol.toLowerCase() + '@kline_' + period;
                 this.exchange.nodeBinanceApi.futuresSubscribe(query, (kline) => {
@@ -158,7 +158,7 @@ module.exports = class BinanceFuturesExchange {
 
     addTickerEvent(symbol) {
         try {
-            const exchangeName = this.exchange.name
+            const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
             this.exchange.nodeBinanceApi.futuresBookTickerStream(retouchedSymbol, function (ticker) {
                 const {
@@ -197,7 +197,7 @@ module.exports = class BinanceFuturesExchange {
 
     addMarkPriceEvent(symbol) {
         try {
-            const exchangeName = this.exchange.name
+            const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
             this.exchange.nodeBinanceApi.futuresMarkPriceStream(retouchedSymbol, function (stream) {
                 const {markPrice} = stream;
@@ -238,7 +238,7 @@ module.exports = class BinanceFuturesExchange {
 
     addOrderBookEvent(symbol) {
         try {
-            const exchangeName = this.exchange.name
+            const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
             const query = retouchedSymbol.toLowerCase() + '@depth@500ms';
             this.exchange.nodeBinanceApi.futuresSubscribe(query, function (depth) {
