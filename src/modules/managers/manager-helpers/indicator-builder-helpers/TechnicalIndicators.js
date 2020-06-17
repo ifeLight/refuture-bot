@@ -1,5 +1,4 @@
-const logger = require('../../../../utils/logger');
-const eventEmitter = require('../../../../events/EventEmitter')
+const technicalIndicators = require('technicalindicators');
 
 module.exports = class Candles {
     constructor(exchange, symbol) {
@@ -12,14 +11,16 @@ module.exports = class Candles {
     }
     
     init(options) {
-        this.period = options.period
+        this.name = options.name;
     }
 
     async build() {
         try {
-            
+            // TODO This Library is still complex to use
+            throw new Error('Still working on this Indicator Builder')
         } catch (error) {
-            this.logger(`${this.getName().toUpperCase()} Builder: indicator builder Failed [${this.symbol}] (${error.message})`)
+            this.logger(`Technical Indicator Builder: indicator builder Failed [${this.symbol}] (${error.message})`);
+            return undefined;
         }
     }
 }

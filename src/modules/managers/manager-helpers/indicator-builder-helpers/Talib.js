@@ -1,8 +1,7 @@
-const logger = require('../../../../utils/logger');
-const eventEmitter = require('../../../../events/EventEmitter')
+const talib = require('talib')
 
 module.exports = class Candles {
-    constructor(exchange, symbol) {
+    constructor({candlesRepository, exchange, symbol, logger, eventEmitter}) {
         this.exchange= exchange;
         this.symbol = symbol;
     }
@@ -12,14 +11,23 @@ module.exports = class Candles {
     }
     
     init(options) {
-        this.period = options.period
+        this.period = options.period;
+    }
+
+    getFunction(name) {
+        const obj = talib.functions.find((func) => {
+            return func.name === name;
+        })
     }
 
     async build() {
         try {
+            // TODO Will be fixed later
+            throw new Error('Still on progress')
             
         } catch (error) {
-            this.logger(`${this.getName().toUpperCase()} Builder: indicator builder Failed [${this.symbol}] (${error.message})`)
+            this.logger(`Talib Builder: indicator builder Failed [${this.symbol}] (${error.message})`);
+            return undefined;
         }
     }
 }
