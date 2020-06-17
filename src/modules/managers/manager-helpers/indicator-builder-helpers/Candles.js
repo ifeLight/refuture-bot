@@ -1,11 +1,10 @@
-const logger = require('../../../../utils/logger');
-const eventEmitter = require('../../../../events/EventEmitter');
-
 module.exports = class Candles {
-    constructor(candlesRepositiory, exchange, symbol) {
-        this.candlesRepositiory = candlesRepositiory;
+    constructor({candlesRepository, exchange, symbol, logger, eventEmitter}) {
+        this.candlesRepository = candlesRepository;
         this.exchange = exchange;
         this.symbol = symbol;
+        this.logger = logger;
+        this.eventEmitter = eventEmitter;
     }
 
     getName() {
@@ -20,12 +19,11 @@ module.exports = class Candles {
 
     async build() {
         try {
-            this.candlesRepositiory.init(this.exchange, this.symbol, this.period);
-            const result = await this.candlesRepositiory.fetchCandlesByNumberFromNow(parseInt(this.candlesLength))
-            console.info(result.length);
+            this.candlesRepository.init(this.exchange, this.symbol, this.period);
+            const result = await this.candlesRepository.fetchCandlesByNumberFromNow(parseInt(this.candlesLength));
             return result;
         } catch (error) {
-            logger.info(`${this.getName()} Builder: indicator builder Failed [${this.symbol}] (${error.message})`);
+            this.logger.info(`${this.getName()} Builder: indicator builder Failed [${this.symbol}] (${error.message})`);
             return undefined;
         }
     }

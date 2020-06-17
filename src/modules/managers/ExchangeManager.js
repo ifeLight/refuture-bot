@@ -1,5 +1,6 @@
 const path = require('path');
 const requireAll = require('require-all');
+const config =  require('config');
 
 class ExchangeManager {
     constructor(eventEmitter, logger) {
@@ -9,6 +10,7 @@ class ExchangeManager {
         Object.keys(exchangeObject).forEach((key) => {
             try {
                 let theExchange = new exchangeObject[key](eventEmitter, logger);
+                theExchange.init(config)
                 let theExchangeName = theExchange.name;
                 exchanges[theExchangeName] = theExchange;
             } catch (error) {
@@ -26,3 +28,5 @@ class ExchangeManager {
         return this.exchanges; // It returns an Object
     }
 }
+
+module.exports = ExchangeManager;

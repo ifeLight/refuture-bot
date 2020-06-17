@@ -1,14 +1,16 @@
 const path = require('path');
 const requireAll = require('require-all');
-const logger = require('../../../utils/logger');
 
 module.exports =  class IndicatorBuilder {
-    constructor(candlesRepository, exchange, symbol) {
+    constructor({candlesRepository, exchange, symbol, logger, eventEmitter, exchangeManager}) {
         this.exchange = exchange;
         this.candlesRepository = candlesRepository;
         // this.tradePair = tradePair;
         this.symbol = symbol;
         this.indicatorsList = [];
+        this.logger = logger;
+        this.eventEmitter = eventEmitter;
+        this.exchangeManager = exchangeManager;
     }
 
     add(name, indicatorType, options) {
@@ -30,11 +32,12 @@ module.exports =  class IndicatorBuilder {
         const self= this;
         Object.keys(helpersObj).forEach((key) => {
             try {
-                let theHelper = new helpersObj[key](self.candlesRepository, self.exchange, self.symbol);
+                const {symbol, candlesRepository, exchange, logger, eventEmitter, exchangeManager} = this;
+                let theHelper = new helpersObj[key]({symbol, candlesRepository, exchange, logger, eventEmitter, exchangeManager});
                 let theHelperName = theHelper.getName();
                 helpers[theHelperName] = theHelper;
             } catch (error) {
-                logger.error(`Indicator Builder: Error loading indicators for building (${error.message})`);
+                this.logger.error(`Indicator Builder: Error loading indicators for building (${error.message})`);
             }
         })
         this.helpers = helpers;
@@ -59,11 +62,9 @@ module.exports =  class IndicatorBuilder {
                 theIndicators[indicatorName] = result
 
             }
-
             return theIndicators;
-
         } catch (error) {
-            logger.error(`Indicator Builder: Error buildig Indicators [${this.symbol}] (${error.message})`);
+            this.logger.error(`Indicator Builder: Error buildig Indicators [${this.symbol}] (${error.message})`);
             return undefined;
         }
     }

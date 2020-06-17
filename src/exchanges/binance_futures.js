@@ -76,7 +76,7 @@ module.exports = class BinanceFuturesExchange {
             const timeDifference = periodToTimeDiff(period);
             const exchangeName = this.name;
             while (sinceTimestamp < (toTimestamp - timeDifference) ) {
-                const fetchedCandles = await this.exchange.fetchOHLCV(symbol, period, since);
+                const fetchedCandles = await this.exchange.fetchOHLCV(symbol, period, sinceTimestamp);
                 ohlcv = [...ohlcv, ...fetchedCandles];
                 sinceTimestamp = fetchedCandles[fetchedCandles.length - 1][0]; 
             }
