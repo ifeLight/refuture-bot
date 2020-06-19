@@ -89,6 +89,6 @@ module.exports =  class IndicatorBuilder {
     }
 
     isBuilt() {
-        return builtIndicators ? true: false;
+        return this.builtIndicators ? true: false;
     }
 }
