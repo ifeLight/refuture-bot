@@ -5,6 +5,10 @@ module.exports = class {
         return 'ifeSma';
     }
 
+    async init(storage, period) {
+        // Meant for prebuilding Indicator Strategies
+    }
+
     buildIndicators(indicatorBuilder, options) {
         indicatorBuilder.add('candles_15', 'candles', {
             period: options.period

@@ -40,10 +40,10 @@ class IndicatorManager {
             const theExchange = this.exchangeManager.find(exchangeName);
             if (!theExchange) throw new Error(`Exchange not found`);
 
-            const indicator
+            
             
         } catch (error) {
-            this.logger.warn(`Indicator Manger: Error running [${indicatorName}:${symbol}:${exchangeName} (error.message)]`);
+            this.logger.warn(`Indicator Manager: Error running [${indicatorName}:${symbol}:${exchangeName} (error.message)]`);
         }
     }
 }
