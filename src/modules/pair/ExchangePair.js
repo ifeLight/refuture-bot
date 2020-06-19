@@ -7,8 +7,6 @@ module.exports = class ExchangePair {
     init(exchange, symbol) {
         this.exchange = exchange;
         this.symbol = symbol;
-        // Add Ticker listener
-        this.exchange.addTickerEvent(this.symbol);
         this.exchangeName = this.exchange.name;
     }
 
@@ -16,23 +14,26 @@ module.exports = class ExchangePair {
         try {
             const { symbol, exchangeName } = this;
             self = this;
+            // Add Ticker listener
+            this.exchange.addTickerEvent(this.symbol);
             this.info = await this.exchange.fetchPairInfo(symbol);
             this.ticker = await this.exchange.fetchTicker(symbol);
-            this.orderBook = await this.exchange.fetchOrderBook(symbol)
+            this.orderBook = await this.exchange.fetchOrderBook(symbol);
+            this.markPrice = undefined;
             if (this.exchange.isFutures) {
                 this.markPrice = await this.exchange.fetchMarkPrice(symbol);
-                this.eventEmitter.on(`markprice_${exchangeName}_${symbol}`, function(markPrice) {
-                    self.markPrice = markPrice;
+                this.eventEmitter.on(`markprice_${exchangeName}_${symbol}`, (markPrice)  => {
+                    this.markPrice = markPrice;
                 })
             }
             
             this.lastPrice = this.ticker.lastPrice;
-            this.eventEmitter.on(`ticker_${exchangeName}_${symbol}`, function(ticker) {
-                self.ticker = ticker;
-                self.lastPrice = ticker.lastPrice;
+            this.eventEmitter.on(`ticker_${exchangeName}_${symbol}`, (ticker) => {
+                this.ticker = ticker;
+                this.lastPrice = ticker.lastPrice;
             })
-            this.eventEmitter.on(`orderbook_${exchangeName}_${symbol}`, function(orderBook) {
-                self.orderBook = orderBook;
+            this.eventEmitter.on(`orderbook_${exchangeName}_${symbol}`, (orderBook) => {
+                this.orderBook = orderBook;
             })
         } catch (error) {
             this.logger.error(`Pair(${this.symbol}): Unable to setup the Pair`)
