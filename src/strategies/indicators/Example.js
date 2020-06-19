@@ -19,7 +19,7 @@ module.exports = class {
         
     }
     
-    getDefaultOptions() {
+    getOptions() {
         return {
             period: '15m'
         }
