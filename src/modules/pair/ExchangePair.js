@@ -35,6 +35,8 @@ module.exports = class ExchangePair {
             this.eventEmitter.on(`orderbook_${exchangeName}_${symbol}`, (orderBook) => {
                 this.orderBook = orderBook;
             })
+
+            this.setupDone = true;
         } catch (error) {
             this.logger.error(`Pair(${this.symbol}): Unable to setup the Pair`)
         }
