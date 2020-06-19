@@ -1,17 +1,16 @@
-const OptionsStorage = require('../../../../providers/Options');
+const OptionsStorage = require('../providers/Options');
 
 module.exports = class Storage {
-    constructor(exchangeName, symbol, logger) {
+    constructor(exchangeName, symbol) {
         this.exchangeName = exchangeName;
         this.symbol = symbol;
-        this.logger = logger;
     }
 
     async get(key) {
         try {
             return OptionsStorage.get(personalizeKey(key));
         } catch (error) {
-            this.logger.error(`Indicator Period Storage:[${this.symbol}:${this.exchangeName}:${key}]: Unable to fetch data(${error.message})`);
+            throw new Error(`Storage:[${this.symbol}:${this.exchangeName}:${key}]: Unable to fetch storage data(${error.message})`)
             return undefined;
         }
     }
@@ -20,8 +19,7 @@ module.exports = class Storage {
         try {
             await OptionsStorage.set(personalizeKey(key), value)
         } catch (error) {
-            this.logger.error(`Indicator Period Storage:[${this.symbol}:${this.exchangeName}:${key}]: Unable to Store data(${error.message})`)
-
+            throw new Error(`Storage:[${this.symbol}:${this.exchangeName}:${key}]: Unable to fetch storage data(${error.message})`)
         }
     }
 
