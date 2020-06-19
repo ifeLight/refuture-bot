@@ -58,13 +58,32 @@ module.exports =  class IndicatorBuilder {
                 }
                 
                 theHelper.init(options);
-                const result = await theHelper.run(build);
+                let result;
+                try {
+                     result = await theHelper.run(build);
+                } catch (error) {
+                    throw new Error(`Error building ${indicatorName}`)
+                }
                 theIndicators[indicatorName] = result
 
             }
+            this.builtIndicators = theIndicators
             return theIndicators;
         } catch (error) {
             this.logger.error(`Indicator Builder: Error buildig Indicators [${this.symbol}] (${error.message})`);
+            return undefined;
+        }
+    }
+
+    get(name) {
+        // Used to fetched built indicators
+        try {
+            if(!builtIndicators) throw new Error('Indicators not yet built')
+            const builtIndicator = this.builtIndicators[name];
+            if (!builtIndicator) throw new Error(`Indicator not found`);
+            return builtIndicator;
+        } catch (error) {
+            this.logger.warn(`Indicator Builder: Error Fetching Built Indicators [${name}:${this.symbol}] (${error.message})`);
             return undefined;
         }
     }
