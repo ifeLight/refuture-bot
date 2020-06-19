@@ -5,7 +5,7 @@ module.exports = class IndicatorPeriod {
     constructor (logger) {
         this.logger = logger
     }
-    async init (exchangePair, indicatorBuilder) {
+    async setup (exchangePair, indicatorBuilder) {
         this.exchangePair = exchangePair;
         this.indicatorBuilder = indicatorBuilder;
         const { exchangeName, symbol } = exchangePair
