@@ -1,17 +1,19 @@
 module.exports = class ExchangePair {
-    constructor (eventEmitter, logger) {
+    constructor (eventEmitter, logger, exchangeManager) {
         this.eventEmitter = eventEmitter;
         this.logger = logger;
+        this.exchangeManager = exchangeManager;
     }
 
-    init(exchange, symbol) {
-        this.exchange = exchange;
+    init(exchangeName, symbol) {
+        
         this.symbol = symbol;
-        this.exchangeName = this.exchange.name;
+        this.exchangeName = exchangeName;
     }
 
     async setup() {
         try {
+            this.exchange = this.exchangeManager.find(this.exchangeName);
             const { symbol, exchangeName } = this;
             self = this;
             // Add Ticker listener
