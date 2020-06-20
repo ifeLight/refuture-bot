@@ -74,7 +74,9 @@ class IndicatorManager {
             return indicatorResult;
             
         } catch (error) {
-            this.logger.warn(`Indicator Manager: Error running [${indicatorName}:${symbol}:${exchangeName} (error.message)]`);
+            this.logger.warn(`Indicator Manager: Error running [${indicatorName}:${symbol}:${exchangeName}] (${error.message})`);
         }
     }
 }
+
+module.exports = IndicatorManager;
