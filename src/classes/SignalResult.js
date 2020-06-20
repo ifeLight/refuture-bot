@@ -34,6 +34,16 @@ module.exports = class SignalResult {
     return this._signal;
   }
 
+  setOrderAdvice(signal, price) {
+    if (!['long', 'short', 'close'].includes(signal)) {
+      throw `Invalid signal:${signal}`;
+    }
+    this._orderAdvice = {
+      signal,
+      price
+    }
+  }
+
   static createSignal(signal, debug = {}) {
     const result = new SignalResult();
 
