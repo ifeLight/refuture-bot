@@ -14,6 +14,7 @@ module.exports = class ExchangePair {
     async setup() {
         try {
             this.exchange = this.exchangeManager.find(this.exchangeName);
+            if (!this.exchange)  throw new Error(`Unable to find exchange ${this.exchangeName}`);
             const { symbol, exchangeName } = this;
             self = this;
             // Add Ticker listener
