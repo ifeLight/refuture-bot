@@ -83,13 +83,76 @@ module.exports = class OrderExecutor {
 
     async runAdvice() {}
 
-    async runShort(exchangePair) {}
+    async runShort(exchangePair, options) {
+        const orderType = options.trade["order_type"] // 'limit' or 'market
+        const { base, quote} = exchangePair.info;
+        const baseBalance = await exchangePair.getBalance(base);
+
+        const { min: minimumAmountLimit, max: maximumAmountLimit } = exchangePair.info.limits.amount;
+        const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision
+
+        if (parseFloat(baseBalance.total)  < minimumAmountLimit) return;
+
+        const openOrders = await exchangePair.getActiveOrders();
+        if (!openOrders) throw new Error('Error fetching open orders');
+        const openSellOrders = openOrders.filter((order) => order.side == 'sell');
+
+        const sellingAmount = parseFloat(parseFloat(baseBalance.total).toFixed(amountPrecision))
+
+        async function cancelAllSellOrders() {
+            for (const order of openOrders) {
+                if (order.side == 'buy') {
+                    await exchangePair.cancelActiveOrders(order.id)
+                }
+            }
+        }
+
+        async function createTheSellOrder() {
+            const baseBalance = await exchangePair.getBalance(base);
+            const sellingAmount = parseFloat(parseFloat(baseBalance.total).toFixed(amountPrecision))
+            if (orderType == 'market') {
+                const sellDetails = await exchangePair.createMarketOrder('sell', sellingAmount);
+            }
+
+            if (orderType == 'limit') {
+                const ticker = exchangePair.getTicker()
+                const { bidPrice, askPrice, lastPrice} = ticker;
+                const sellingPrice = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : askPrice).toFixed(pricePrecision))
+                const sellDetails = await exchangePair.createLimitOrder('sell', sellingAmount, sellingPrice);
+                
+            }
+            // TODO - A Notifier
+            return;
+        }
+
+        if (openSellOrders.length > 1) {
+            await cancelAllSellOrders();
+            await createTheSellOrder();
+            return;
+        }
+
+        if (openSellOrders.length < 1) {
+            await createTheSellOrder();
+            return;
+        }
+
+        if (openSellOrders.length > 1) {
+            const order = openOrders.find((order) => order.side == 'sell');
+            const orderPrice = parseFloat(order.price)
+            if (orderPrice > askPrice ) {
+                await cancelAllSellOrders();
+                await createTheSellOrder();
+                return;
+            }
+        }
+
+        
+    }
 
     async runLong(exchangePair, requiredAmount, options) {
         const orderType = options.trade["order_type"] // 'limit' or 'market
         const { base, quote} = exchangePair.info;
         const baseBalance = await exchangePair.getBalance(base);
-        const quoteBalance = await exchangePair.getBalance(quote);
 
         // const {total, free, locked } = baseBalance;
         if (!baseBalance) throw new Error('Error fetching base balance');
@@ -113,7 +176,7 @@ module.exports = class OrderExecutor {
 
         const buyingPrice = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : bidPrice).toFixed(pricePrecision))
 
-        async function cancelAllbuyOrders() {
+        async function cancelAllBuyOrders() {
             for (const order of openOrders) {
                 if (order.side == 'buy') {
                     await exchangePair.cancelActiveOrders(order.id)
@@ -121,11 +184,16 @@ module.exports = class OrderExecutor {
             }
         }
         async function createTheBuyOrder() {
+            const quoteBalance = await exchangePair.getBalance(quote);
+            if ((remainingBal * lastPrice) > quoteBalance.free) return;
             if (orderType == 'market') {
                 const buyDetails = await exchangePair.createMarketOrder('buy', buyingAmount);
             }
 
             if (orderType == 'limit') {
+                const ticker = exchangePair.getTicker()
+                const { bidPrice, askPrice, lastPrice} = ticker;
+                const buyingPrice = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : bidPrice).toFixed(pricePrecision))
                 const buyDetails = await exchangePair.createLimitOrder('buy', buyingAmount, buyingPrice);
                 
             }
@@ -135,7 +203,7 @@ module.exports = class OrderExecutor {
 
         const moreThanTwoOpenBuyOrders = openBuyOrders.length > 1;
         if (moreThanTwoOpenBuyOrders) {
-            await cancelAllbuyOrders();
+            await cancelAllBuyOrders();
             await createTheBuyOrder();
             return;
         }
@@ -151,7 +219,7 @@ module.exports = class OrderExecutor {
             const order = openOrders.find((order) => order.side == 'buy');
             const orderPrice = parseFloat(order.price)
             if (orderPrice < bidPrice ) {
-                await cancelAllbuyOrders();
+                await cancelAllBuyOrders();
                 await createTheBuyOrder();
                 return;
             }
