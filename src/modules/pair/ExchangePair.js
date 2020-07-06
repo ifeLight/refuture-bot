@@ -69,6 +69,7 @@ module.exports = class ExchangePair {
             return await this.exchange.fetchBalance(asset);
         } catch (error) {
             this.logger(`Pair(${this.symbol}): Unable to fetch balance for ${this.asset}`);
+            return undefined;
         }
     }
 
@@ -78,15 +79,30 @@ module.exports = class ExchangePair {
             return orders;
         } catch (error) {
             this.logger(`Pair(${this.symbol}): Unable to Get Orders (${error.message})`);
+            return undefined;
         }
     }
 
     async getPositions() {
-        try {
-            const positions = await this.exchange.fetchPositions(this.symbol);
-            return positions;
-        } catch (error) {
-            this.logger(`Pair(${this.symbol}): Unable to Get Positions (${error.message})`);
+        if (this.exchange.isFutures) {
+            try {
+                const positions = await this.exchange.fetchPositions(this.symbol);
+                return positions;
+            } catch (error) {
+                this.logger(`Pair(${this.symbol}): Unable to Get Positions (${error.message})`);
+                return undefined;
+            }
+        } else {
+            return undefined;
         }
     }
+
+    async createMarketOrder(side, amount) {
+        return this.exchange.createMarketOrder(this.symbol, side, amount);
+    }
+
+    async createLimitOrder(side, amount, price) {
+        return this.exchange.createMarketOrder(this.symbol, side, amount, price);
+    }
+    
 }
