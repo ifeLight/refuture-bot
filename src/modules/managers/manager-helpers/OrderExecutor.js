@@ -106,31 +106,56 @@ module.exports = class OrderExecutor {
 
         const openOrders = await exchangePair.getActiveOrders();
         if (!openOrders) throw new Error('Error fetching open orders');
+        const openBuyOrders = openOrders.filter((order) => order.side == 'buy')
 
         const ticker = exchangePair.getTicker()
         const { bidPrice, askPrice, lastPrice} = ticker;
 
         const buyingPrice = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : bidPrice).toFixed(pricePrecision))
 
-        const moreThanTwoOpenBuyOrders = (openOrders.filter((order) => order.side == 'buy')).length > 1;
-
-        if (moreThanTwoOpenBuyOrders ) {
+        async function cancelAllbuyOrders() {
             for (const order of openOrders) {
                 if (order.side == 'buy') {
                     await exchangePair.cancelActiveOrders(order.id)
                 }
             }
+        }
+        async function createTheBuyOrder() {
             if (orderType == 'market') {
                 const buyDetails = await exchangePair.createMarketOrder('buy', buyingAmount);
             }
 
             if (orderType == 'limit') {
                 const buyDetails = await exchangePair.createLimitOrder('buy', buyingAmount, buyingPrice);
+                
             }
-
+            // TODO - A Notifier
+            return;
         }
 
+        const moreThanTwoOpenBuyOrders = openBuyOrders.length > 1;
+        if (moreThanTwoOpenBuyOrders) {
+            await cancelAllbuyOrders();
+            await createTheBuyOrder();
+            return;
+        }
 
+        const noBuyOrder = openBuyOrders.length < 1;
+        if (noBuyOrder) {
+            await createTheBuyOrder();
+            return;
+        }
+
+        const oneBuyOrder = openBuyOrders.length == 1;
+        if (oneBuyOrder) {
+            const order = openOrders.find((order) => order.side == 'buy');
+            const orderPrice = parseFloat(order.price)
+            if (orderPrice < bidPrice ) {
+                await cancelAllbuyOrders();
+                await createTheBuyOrder();
+                return;
+            }
+        }
 
     }
 
