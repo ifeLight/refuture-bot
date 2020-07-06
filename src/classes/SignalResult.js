@@ -18,6 +18,10 @@ module.exports = class SignalResult {
     this._tag = tag;
   }
 
+  getTag() {
+    return this._tag;
+  }
+
   setSignal(signal) {
     if (!['long', 'short', 'close'].includes(signal)) {
       throw `Invalid signal:${signal}`;
@@ -50,6 +54,10 @@ module.exports = class SignalResult {
       signal,
       price
     }
+  }
+
+  getOrderAdvice() {
+    return this._orderAdvice;
   }
 
   static createSignal(signal, debug = {}) {
