@@ -31,7 +31,7 @@ module.exports = class OrderExecutor {
             }
 
             //Return when no advice and signal
-            if (!signalResult.getSignal() || !signalResult.getOrderAdvice()) return;
+            if (!signalResult.getSignal() && !signalResult.getOrderAdvice()) return;
             
             // If it is Futures, run Futures Order Execution
             const isFutures = exchangePair.exchange.isFutures;
@@ -60,25 +60,100 @@ module.exports = class OrderExecutor {
     }
 
     async executeFutures(signalResult, exchangePair, options) {
-        const positions = await exchangePair.getPositions();
+        try {
+            let positions = await exchangePair.getPositions();
+            if (positions === undefined) throw new Error('Cannot fetch positions for execution');
 
+            let position;
+
+            if (positions.length > 1) {
+                const mostProfitablePosition = await this.resetPositionsToOne(positions, exchangePair);
+                position = mostProfitablePosition;
+            } else if (positions.length == 1) {
+                position = position[0]
+            }
+
+            if (signalResult.getSignal()) {
+                signal = signalResult.getSignal()
+                if (signal == 'long') {
+                    await this.runFuturesLong(position, exchangePair, amount, options);
+                }
+
+                if (signal == 'short') {
+                    await this.runFuturesShort(position, exchangePair, amount, options);
+                }
+
+                if (signal == 'close' ) {
+                    await this.futuresClose(position, exchangePair, amount, options);
+                }
+            } else if (signalResult.getOrderAdvice()) {
+                await this.runFuturesAdvice();
+            }
+            
+        } catch (error) {
+            this.logger(`Execute Futures Order: Failed to execute Order [${exchangePair.symbol} (${error.message})]`)
+        }
     }
 
-    async resetPositionsToOne (positions) {
-        if (positions.length < 2) return;
+    async resetPositionsToOne (positions, exchangePair) {
+        const mostProfitablePosition = positions.reduce((prev, next) => {
+            if (prev.unRealizedProfit >= next.unRealizedProfit) {
+                return prev;
+            }
+            return next;
+        })
 
+        for (const position of positions) {
+            const check1 = mostProfitablePosition.unRealizedProfit == position.unRealizedProfit;
+            const check2 = mostProfitablePosition.liquidationPrice == position.liquidationPrice;
+            if (!check1 || !check2) {
+                await this.futuresForceClose(position, exchangePair);
+            }
+        }
+        return mostProfitablePosition;
     }
 
-    async isLong() {
-
+    async futuresForceClose(position, exchangePair) {
+        const { positionAmount, positionSide } = position;
+        const amount = Math.abs(positionAmount);
+        if (positionSide == 'LONG') {
+            return (await exchangePair.createMarketOrder('sell', amount));
+        }
+        return (await exchangePair.createMarketOrder('buy', amount));
     }
 
-    async isShort() {
-
+    async futuresClose(position, exchangePair, options) {
+        if (!position) return;
+        const { positionAmount, positionSide } = position;
+        const amount = Math.abs(positionAmount);
+        if (positionSide == 'LONG') {
+            await this.futuresCreateOrder(exchangePair, amount, 'sell', options);
+            return;
+        }
+        await this.futuresCreateOrder(exchangePair, amount, 'buy', options);
+        return;
     }
 
-    async isClose() {
+    async futuresCreateOrder(exchangePair, amount, side, options) { //side: 'sell' or 'buy'
+        const orderType = options.trade["order_type"];
+        if (orderType == 'market') {
+            const sellDetails = await exchangePair.createMarketOrder(side, amount);
+        }
 
+        if (orderType == 'limit') {
+            const ticker = exchangePair.getTicker()
+            const { bidPrice, askPrice, lastPrice} = ticker;
+            const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision
+            let price;
+            if (side == 'buy') {
+                price = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : bidPrice).toFixed(pricePrecision))
+            } else {
+                price = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : askPrice).toFixed(pricePrecision))
+            }
+            const orderDetails = await exchangePair.createLimitOrder(side, amount, price);
+        }
+        // TODO - A Notifier
+        return;
     }
 
     async runAdvice() {}
@@ -119,7 +194,6 @@ module.exports = class OrderExecutor {
                 const { bidPrice, askPrice, lastPrice} = ticker;
                 const sellingPrice = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : askPrice).toFixed(pricePrecision))
                 const sellDetails = await exchangePair.createLimitOrder('sell', sellingAmount, sellingPrice);
-                
             }
             // TODO - A Notifier
             return;
@@ -144,9 +218,7 @@ module.exports = class OrderExecutor {
                 await createTheSellOrder();
                 return;
             }
-        }
-
-        
+        } 
     }
 
     async runLong(exchangePair, requiredAmount, options) {
@@ -173,8 +245,6 @@ module.exports = class OrderExecutor {
 
         const ticker = exchangePair.getTicker()
         const { bidPrice, askPrice, lastPrice} = ticker;
-
-        const buyingPrice = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : bidPrice).toFixed(pricePrecision))
 
         async function cancelAllBuyOrders() {
             for (const order of openOrders) {
