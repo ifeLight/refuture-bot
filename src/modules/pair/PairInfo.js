@@ -20,12 +20,10 @@ module.exports = class PairInfo {
          */
         this.limits = limits;
         this.active = active;
-        this.fees = fees;
         /**
          * Fees is in this form
          * fees: {  percentage: true, taker: 0.001, maker: 0.001 }
          */
-
-
-    }
+        this.fees = fees;
+   }
 }
