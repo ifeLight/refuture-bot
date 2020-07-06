@@ -1,5 +1,9 @@
 const _ = require('lodash');
 
+/**
+ * Part of the code, gotten from crypto trading bot- Github
+ */
+
 module.exports = class SignalResult {
   constructor() {
     this._debug = {};
@@ -8,6 +12,10 @@ module.exports = class SignalResult {
 
   mergeDebug(debug) {
     this._debug = _.merge(this._debug, debug);
+  }
+
+  setTag(tag) {
+    this._tag = tag;
   }
 
   setSignal(signal) {
