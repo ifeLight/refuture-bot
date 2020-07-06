@@ -20,6 +20,10 @@ class SafetyPeriod extends IndicatorPeriod {
     getPairInfo() {
         return this.exchangePair.info;
     }
+
+    isFutures() {
+        return this.exchangePair.exchange.isFutures ? true : false;
+    }
 }
 
 module.exports = SafetyPeriod;
