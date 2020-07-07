@@ -60,6 +60,14 @@ module.exports = class ExchangePair {
     getMarkPrice() {
         return this.markPrice;
     }
+
+    async getLeverage() {
+        if (this.exchange.isFutures) {
+            const leverage = await this.exchange.getLeverage(this.symbol);
+            return leverage
+        }
+        return undefined;
+    }
     
     /**
      * Private Trade Functions
