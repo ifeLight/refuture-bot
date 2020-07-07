@@ -293,9 +293,20 @@ module.exports = class BinanceFuturesExchange {
         try {
             const retouchedSymbol = this.retouchSymbol(symbol);
             const leverageNumber = Number(leverage);
-            await this.exchange.nodeBinanceApi.futuresLeverage( retouchedSymbol, leverageNumber )
+            await this.exchange.nodeBinanceApi.futuresLeverage( retouchedSymbol, leverageNumber );
+            this._leverage = leverage;
         } catch (error) {
-            this.logger.error(`Binance Futures: Unable to change leverage [${symbol}:${leverage}] (${error.message})`)
+            this.logger.error(`Binance Futures: Unable to change leverage [${symbol}:${leverage}] (${error.message})`);
+        }
+    }
+
+    async getLeverage(symbol) {
+        try {
+            if (this._leverage) return this._leverage;
+            throw new Error('Leverage not set');
+        } catch (error) {
+            this.logger.error(`Binance Futures: Unable to fetch leverage [${symbol}] (${error.message})`);
+            return undefined;
         }
     }
 
