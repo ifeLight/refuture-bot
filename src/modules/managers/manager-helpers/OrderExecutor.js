@@ -1,6 +1,8 @@
 module.exports = class OrderExecutor {
     constructor({logger, eventEmitter, notifier}) {
-
+        this.logger = logger;
+        this.eventEmitter = event;
+        this.notifier = notifier;
     }
 
     async execute(signalResult, exchangePair, options) {
