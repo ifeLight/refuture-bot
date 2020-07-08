@@ -1,7 +1,7 @@
 module.exports = class OrderExecutor {
     constructor({logger, eventEmitter, notifier}) {
         this.logger = logger;
-        this.eventEmitter = event;
+        this.eventEmitter = eventEmitter;
         this.notifier = notifier;
     }
 
@@ -29,7 +29,6 @@ module.exports = class OrderExecutor {
             const exchangeAmountFigure = parseFloat((amount - (parseFloat(takerFee) * amount)).toFixed(amountPrecision));
             if (exchangeAmountFigure < minimumAmountLimit || exchangeAmountFigure > maximumAmountLimit) {
                 throw new Error('Insufficient or bad amount');
-                return;
             }
 
             //Return when no advice and signal
