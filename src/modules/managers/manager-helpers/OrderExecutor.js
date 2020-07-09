@@ -13,8 +13,8 @@ module.exports = class OrderExecutor {
     
             if (tradeOptions.amount) {
                 amount = parseFloat(tradeOptions.amount)
-            } else if (tradeOptions['capital_amount']) {
-                const capitalAmount = parseFloat(tradeOptions['capital_amount']);
+            } else if (tradeOptions['currency_amount']) {
+                const capitalAmount = parseFloat(tradeOptions['currency_amount']);
                 amount = capitalAmount / parseFloat(lastPrice)
             } else {
                 return;
@@ -78,8 +78,8 @@ module.exports = class OrderExecutor {
             let amount;
             if (tradeOptions.amount) {
                 amount = parseFloat(tradeOptions.amount) * leverage;
-            } else if (tradeOptions['capital_amount']) {
-                const capitalAmount = parseFloat(tradeOptions['capital_amount']);
+            } else if (tradeOptions['currency_amount']) {
+                const capitalAmount = parseFloat(tradeOptions['currency_amount']);
                 amount = (capitalAmount / parseFloat(lastPrice)) * leverage;
             } else {
                 return;
