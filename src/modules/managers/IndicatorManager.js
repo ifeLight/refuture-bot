@@ -70,11 +70,13 @@ class IndicatorManager {
             await indicatorPeriod.setup(exchangePair, indicatorBuilder)
             
             const indicatorResult = await theIndicator.period(indicatorPeriod, indicatorOptions);
+            indicatorResult.setTag(indicatorName);
             
             return indicatorResult;
             
         } catch (error) {
             this.logger.warn(`Indicator Manager: Error running [${indicatorName}:${symbol}:${exchangeName}] (${error.message})`);
+            return undefined;
         }
     }
 }
