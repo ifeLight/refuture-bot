@@ -10,12 +10,15 @@ const ExchangePair = require('../pair/ExchangePair')
 
 const CandlesRepository = require('../repository/CandlesRepository')
 
+const SignalResult = require('../../classes/SignalResult');
+
 class StrategyManager {
     constructor ({eventEmitter, logger, notifier}) {
         this.eventEmitter = eventEmitter;
         this.logger = logger;
         this.notifier = notifier;
         this._list = [];
+        this._exchangePairs = [];
     }
 
     async init() {
@@ -86,19 +89,98 @@ class StrategyManager {
         return this._list;
     }
 
+    getExchangePair (exchangeName, symbol) {
+        return this._exchangePairs[`${exchangeName}:${symbol}`];
+    }
+
     async setExchangePair(strat) {
         const { exchange: exchangeName, symbol} = strat;
         const { eventEmitter, logger, exchangeManager } = this;
+        const isExist = this.getExchangePair(exchangeName, symbol)
+        if (isExist) return isExist;
         const exchangePair = new ExchangePair(eventEmitter, logger, exchangeManager);
         exchangePair.init(exchangeName, symbol)
         await exchangePair.setup();
+        this._exchangePairs[`${exchangeName}:${symbol}`];
         return exchangePair;
     }
 
     async runStrategies() {}
 
-    async runStrategy(exchangePair){
-        
+    async runInidicatorsStrategyTick(strat){
+        const { symbol, exchange: exchangeName, trade, strategies} = strat;
+        const { policies, insurances, safeties, indicators } = strategies;
+        let exchangePair;
+        const indicatorsResults = [];
+        if (this.getExchangePair(exchangeName, symbol)) {
+            exchangePair = this.getExchangePair(exchangeName, symbol)
+        } else {
+            const setExchangePair = await this.setExchangePair(strat);
+            exchangePair = setExchangePair;
+        }
+        if (indicators && Array.isArray(indicators) && indicators.length > 0) {
+            for (indicator of indicators) {
+                let indicatorResult;
+                if (typeof indicator === 'string') {
+                    indicatorsResults.push(await this.indicatorManager.run(indicator, exchangePair, null));
+                } else if (typeof indicator === 'object') {
+                    const { name, options} = indicator;
+                    indicatorsResults.push(await this.indicatorManager.run(name, exchangePair, options));
+                }
+            }
+        }
+        return indicatorsResults;
     }
+
+    async runSafetiesStrategyUnit(strat){
+        const { symbol, exchange: exchangeName, strategies} = strat;
+        const { safeties } = strategies;
+        let exchangePair;
+        if (this.getExchangePair(exchangeName, symbol)) {
+            exchangePair = this.getExchangePair(exchangeName, symbol)
+        } else {
+            const setExchangePair = await this.setExchangePair(strat);
+            exchangePair = setExchangePair;
+        }
+        if (safeties && Array.isArray(safeties) && safeties.length > 0) {
+            for (safety of safeties) {
+                let safetyResult;
+                if (typeof safety === 'string') {
+                    safetyResult = await this.safetyManager.run(safety, exchangePair, null);
+                } else if (typeof safety === 'object') {
+                    const { name, options} = safety;
+                    safetyResult = await this.safetyManager.run(name, exchangePair, options);
+                }
+                await this.orderExecutor.execute(safetyResult, exchangePair, strat);
+            }
+        }
+    }
+
+    indicatorSignalsResolver(signalResults) {
+        if (!signalResults ) {
+            return SignalResult.createEmptySignal();
+        }
+        const longSignals = signalResults.filter(signalResult => signalResult === 'long');
+        const shortSignals = signalResults.filter(signalResult => signalResult === 'short');
+        const closeSignals = signalResults.filter(signalResult => signalResult === 'close');
+        const isAllsignalEqual = longSignals.length === shortSignals.length  && longSignals.length === closeSignals.length;
+        const isOppositeSignalEqual = longSignals.length === shortSignals.length;
+
+        if (isAllsignalEqual || isOppositeSignalEqual) {
+            return SignalResult.createEmptySignal();
+        }
+        if (longSignals.length > shortSignals.length && longSignals.length > closeSignals.length) {
+            return longSignals[0];
+        }
+
+        if (shortSignals.length > longSignals.length && shortSignals.length > closeSignals.length) {
+            return shortSignals[0];
+        }
+
+        if (closeSignals.length > longSignals.length && closeSignals.length > shortSignals.length) {
+            return closeSignals[0];
+        }
+        return SignalResult.createEmptySignal();
+    } 
 
 }
