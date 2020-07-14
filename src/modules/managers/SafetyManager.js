@@ -35,10 +35,10 @@ class SafetyManager {
         return this.safeties; // It returns an Object
     }
 
-    async run(SafetyName, exchangePair, options) {
+    async run(safetyName, exchangePair, options) {
         try {
             const { symbol, exchangeName } = exchangePair;
-            const theSafety = this.find(SafetyName);
+            const theSafety = this.find(safetyName);
             if (!theSafety) throw new Error(`Safety not found`);
             const theExchange = this.exchangeManager.find(exchangeName);
             if (!theExchange) throw new Error(`Exchange not found`);
@@ -70,11 +70,13 @@ class SafetyManager {
             await safetyPeriod.setup(exchangePair, indicatorBuilder)
             
             const safetyResult = await theSafety.period(safetyPeriod, safetyOptions);
+            safetyResult.setTag(safetyName);
             
             return safetyResult;
             
         } catch (error) {
-            this.logger.warn(`Safety Manager: Error running [${SafetyName}:${symbol}:${exchangeName}] (${error.message})`);
+            this.logger.warn(`Safety Manager: Error running [${safetyName}:${symbol}:${exchangeName}] (${error.message})`);
+            return undefined;
         }
     }
 }
