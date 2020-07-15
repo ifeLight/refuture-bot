@@ -1,3 +1,5 @@
+const pForever = require('p-forever');
+
 const IndicatorManager = require('./IndicatorManager');
 const PolicyManger = require('./PolicyManager');
 const InsuranceManager = require('./InsuranceManager');
@@ -105,8 +107,6 @@ class StrategyManager {
         return exchangePair;
     }
 
-    async runStrategies() {}
-
     async runInidicatorsStrategyTick(strat){
         const { symbol, exchange: exchangeName, trade, strategies} = strat;
         const { policies, insurances, safeties, indicators } = strategies;
@@ -160,9 +160,9 @@ class StrategyManager {
         if (!signalResults ) {
             return SignalResult.createEmptySignal();
         }
-        const longSignals = signalResults.filter(signalResult => signalResult === 'long');
-        const shortSignals = signalResults.filter(signalResult => signalResult === 'short');
-        const closeSignals = signalResults.filter(signalResult => signalResult === 'close');
+        const longSignals = signalResults.filter((signalResult) => typeof signalResult === 'object' && signalResult === 'long');
+        const shortSignals = signalResults.filter((signalResult) => typeof signalResult === 'object' &&  signalResult === 'short');
+        const closeSignals = signalResults.filter((signalResult) => typeof signalResult === 'object' &&  signalResult === 'close');
         const isAllsignalEqual = longSignals.length === shortSignals.length  && longSignals.length === closeSignals.length;
         const isOppositeSignalEqual = longSignals.length === shortSignals.length;
 
@@ -183,4 +183,44 @@ class StrategyManager {
         return SignalResult.createEmptySignal();
     } 
 
+    async runIndicatorStrategyUnit(strat) {
+        const { symbol, exchange: exchangeName} = strat;
+        let exchangePair;
+        if (this.getExchangePair(exchangeName, symbol)) {
+            exchangePair = this.getExchangePair(exchangeName, symbol)
+        } else {
+            const setExchangePair = await this.setExchangePair(strat);
+            exchangePair = setExchangePair;
+        }
+        const signalResults = await this.runInidicatorsStrategyTick(strat);
+        const signalResult = this.indicatorSignalsResolver(signalResults);
+        await this.orderExecutor.execute(signalResult, exchangePair, strat);
+    }
+
+    runStrategies() {
+        const list = this.getList();
+        const self = this;
+        list.forEach(strat => {
+            const { symbol, exchange: exchangeName} = strat;
+            pForever(async (i) => {
+                try {
+                    await this.runIndicatorStrategyUnit(strat);
+                } catch (error) {
+                    self.logger.warn(`Indicator Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`)
+                }
+            });
+
+            pForever(async (i) => {
+                try {
+                    await this.runSafetiesStrategyUnit(strat);
+                } catch (error) {
+                    self.logger.warn(`Safety Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`)
+                }
+            });
+        });
+
+    }
+
 }
+
+module.exports = StrategyManager;
