@@ -246,3 +246,6 @@ Temporary Items
 # Manual test codes
 t.js
 tt.js
+
+# Instance Files
+instance.json
