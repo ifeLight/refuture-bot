@@ -4,6 +4,8 @@ const requireAll = require('require-all');
 const IndicatorBuilder = require('./manager-helpers/IndicatorBuilder');
 const IndicatorPeriod = require('./manager-helpers/IndicatorPeriod');
 
+const SignalResult = require('../../classes/SignalResult');
+
 class IndicatorManager {
     constructor({candlesRepository, logger, eventEmitter, exchangeManager}) {
         this.candlesRepository = candlesRepository;
@@ -35,7 +37,11 @@ class IndicatorManager {
         return this.indicators; // It returns an Object
     }
 
-    async run( indicatorName, exchangePair, options) {
+    async runInit(indicatorName, exchangePair, options) {
+        return (await this.run(indicatorName, exchangePair, options, true));
+    }
+
+    async run( indicatorName, exchangePair, options, init=false) {
         try {
             const { symbol, exchangeName } = exchangePair;
             const theIndicator = this.find(indicatorName);
@@ -68,11 +74,17 @@ class IndicatorManager {
             const indicatorPeriod = new IndicatorPeriod(this.logger);
 
             await indicatorPeriod.setup(exchangePair, indicatorBuilder)
+            let indicatorResult = await theIndicator.period(indicatorPeriod, indicatorOptions);
             
-            const indicatorResult = await theIndicator.period(indicatorPeriod, indicatorOptions);
-            indicatorResult.setTag(indicatorName);
-            
-            return indicatorResult;
+            if (!init) {
+                if (!indicatorResult) {
+                    let indicatorResult = SignalResult.createEmptySignal();
+                    indicatorResult.setTag(indicatorName);
+                    return indicatorResult;
+                }
+                indicatorResult.setTag(indicatorName);
+                return indicatorResult;
+            }
             
         } catch (error) {
             this.logger.warn(`Indicator Manager: Error running [${indicatorName}:${symbol}:${exchangeName}] (${error.message})`);

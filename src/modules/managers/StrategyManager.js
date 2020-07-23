@@ -112,7 +112,15 @@ class StrategyManager {
         return exchangePair;
     }
 
-    async runInidicatorsStrategyTick(strat){
+    async runIndicatorsInitials(strat) {
+       return (await this.runInidicatorsStrategyTick(strat, true))
+    }
+
+    async runSafetiesInitials(strat) {
+        return (await this.runSafetiesStrategyUnit(strat, true));
+    }
+
+    async runInidicatorsStrategyTick (strat, init=false){
         const { symbol, exchange: exchangeName, trade, strategies} = strat;
         const { policies, insurances, safeties, indicators } = strategies;
         let exchangePair;
@@ -127,17 +135,17 @@ class StrategyManager {
             for (indicator of indicators) {
                 let indicatorResult;
                 if (typeof indicator === 'string') {
-                    indicatorsResults.push(await this.indicatorManager.run(indicator, exchangePair, null));
+                    indicatorsResults.push(await this.indicatorManager.run(indicator, exchangePair, null, init));
                 } else if (typeof indicator === 'object') {
                     const { name, options} = indicator;
-                    indicatorsResults.push(await this.indicatorManager.run(name, exchangePair, options));
+                    indicatorsResults.push(await this.indicatorManager.run(name, exchangePair, options, init));
                 }
             }
         }
         return indicatorsResults;
     }
 
-    async runSafetiesStrategyUnit(strat){
+    async runSafetiesStrategyUnit(strat, init=false){
         const { symbol, exchange: exchangeName, strategies} = strat;
         const { safeties } = strategies;
         let exchangePair;
@@ -151,10 +159,10 @@ class StrategyManager {
             for (safety of safeties) {
                 let safetyResult;
                 if (typeof safety === 'string') {
-                    safetyResult = await this.safetyManager.run(safety, exchangePair, null);
+                    safetyResult = await this.safetyManager.run(safety, exchangePair, null, init);
                 } else if (typeof safety === 'object') {
                     const { name, options} = safety;
-                    safetyResult = await this.safetyManager.run(name, exchangePair, options);
+                    safetyResult = await this.safetyManager.run(name, exchangePair, options, init);
                 }
                 await this.orderExecutor.execute(safetyResult, exchangePair, strat);
             }
@@ -205,8 +213,9 @@ class StrategyManager {
     runStrategies() {
         const list = this.getList();
         const self = this;
-        list.forEach(strat => {
+        list.forEach(async (strat) => {
             const { symbol, exchange: exchangeName} = strat;
+            await this.runIndicatorsInitials(strat);
             pForever(async (i) => {
                 try {
                     await this.runIndicatorStrategyUnit(strat);
@@ -215,6 +224,7 @@ class StrategyManager {
                 }
             });
 
+            await this.runSafetiesInitials(strat);
             pForever(async (i) => {
                 try {
                     await this.runSafetiesStrategyUnit(strat);

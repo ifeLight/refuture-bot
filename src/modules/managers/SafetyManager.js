@@ -4,6 +4,9 @@ const requireAll = require('require-all');
 const IndicatorBuilder = require('./manager-helpers/IndicatorBuilder');
 const SafetyPeriod = requir('./manager-helpers/SafetyPeriod')
 
+const SignalResult = require('../../classes/SignalResult')
+
+
 class SafetyManager {
     constructor({logger, eventEmitter, exchangeManager, candlesRepository}) {
         this.candlesRepository = candlesRepository;
@@ -35,7 +38,11 @@ class SafetyManager {
         return this.safeties; // It returns an Object
     }
 
-    async run(safetyName, exchangePair, options) {
+    async runInit(safetyName, exchangePair, options) {
+        return (await this.run(safetyName, exchangePair, options, true));
+    }
+
+    async run(safetyName, exchangePair, options, init=false) {
         try {
             const { symbol, exchangeName } = exchangePair;
             const theSafety = this.find(safetyName);
@@ -69,10 +76,16 @@ class SafetyManager {
 
             await safetyPeriod.setup(exchangePair, indicatorBuilder)
             
-            const safetyResult = await theSafety.period(safetyPeriod, safetyOptions);
-            safetyResult.setTag(safetyName);
-            
-            return safetyResult;
+            let safetyResult = await theSafety.period(safetyPeriod, safetyOptions);
+            if (!init) {
+                if (!safetyResult) {
+                    let safetyResult = SignalResult.createEmptySignal();
+                    safetyResult.setTag(safetyName);
+                    return safetyResult;
+                }
+                safetyResult.setTag(safetyName);
+                return safetyResult;
+            }
             
         } catch (error) {
             this.logger.warn(`Safety Manager: Error running [${safetyName}:${symbol}:${exchangeName}] (${error.message})`);
