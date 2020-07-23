@@ -3,7 +3,8 @@
     "exchange": "binance",
     "trade": {
         "amount": 0.001,
-        "order_type": "market"
+        "order_type": "market",
+        "leverage": 2
     },
     "strategies": {
         "indicators": [
