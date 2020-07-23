@@ -61,6 +61,13 @@ module.exports = class ExchangePair {
         return this.markPrice;
     }
 
+    async setLeverage(leverage) {
+        if (this.exchange.isFutures) {
+            const leverage = await this.exchange.changeLeverage(this.symbol, parseInt(leverage));
+            return leverage;
+        }
+        return undefined;
+    }
     async getLeverage() {
         if (this.exchange.isFutures) {
             const leverage = await this.exchange.getLeverage(this.symbol);

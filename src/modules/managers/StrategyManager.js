@@ -8,9 +8,9 @@ const WatchdogManager = require('./WatchdogManager');
 const ExchangeManager = require('./ExchangeManager');
 const OrderExecutor = require('./manager-helpers/OrderExecutor')
 
-const ExchangePair = require('../pair/ExchangePair')
+const ExchangePair = require('../pair/ExchangePair');
 
-const CandlesRepository = require('../repository/CandlesRepository')
+const CandlesRepository = require('../repository/CandlesRepository');
 
 const SignalResult = require('../../classes/SignalResult');
 
@@ -54,7 +54,8 @@ class StrategyManager {
         //         amount: 0.01,
         //         currency_amount: 15,
         //         usd_amount: 15,
-        //         order_type: 'limit' //'limit' or'market'
+        //         order_type: 'limit' //'limit' or'market',
+        //         leverage: 5,
         //     },
         //     strategies: {
         //         indicators: [
@@ -97,12 +98,16 @@ class StrategyManager {
 
     async setExchangePair(strat) {
         const { exchange: exchangeName, symbol} = strat;
+        const { leverage } = trade;
         const { eventEmitter, logger, exchangeManager } = this;
         const isExist = this.getExchangePair(exchangeName, symbol)
         if (isExist) return isExist;
         const exchangePair = new ExchangePair(eventEmitter, logger, exchangeManager);
-        exchangePair.init(exchangeName, symbol)
+        exchangePair.init(exchangeName, symbol);
         await exchangePair.setup();
+        if (leverage) {
+            await exchangePair.setLeverage(leverage)
+        }
         this._exchangePairs[`${exchangeName}:${symbol}`];
         return exchangePair;
     }
