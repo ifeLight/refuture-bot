@@ -61,6 +61,15 @@ module.exports = class ExchangePair {
         return this.markPrice;
     }
 
+    getlastSignal() {
+        return this._lastSignal;
+    }
+
+    setLastSignal(signal) {
+        if (!['long', 'short', 'close'].includes(signal)) return;
+        this._lastSignal = signal;
+    }
+
     async setLeverage(leverage) {
         if (this.exchange.isFutures) {
             const leverage = await this.exchange.changeLeverage(this.symbol, parseInt(leverage));

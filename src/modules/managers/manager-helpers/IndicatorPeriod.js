@@ -33,7 +33,9 @@ module.exports = class IndicatorPeriod {
         return this.exchangePair.getLastPrice();
     } 
 
-    getLastSignal() {} // TODO getLastSignal to be worked on
+    getLastSignal() {
+        return this.exchangePair.getlastSignal()
+    } 
 
     getTicker() {
         return this.exchangePair.getTicker();

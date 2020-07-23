@@ -45,6 +45,8 @@ module.exports = class OrderExecutor {
 
             if (signalResult.getSignal()) {
                 signal = signalResult.getSignal()
+                // Set last signal
+                exchangePair.setLastSignal(signal);
                 if (signal == 'long') {
                     await this.runLong(exchangePair, amount, options);
                 }
