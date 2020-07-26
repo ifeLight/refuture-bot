@@ -24,8 +24,12 @@ module.exports = class Candles {
             const { period, foreignSymbol, exchangeName, candlesLength} = this;
             const theExchange = this.exchangeManager.find(exchangeName);
             if (!theExchange) throw new Error('Exchange Name Invalid');
-            this.candlesRepository.init(theExchange, foreignSymbol, period);
-            const result = await this.candlesRepository.fetchCandlesByNumberFromNow(parseInt(candlesLength));
+            const result = await this.candlesRepository.fetchCandlesByNumberFromNow({
+                period,
+                symbol: foreignSymbol,
+                exchange: theExchange,
+                length: parseInt(candlesLength)
+            });
             return result;
         } catch (error) {
             this.logger(`Foreign Candle: Build Failed [${this.symbol}] (${error.message})`);

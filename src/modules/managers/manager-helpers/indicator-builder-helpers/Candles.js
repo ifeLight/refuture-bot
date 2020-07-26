@@ -12,15 +12,15 @@ module.exports = class Candles {
     }
     
     init(options) {
-        this.period = options.period
+        this.period = options.period;
         this.candlesLength = options.length || 200;
-
     }
 
     async build() {
         try {
-            this.candlesRepository.init(this.exchange, this.symbol, this.period);
-            const result = await this.candlesRepository.fetchCandlesByNumberFromNow(parseInt(this.candlesLength));
+            const { exchange, symbol, period, candlesLength} = this;
+            const length = parseInt(candlesLength);
+            const result = await this.candlesRepository.fetchCandlesByNumberFromNow({exchange, symbol, period, length});
             return result;
         } catch (error) {
             this.logger.info(`${this.getName()} Builder: indicator builder Failed [${this.symbol}] (${error.message})`);
