@@ -160,7 +160,7 @@ module.exports = class BinanceFuturesExchange {
         try {
             const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
-            this.exchange.nodeBinanceApi.futuresBookTickerStream(retouchedSymbol, function (ticker) {
+            this.exchange.nodeBinanceApi.futuresBookTickerStream(retouchedSymbol, (ticker) => {
                 const {
                     bestBid: bidPrice,
                     bestAsk: askPrice,
@@ -241,7 +241,7 @@ module.exports = class BinanceFuturesExchange {
             const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
             const query = retouchedSymbol.toLowerCase() + '@depth@500ms';
-            this.exchange.nodeBinanceApi.futuresSubscribe(query, function (depth) {
+            this.exchange.nodeBinanceApi.futuresSubscribe(query, (depth) => {
                 let {
                     b: bids,
                     a: asks
