@@ -73,7 +73,7 @@ module.exports =  class IndicatorBuilder {
             this.builtIndicators = theIndicators
             return theIndicators;
         } catch (error) {
-            this.logger.error(`Indicator Builder: Error buildig Indicators [${this.symbol}] (${error.message})`);
+            this.logger.error(`Indicator Builder: Error building Indicators [${this.symbol}] (${error.message})`);
             return undefined;
         }
     }
