@@ -102,6 +102,7 @@ module.exports = class BinanceFuturesExchange {
     }
 
     addCandleEvent (symbol, period) {
+        const self = this;
         const candleEventId = symbol + period; ///To prevent duplicate candle event registration
         if (!this.candleEventsList) {
             this.candleEventsList = []
@@ -125,7 +126,7 @@ module.exports = class BinanceFuturesExchange {
                         close: Number(c),
                         volume: Number(v),
                     }
-                    this.eventEmitter.emit(`candle_${exchangeName}_${symbol}_${period}`, retouchedCandle);
+                    self.eventEmitter.emit(`candle_${exchangeName}_${symbol}_${period}`, retouchedCandle);
                 });
             }
         } catch (error) {
@@ -158,6 +159,7 @@ module.exports = class BinanceFuturesExchange {
 
     addTickerEvent(symbol) {
         try {
+            const self = this;
             const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
             this.exchange.nodeBinanceApi.futuresBookTickerStream(retouchedSymbol, (ticker) => {
@@ -177,7 +179,7 @@ module.exports = class BinanceFuturesExchange {
                     askQty,
                     lastPrice: Number(((Number(bidPrice) + Number(askPrice)) / 2).toFixed(priceDecimalPlaces))
                 }) 
-                this.eventEmitter.emit(`ticker_${exchangeName}_${symbol}`, newTicker);
+                self.eventEmitter.emit(`ticker_${exchangeName}_${symbol}`, newTicker);
             })
         } catch (error) {
             this.logger.warn(`Binance Futures: Unable to fetch Mark Price [${symbol}] (${error.message})`);
@@ -197,11 +199,12 @@ module.exports = class BinanceFuturesExchange {
 
     addMarkPriceEvent(symbol) {
         try {
+            const self = this;
             const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
             this.exchange.nodeBinanceApi.futuresMarkPriceStream(retouchedSymbol, function (stream) {
                 const {markPrice} = stream;
-                this.eventEmitter.emit(`markprice_${exchangeName}_${symbol}`, markPrice);
+                self.eventEmitter.emit(`markprice_${exchangeName}_${symbol}`, markPrice);
             })
         } catch (error) {
             this.logger.warn(`Binance Futures: Unable to fetch order book [${symbol}] (${error.message})`);
@@ -238,6 +241,7 @@ module.exports = class BinanceFuturesExchange {
 
     addOrderBookEvent(symbol) {
         try {
+            const self = this;
             const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
             const query = retouchedSymbol.toLowerCase() + '@depth@500ms';
@@ -262,7 +266,7 @@ module.exports = class BinanceFuturesExchange {
                 })
 
                 const newOrderBook = new OrderBook(bids, asks);
-                this.eventEmitter.emit(`orderbook_${exchangeName}_${symbol}`, newOrderBook);
+                self.eventEmitter.emit(`orderbook_${exchangeName}_${symbol}`, newOrderBook);
             })
         } catch (error) {
             this.logger.error(`Binance Futures: Unable to add order book [${symbol}] (${error.message})`);
@@ -293,8 +297,12 @@ module.exports = class BinanceFuturesExchange {
         try {
             const retouchedSymbol = this.retouchSymbol(symbol);
             const leverageNumber = Number(leverage);
-            await this.exchange.nodeBinanceApi.futuresLeverage( retouchedSymbol, leverageNumber );
+            const res = await this.exchange.fapiPrivate_post_leverage( {
+                symbol: retouchedSymbol,
+                leverage: leverageNumber
+            });
             this._leverage = leverage;
+            return res;
         } catch (error) {
             this.logger.error(`Binance Futures: Unable to change leverage [${symbol}:${leverage}] (${error.message})`);
         }
