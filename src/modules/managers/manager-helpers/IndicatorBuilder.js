@@ -27,7 +27,10 @@ module.exports =  class IndicatorBuilder {
 
     getHelpers() {
         const helpersrDir = path.join(__dirname, 'indicator-builder-helpers');
-        const helpersObj = requireAll(helpersrDir); //returns an Object
+        const helpersObj = requireAll({
+            dirname: helpersrDir,
+            recursive: false
+        }); //returns an Object
         const helpers = {};
         const self= this;
         Object.keys(helpersObj).forEach((key) => {
@@ -60,11 +63,11 @@ module.exports =  class IndicatorBuilder {
                 theHelper.init(options);
                 let result;
                 try {
-                     result = await theHelper.run(build);
+                     result = await theHelper.build();
                 } catch (error) {
-                    throw new Error(`Error building ${indicatorName}`)
+                    throw new Error(`Error building ${indicatorName} (${error.message})`)
                 }
-                theIndicators[indicatorName] = result
+                theIndicators[indicatorName] = result;
 
             }
             this.builtIndicators = theIndicators
@@ -78,7 +81,7 @@ module.exports =  class IndicatorBuilder {
     get(name) {
         // Used to fetched built indicators
         try {
-            if(!builtIndicators) throw new Error('Indicators not yet built')
+            if(!this.builtIndicators) throw new Error('Indicators not yet built')
             const builtIndicator = this.builtIndicators[name];
             if (!builtIndicator) throw new Error(`Indicator not found`);
             return builtIndicator;
