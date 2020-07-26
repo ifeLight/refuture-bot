@@ -16,7 +16,7 @@ module.exports = class ExchangePair {
             this.exchange = this.exchangeManager.find(this.exchangeName);
             if (!this.exchange)  throw new Error(`Unable to find exchange ${this.exchangeName}`);
             const { symbol, exchangeName } = this;
-            self = this;
+            const self = this;
             // Add Ticker listener
             this.exchange.addTickerEvent(this.symbol);
             this.info = await this.exchange.fetchPairInfo(symbol);
@@ -41,7 +41,7 @@ module.exports = class ExchangePair {
 
             this.setupDone = true;
         } catch (error) {
-            this.logger.error(`Pair(${this.symbol}): Unable to setup the Pair`)
+            this.logger.error(`Pair [${this.symbol}:${this.exchangeName}]: Unable to setup the Pair (${error.message})`);
         }
     }
 
@@ -72,15 +72,17 @@ module.exports = class ExchangePair {
 
     async setLeverage(leverage) {
         if (this.exchange.isFutures) {
-            const leverage = await this.exchange.changeLeverage(this.symbol, parseInt(leverage));
-            return leverage;
+            console.log('Requesting');
+            const res = await this.exchange.changeLeverage(this.symbol, parseInt(leverage));
+            console.log(leverage);
+            return res;
         }
         return undefined;
     }
     async getLeverage() {
         if (this.exchange.isFutures) {
             const leverage = await this.exchange.getLeverage(this.symbol);
-            return leverage
+            return leverage;
         }
         return undefined;
     }
