@@ -3,7 +3,7 @@ const fs = require('fs');
 
 const Trader = require('../services/Trader');
 
-module.exports = function (instanceFilePath) {
+module.exports = async function (instanceFilePath) {
     const cmdInstanceFilePath = instanceFilePath ? instanceFilePath : 'instance-sample.json';
     const instanceFile = path.join(process.cwd(), cmdInstanceFilePath)
     if (!fs.existsSync(instanceFile)) throw new Error(`Instance File: Instance File does not Exist (${instanceFile})`);
@@ -14,11 +14,11 @@ module.exports = function (instanceFilePath) {
 
     async function runTradeServices (instances) {
         const tradeService = new Trader();
-        tradeService.start(instances)
-    }
+        tradeService.start(instances);
+    };
 
     try {
-        await runTradeServices(instances)
+        await runTradeServices(instances);
     } catch (error) {
         console.error("Trade Service Failed while running")
     }

@@ -14,11 +14,17 @@ class Trader {
     start(instances) {
         try {
             const { logger, eventEmitter, notifier } = this;
-            const strategyManager = new StrategyManager({ logger, eventEmitter, notifier })
-            instances.forEach(instance => {
-                strategyManager.add(instance);
-            });
-            strategyManager.runStrategies();
+            const strategyManager = new StrategyManager({ logger, eventEmitter, notifier });
+            (async () => {
+                await strategyManager.init();
+                instances.forEach(instance => {
+                    strategyManager.add(instance);
+                });
+                strategyManager.runStrategies();
+            })()
+            .catch((err) => {
+                throw err;
+            })
         } catch (error) {
             throw error;
         }

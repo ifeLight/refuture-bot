@@ -16,9 +16,9 @@ program
     .command('trade')
     .description('Run the Live trading Service')
     .option('-i, --instance <value>', 'the instance file')
-    .action((cmdObj) => {
+    .action(async (cmdObj) => {
         const { instance: instanceFilePath } = cmdObj
-        tradeCommand(instanceFilePath);
+        await tradeCommand(instanceFilePath);
     })
 
  program
