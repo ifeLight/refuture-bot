@@ -7,66 +7,64 @@ module.exports = class CandlesRepository {
     constructor(eventEmitter, logger) {
         this.eventEmitter = eventEmitter;
         this.logger = logger;
-        this.eventListenerIds = [];
+        this._eventListenerIds = [];
     }
 
-    init(exchange, symbol, period) {
-        this.exchange = exchange;
-        this.period = period;
-        this.symbol = symbol;
-        this.exchangeName = this.exchange.name;
-        this.exchange.addCandleEvent(symbol, period);
-        const candleEventName = `candle_${this.exchangeName}_${symbol}_${period}`;
-
-        if (this.eventListenerIds.indexOf(candleEventName) < 0) {
+    createEvent(exchange, symbol, period) {
+        const self  = this;
+        const {name: exchangeName} = exchange;
+        const candleEventName = `candle_${exchangeName}_${symbol}_${period}`;
+        if (this._eventListenerIds.indexOf(candleEventName) < 0) {
+            exchange.addCandleEvent(symbol, period);
+            this._eventListenerIds.push(candleEventName);
             this.eventEmitter.on(candleEventName, async (candle) => {
                 try {
                     await CandleModel.addCandle(candle);
                 } catch (error) {
-                    this.logger.info(`Candles Repository: Error adding Candle (${error.message})`)
+                    self.logger.info(`Candles Repository: Error adding Candle (${error.message})`)
                 }
             })
         }
     }
 
-    async fetchCandlesByTimeDifference(startTime, endTime) {
+    async fetchCandlesByTimeDifference({exchange, symbol, period, startTime, endTime}) {
         try {
-            const { period, symbol } = this;
-            const exchangeName = this.exchange.name;
+            const {name: exchangeName} = exchange;
+            this.createEvent(exchange, symbol, period);
             const fromDatabase = await CandleModel.fetchCandles({period, exchangeName, symbol, from: startTime, to: endTime});
             const timeDifference = periodToTimeDiff(period);
             const startTimeTimestamp = new Date(startTime).getTime();
             const endTimeTimestamp = new Date(endTime).getTime();
             const numberOfCandlesNeeded = Math.abs(endTimeTimestamp - startTimeTimestamp) / timeDifference;
             if ((numberOfCandlesNeeded ) >= fromDatabase.length) {
-                const fromExchange = await this.exchange.fetchCandles(symbol, period, startTime, endTime);
+                const fromExchange = await exchange.fetchCandles(symbol, period, startTime, endTime);
                 const storeToDatabase = await CandleModel.addCandles(fromExchange);
             } else {
                 return fromDatabase;
             }
         return CandleModel.fetchCandles({period, exchangeName, symbol, from: startTime, to: endTime});
         } catch (error) {
-            this.logger.error(`Candles Repository (fetchCandlesByTimeDifference): Error Fetching Candles [${this.exchange.name}: ${this.symbol}] (${error.message})`);
+            this.logger.error(`Candles Repository (fetchCandlesByTimeDifference): Error Fetching Candles [${exchange.name}: ${symbol}] (${error.message})`);
             return undefined;
         }
     }
 
-    async fetchCandlesByNumberFromNow(numberOfCandlesFromNow) {
+    async fetchCandlesByNumberFromNow({exchange, symbol, period, length}) {
         try {
-            const { period, symbol } = this;
-            const exchangeName = this.exchange.name;
-            const fromDatabase = await CandleModel.fetchCandles({period, exchangeName, symbol, number: numberOfCandlesFromNow});
-            if (fromDatabase.length < numberOfCandlesFromNow) {
+            const {name: exchangeName} = exchange;
+            this.createEvent(exchange, symbol, period);
+            const fromDatabase = await CandleModel.fetchCandles({period, exchangeName, symbol, number: length});
+            if (fromDatabase.length < length) {
                 const timeDifference = periodToTimeDiff(period);
-                const startTime = new Date(Date.now() - (timeDifference * numberOfCandlesFromNow));
-                const fromExchange = await this.exchange.fetchCandles(symbol, period, startTime);
+                const startTime = new Date(Date.now() - (timeDifference * length));
+                const fromExchange = await exchange.fetchCandles(symbol, period, startTime);
                 const storeToDatabase = await CandleModel.addCandles(fromExchange);
             } else {
                 return fromDatabase;
             }
-            return CandleModel.fetchCandles({period, exchangeName, symbol, number: numberOfCandlesFromNow});
+            return CandleModel.fetchCandles({period, exchangeName, symbol, number: length});
         } catch (error) {
-            this.logger.error(`Candles Repository (fetchCandlesByNumberFromNow): Error Fetching Candles [${this.exchange.name}: ${this.symbol}] (${error.message})`);
+            this.logger.error(`Candles Repository (fetchCandlesByNumberFromNow): Error Fetching Candles [${exchange.name}: ${symbol}] (${error.message})`);
         }
     }
 }
