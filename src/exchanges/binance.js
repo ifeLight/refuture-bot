@@ -148,7 +148,7 @@ module.exports = class BinanceExchange {
         try {
             const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
-            this.exchange.binanceApiNode.ws.ticker(retouchedSymbol, function (ticker) {
+            this.exchange.binanceApiNode.ws.ticker(retouchedSymbol, (ticker) => {
                 const {
                     bestBid: bidPrice,
                     bestAsk: askPrice,
