@@ -2,7 +2,7 @@ const path = require('path');
 const requireAll = require('require-all');
 
 const IndicatorBuilder = require('./manager-helpers/IndicatorBuilder');
-const SafetyPeriod = requir('./manager-helpers/SafetyPeriod')
+const SafetyPeriod = require('./manager-helpers/SafetyPeriod')
 
 const SignalResult = require('../../classes/SignalResult')
 
@@ -43,8 +43,8 @@ class SafetyManager {
     }
 
     async run(safetyName, exchangePair, options, init=false) {
+        const { symbol, exchangeName } = exchangePair;
         try {
-            const { symbol, exchangeName } = exchangePair;
             const theSafety = this.find(safetyName);
             if (!theSafety) throw new Error(`Safety not found`);
             const theExchange = this.exchangeManager.find(exchangeName);

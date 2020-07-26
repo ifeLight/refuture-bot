@@ -42,8 +42,8 @@ class IndicatorManager {
     }
 
     async run( indicatorName, exchangePair, options, init=false) {
+        const { symbol, exchangeName } = exchangePair;
         try {
-            const { symbol, exchangeName } = exchangePair;
             const theIndicator = this.find(indicatorName);
             if (!theIndicator) throw new Error(`Indicator not found`);
             const theExchange = this.exchangeManager.find(exchangeName);
@@ -72,10 +72,9 @@ class IndicatorManager {
             if (!builtIndicators) throw new Error('Error building indicators');
 
             const indicatorPeriod = new IndicatorPeriod(this.logger);
-
-            await indicatorPeriod.setup(exchangePair, indicatorBuilder)
+            await indicatorPeriod.setup(exchangePair, indicatorBuilder);
             let indicatorResult = await theIndicator.period(indicatorPeriod, indicatorOptions);
-            
+
             if (!init) {
                 if (!indicatorResult) {
                     let indicatorResult = SignalResult.createEmptySignal();
