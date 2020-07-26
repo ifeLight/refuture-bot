@@ -6,7 +6,6 @@ module.exports = class ExchangePair {
     }
 
     init(exchangeName, symbol) {
-        
         this.symbol = symbol;
         this.exchangeName = exchangeName;
     }
@@ -41,7 +40,8 @@ module.exports = class ExchangePair {
 
             this.setupDone = true;
         } catch (error) {
-            this.logger.error(`Pair [${this.symbol}:${this.exchangeName}]: Unable to setup the Pair (${error.message})`);
+            console.error(error);
+            this.logger.error(`Exchange Pair [${this.symbol}:${this.exchangeName}]: Unable to setup the Pair (${error.message})`);
         }
     }
 
