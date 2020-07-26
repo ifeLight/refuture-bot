@@ -35,6 +35,7 @@ class StrategyManager {
         const exchangeManager = new ExchangeManager(eventEmitter, logger);
         const candlesRepository = new CandlesRepository(eventEmitter, logger);
 
+        this.exchangeManager = exchangeManager;
         this.indicatorManager = new IndicatorManager({candlesRepository, logger, eventEmitter, exchangeManager});
         this.safetyManager = new SafetyManager({logger, eventEmitter, exchangeManager, candlesRepository});
 
@@ -43,7 +44,6 @@ class StrategyManager {
         // this.insuranceManager = new InsuranceManager();
         // this.watchdogManager = new WatchdogManager();
 
-        // NOTE Remember to set up ExchngePair for each Symbol
     }
 
     add(strat) {
@@ -96,8 +96,8 @@ class StrategyManager {
         return this._exchangePairs[`${exchangeName}:${symbol}`];
     }
 
-    async setExchangePair(strat) {
-        const { exchange: exchangeName, symbol} = strat;
+    async createExchangePair(strat) {
+        const { exchange: exchangeName, symbol, trade} = strat;
         const { leverage } = trade;
         const { eventEmitter, logger, exchangeManager } = this;
         const isExist = this.getExchangePair(exchangeName, symbol)
@@ -108,7 +108,7 @@ class StrategyManager {
         if (leverage) {
             await exchangePair.setLeverage(leverage)
         }
-        this._exchangePairs[`${exchangeName}:${symbol}`];
+        this._exchangePairs[`${exchangeName}:${symbol}`] = exchangePair;
         return exchangePair;
     }
 
@@ -121,24 +121,25 @@ class StrategyManager {
     }
 
     async runInidicatorsStrategyTick (strat, init=false){
+        const self  = this;
         const { symbol, exchange: exchangeName, trade, strategies} = strat;
         const { policies, insurances, safeties, indicators } = strategies;
         let exchangePair;
         const indicatorsResults = [];
-        if (this.getExchangePair(exchangeName, symbol)) {
-            exchangePair = this.getExchangePair(exchangeName, symbol)
+        if (self.getExchangePair(exchangeName, symbol)) {
+            exchangePair = self.getExchangePair(exchangeName, symbol)
         } else {
-            const setExchangePair = await this.setExchangePair(strat);
-            exchangePair = setExchangePair;
+            const createExchangePair = await self.createExchangePair(strat);
+            exchangePair = createExchangePair;
         }
         if (indicators && Array.isArray(indicators) && indicators.length > 0) {
-            for (indicator of indicators) {
+            for (let indicator of indicators) {
                 let indicatorResult;
                 if (typeof indicator === 'string') {
-                    indicatorsResults.push(await this.indicatorManager.run(indicator, exchangePair, null, init));
+                    indicatorsResults.push(await self.indicatorManager.run(indicator, exchangePair, null, init));
                 } else if (typeof indicator === 'object') {
                     const { name, options} = indicator;
-                    indicatorsResults.push(await this.indicatorManager.run(name, exchangePair, options, init));
+                    indicatorsResults.push(await self.indicatorManager.run(name, exchangePair, options, init));
                 }
             }
         }
@@ -152,11 +153,11 @@ class StrategyManager {
         if (this.getExchangePair(exchangeName, symbol)) {
             exchangePair = this.getExchangePair(exchangeName, symbol)
         } else {
-            const setExchangePair = await this.setExchangePair(strat);
-            exchangePair = setExchangePair;
+            const createdExchangePair = await this.createExchangePair(strat);
+            exchangePair = createdExchangePair;
         }
         if (safeties && Array.isArray(safeties) && safeties.length > 0) {
-            for (safety of safeties) {
+            for (let safety of safeties) {
                 let safetyResult;
                 if (typeof safety === 'string') {
                     safetyResult = await this.safetyManager.run(safety, exchangePair, null, init);
@@ -164,18 +165,19 @@ class StrategyManager {
                     const { name, options} = safety;
                     safetyResult = await this.safetyManager.run(name, exchangePair, options, init);
                 }
-                await this.orderExecutor.execute(safetyResult, exchangePair, strat);
+                // await this.orderExecutor.execute(safetyResult, exchangePair, strat);
+                console.log(safetyResult);
             }
         }
     }
 
     indicatorSignalsResolver(signalResults) {
-        if (!signalResults ) {
+        if (!signalResults || (signalResults && signalResults.length < 1) ) {
             return SignalResult.createEmptySignal();
         }
-        const longSignals = signalResults.filter((signalResult) => typeof signalResult === 'object' && signalResult === 'long');
-        const shortSignals = signalResults.filter((signalResult) => typeof signalResult === 'object' &&  signalResult === 'short');
-        const closeSignals = signalResults.filter((signalResult) => typeof signalResult === 'object' &&  signalResult === 'close');
+        const longSignals = signalResults.filter((signalResult) => typeof signalResult === 'object' && signalResult.getSignal() === 'long');
+        const shortSignals = signalResults.filter((signalResult) => typeof signalResult === 'object' &&  signalResult.getSignal() === 'short');
+        const closeSignals = signalResults.filter((signalResult) => typeof signalResult === 'object' &&  signalResult.getSignal() === 'close');
         const isAllsignalEqual = longSignals.length === shortSignals.length  && longSignals.length === closeSignals.length;
         const isOppositeSignalEqual = longSignals.length === shortSignals.length;
 
@@ -202,12 +204,13 @@ class StrategyManager {
         if (this.getExchangePair(exchangeName, symbol)) {
             exchangePair = this.getExchangePair(exchangeName, symbol)
         } else {
-            const setExchangePair = await this.setExchangePair(strat);
-            exchangePair = setExchangePair;
+            const createdExchangePair = await this.createExchangePair(strat);
+            exchangePair = createdExchangePair;
         }
         const signalResults = await this.runInidicatorsStrategyTick(strat);
         const signalResult = this.indicatorSignalsResolver(signalResults);
-        await this.orderExecutor.execute(signalResult, exchangePair, strat);
+        // await this.orderExecutor.execute(signalResult, exchangePair, strat);
+        console.log(signalResult);
     }
 
     runStrategies() {
