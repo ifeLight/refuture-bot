@@ -40,7 +40,6 @@ module.exports = class ExchangePair {
 
             this.setupDone = true;
         } catch (error) {
-            console.error(error);
             this.logger.error(`Exchange Pair [${this.symbol}:${this.exchangeName}]: Unable to setup the Pair (${error.message})`);
         }
     }
@@ -72,9 +71,7 @@ module.exports = class ExchangePair {
 
     async setLeverage(leverage) {
         if (this.exchange.isFutures) {
-            console.log('Requesting');
             const res = await this.exchange.changeLeverage(this.symbol, parseInt(leverage));
-            console.log(leverage);
             return res;
         }
         return undefined;
