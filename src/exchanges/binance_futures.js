@@ -188,7 +188,7 @@ module.exports = class BinanceFuturesExchange {
                 self.eventEmitter.emit(`ticker_${exchangeName}_${symbol}`, newTicker);
             })
         } catch (error) {
-            this.logger.warn(`Binance Futures: Unable to fetch Mark Price [${symbol}] (${error.message})`);
+            this.logger.warn(`Binance Futures: Unable to add Ticker Event [${symbol}] (${error.message})`);
         }
     }
 
@@ -213,7 +213,7 @@ module.exports = class BinanceFuturesExchange {
                 self.eventEmitter.emit(`markprice_${exchangeName}_${symbol}`, markPrice);
             })
         } catch (error) {
-            this.logger.warn(`Binance Futures: Unable to fetch order book [${symbol}] (${error.message})`);
+            this.logger.warn(`Binance Futures: Unable to add Mark Price Event [${symbol}] (${error.message})`);
         }
     }
 
@@ -275,7 +275,7 @@ module.exports = class BinanceFuturesExchange {
                 self.eventEmitter.emit(`orderbook_${exchangeName}_${symbol}`, newOrderBook);
             })
         } catch (error) {
-            this.logger.error(`Binance Futures: Unable to add order book [${symbol}] (${error.message})`);
+            this.logger.error(`Binance Futures: Unable to add order book event [${symbol}] (${error.message})`);
         }
     }
 
@@ -330,7 +330,7 @@ module.exports = class BinanceFuturesExchange {
             const order = await this.exchange.createOrder(symbol, 'market', side, amount);
             return order;
         } catch (error) {
-            this.logger.info(`Binance Futures: Unable to create Limit Order [${symbol}:${side}:${amount}] (${error.message})`);
+            this.logger.info(`Binance Futures: Unable to create Market Order [${symbol}:${side}:${amount}] (${error.message})`);
             return undefined;
         }
     }
@@ -391,12 +391,12 @@ module.exports = class BinanceFuturesExchange {
     async fetchPositions(symbol) {
         try {
             if (!this.positions) {
-                await syncWebsocketPositions();
+                await this.syncWebsocketPositions();
             }
-            return this.positions[symbol];
+            return this.positions[symbol] || [];
         } catch (e) {
-            this.logger.error(`Binance Futures: error getting positions:${e}`);
-            return;
+            this.logger.error(`Binance Futures: error getting positions:${e.message}`);
+            return undefined;
         }
     }
 
@@ -450,7 +450,7 @@ module.exports = class BinanceFuturesExchange {
 
             if (message.e && message.e.toUpperCase() === 'ORDER_TRADE_UPDATE') {
                 const order = message.o;
-                await self.syncWebsocketOrder(order);
+                await self.syncWebsocketOrders(order);
                 
             }
 
@@ -521,26 +521,27 @@ module.exports = class BinanceFuturesExchange {
       async syncWebsocketPositions () {
           try {
             const self = this;
-            this.positions = {};
             const response = await this.exchange.fapiPrivateGetPositionRisk();
             const mappedPositions = response.map((pos) => {
                 const { symbol: symbolId, positionAmt: positionAmount} = pos;
                 const asset = symbolId.split('USDT')[0];
                 const sym = asset + '/' + 'USDT';
                 return new Position({
+                    ...pos,
                     symbol: sym,
                     positionAmount,
-                    ...pos
-                })
-            })
+                });
+            });
+
+            this.positions = {};
             mappedPositions.forEach((pos) => {
                 const { symbol } = pos;
-                if (self.positions[symbol] && Array.isArray(self.positions[symbol])) {
-                    self.positions[symbol].push(pos)
+                if (this.positions[symbol] && Array.isArray(this.positions[symbol])) {
+                    this.positions[symbol].push(pos)
                 } else {
-                    self.positions[symbol] = [pos];
+                    this.positions[symbol] = [pos];
                 }
-            })
+            });
           } catch (error) {
             this.logger.info(`Binance Futures: Failed to sync websocket Positions (${error.message})`);
           }
