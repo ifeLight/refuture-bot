@@ -37,7 +37,7 @@ module.exports = class OrderExecutor {
             // If it is Futures, run Futures Order Execution
             const isFutures = exchangePair.exchange.isFutures;
             if (isFutures) {
-                return (await this.executeFutures(signalResult, exchangePair, amount));
+                return (await this.executeFutures(signalResult, exchangePair, options));
             }  
             const { base, quote} = exchangePair.info;
             const baseBalance = await exchangePair.getBalance(base);
@@ -65,6 +65,7 @@ module.exports = class OrderExecutor {
 
     async executeFutures(signalResult, exchangePair, options) {
         try {
+            const tradeOptions = options.trade;
             let positions = await exchangePair.getPositions();
             if (positions === undefined) throw new Error('Cannot fetch positions for execution');
 
@@ -76,8 +77,24 @@ module.exports = class OrderExecutor {
                 position = position[0]
             }
 
-            const tradeOptions = options.trade;
-            const leverage = parseFloat(await exchangePair.getLeverage());
+            console.log('Positions');
+            console.log(positions);
+            console.log('-----');
+
+            console.log('Position1');
+            console.log(position);
+            console.log('-----');
+
+             // Leverage set check
+             const lev = await exchangePair.getLeverage();
+            if (!lev) {
+                const optionsLeverage = tradeOptions.leverage;
+                if (!optionsLeverage) throw new Error('Leverage not set in options')
+                const leverage = parseInt(optionsLeverage);
+                await exchangePair.setLeverage(leverage)
+            }
+
+            const leverage = parseInt(await exchangePair.getLeverage());
             let amount;
             if (tradeOptions.amount) {
                 amount = parseFloat(tradeOptions.amount) * leverage;
@@ -89,7 +106,7 @@ module.exports = class OrderExecutor {
             }
 
             if (signalResult.getSignal()) {
-                signal = signalResult.getSignal()
+                const signal = signalResult.getSignal();
                 if (signal == 'long') {
                     await this.runFuturesLong(position, exchangePair, amount, options);
                 }
@@ -106,6 +123,7 @@ module.exports = class OrderExecutor {
             }
             
         } catch (error) {
+            console.error(error);
             this.logger.warn(`Execute Futures Order: Failed to execute Order [${exchangePair.symbol} (${error.message})]`)
         }
     }
@@ -202,6 +220,9 @@ module.exports = class OrderExecutor {
         const openSellOrders = openOrders.filter((order) => order.side == 'sell');
         const ticker = exchangePair.getTicker()
         const { bidPrice, askPrice, lastPrice} = ticker;
+        console.log('position');
+        console.log(position);
+        console.log('-----');
         if (!position) {
             if (openOrders.length > 1 || (openBuyOrders.length === 0 && openOrders.length == 1)) {
                 await exchangePair.cancelActiveOrders();
@@ -230,7 +251,7 @@ module.exports = class OrderExecutor {
             const remainingAmount = parseFloat(amount) - parseFloat(positionAmount);
             const { min: minimumAmountLimit, max: maximumAmountLimit } = exchangePair.info.limits.amount;
             const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision;
-            const rePrecisedAmount =  parseFloat(remainingAmount.toFixed(amountPrecision))
+            const rePrecisedAmount =  parseFloat(remainingAmount.toFixed(amountPrecision));
 
             if (positionSide === 'LONG') {
                 if (rePrecisedAmount < minimumAmountLimit ) return;
