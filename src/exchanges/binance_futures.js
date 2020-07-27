@@ -282,12 +282,11 @@ module.exports = class BinanceFuturesExchange {
     async fetchBalance(asset) {
         try {
             if (!this.balances) {
-                await self.initUserWebsocket();
-                const fetchedBalances = (await this.exchange.fetchBalance()).info.balances;
-                this.balances = {};
-                this.addBalanceEvent(); //To trigger the balance Websocket event
+                await this.initUserWebsocket();
+                const fetchedBalances = (await this.exchange.fetchBalance()).info.assets;
+                this.balances = {}; //To trigger the balance Websocket event
                 fetchedBalances.forEach(bal => {
-                    const { asset, free, locked } = bal
+                    const { asset, maxWithdrawAmount: free, initialMargin: locked } = bal;
                     this.balances[asset] = new Balance(asset, free, locked);
                 });
                 return this.balances[asset];
