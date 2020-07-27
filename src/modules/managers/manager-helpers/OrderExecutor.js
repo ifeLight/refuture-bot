@@ -212,7 +212,7 @@ module.exports = class OrderExecutor {
         const openSellOrders = openOrders.filter((order) => order.side == 'sell');
         const ticker = exchangePair.getTicker()
         const { bidPrice, askPrice, lastPrice} = ticker;
-        if (!position) {
+        if (!position || (position && position.positionAmount == 0)) {
             if (openOrders.length > 1 || (openBuyOrders.length === 0 && openOrders.length == 1)) {
                 await exchangePair.cancelActiveOrders();
                 await this.futuresCreateOrder(exchangePair, amount, 'buy', options);
@@ -311,7 +311,7 @@ module.exports = class OrderExecutor {
         const openSellOrders = openOrders.filter((order) => order.side == 'sell');
         const ticker = exchangePair.getTicker()
         const { bidPrice, askPrice, lastPrice} = ticker;
-        if (!position) {
+        if (!position || (position && position.positionAmount == 0)) {
             if (openOrders.length > 1 || (openSellOrders.length === 0 && openOrders.length == 1)) {
                 await exchangePair.cancelActiveOrders();
                 await this.futuresCreateOrder(exchangePair, amount, 'sell', options);
@@ -381,7 +381,6 @@ module.exports = class OrderExecutor {
             }
             
             if (positionSide === 'LONG') {
-                console.log('came here');
                 if (openOrders.length > 1 || (openSellOrders.length === 0 && openOrders.length == 1)) {
                     await exchangePair.cancelActiveOrders();
                     await recreateOrder();
@@ -426,6 +425,7 @@ module.exports = class OrderExecutor {
     async futuresForceClose(position, exchangePair) {
         await exchangePair.cancelActiveOrders();
         const { positionAmount, positionSide } = position;
+        if (positionAmount == 0) return;
         const amount = Math.abs(positionAmount);
         if (positionSide == 'LONG') {
             return (await exchangePair.createMarketOrder('sell', amount));
@@ -434,7 +434,7 @@ module.exports = class OrderExecutor {
     }
 
     async futuresClose(position, exchangePair, options) {
-        if (!position) return;
+        if (!position || (position && position.positionAmount == 0)) return;
         await exchangePair.cancelActiveOrders();
         const { positionAmount, positionSide } = position;
         const amount = Math.abs(positionAmount);
