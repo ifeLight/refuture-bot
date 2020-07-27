@@ -74,16 +74,8 @@ module.exports = class OrderExecutor {
                 const mostProfitablePosition = await this.resetPositionsToOne(positions, exchangePair);
                 position = mostProfitablePosition;
             } else if (positions.length == 1) {
-                position = position[0]
+                position = positions[0]
             }
-
-            console.log('Positions');
-            console.log(positions);
-            console.log('-----');
-
-            console.log('Position1');
-            console.log(position);
-            console.log('-----');
 
              // Leverage set check
              const lev = await exchangePair.getLeverage();
@@ -220,9 +212,6 @@ module.exports = class OrderExecutor {
         const openSellOrders = openOrders.filter((order) => order.side == 'sell');
         const ticker = exchangePair.getTicker()
         const { bidPrice, askPrice, lastPrice} = ticker;
-        console.log('position');
-        console.log(position);
-        console.log('-----');
         if (!position) {
             if (openOrders.length > 1 || (openBuyOrders.length === 0 && openOrders.length == 1)) {
                 await exchangePair.cancelActiveOrders();
@@ -276,6 +265,7 @@ module.exports = class OrderExecutor {
                 if (remAmount > 0) {
                     const remAmountToQuote = (remAmount * lastPrice) / parseInt(leverage);
                     const { quote } = exchangePair.info;
+                    console.log(quote);
                     const quoteBalance = await exchangePair.getBalance(quote);
                     let newAmount;
                     if (remAmountToQuote < quoteBalance.free) {
@@ -306,11 +296,16 @@ module.exports = class OrderExecutor {
                         return;
                     }
                 }
+
+                if (openOrders.length < 1) {
+                    await recreateOrder()
+                    return;
+                }
             }
         }
     }
 
-    async runFuturesShort() {
+    async runFuturesShort(position, exchangePair, amount, options) {
         const openOrders = await exchangePair.getActiveOrders();
         const openBuyOrders = openOrders.filter((order) => order.side == 'buy');
         const openSellOrders = openOrders.filter((order) => order.side == 'sell');
@@ -386,6 +381,7 @@ module.exports = class OrderExecutor {
             }
             
             if (positionSide === 'LONG') {
+                console.log('came here');
                 if (openOrders.length > 1 || (openSellOrders.length === 0 && openOrders.length == 1)) {
                     await exchangePair.cancelActiveOrders();
                     await recreateOrder();
@@ -398,6 +394,11 @@ module.exports = class OrderExecutor {
                         await recreateOrder()
                         return;
                     }
+                }
+
+                if (openOrders.length < 1) {
+                    await recreateOrder()
+                    return;
                 }
             }
         }
