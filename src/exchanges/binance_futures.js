@@ -37,7 +37,13 @@ module.exports = class BinanceFuturesExchange {
         this.exchange.nodeBinanceApi = new NodeBinanceApi().options({
             APIKEY: apiKey,
             APISECRET: apiSecret
-          });
+        });
+
+        try {
+            await this.exchange.loadMarkets();
+        } catch (error) {
+            this.logger.warn(`Binance Futures: Unable to load markets: ${error.message}`);
+        }
 
         try {
             await this.exchange.checkRequiredCredentials();
@@ -340,7 +346,7 @@ module.exports = class BinanceFuturesExchange {
     }
     async fetchActiveOrders(symbol) {
         try {
-            if (!this.orders) {
+            if (!this.orders || (this.orders && !this.orders[symbol])) {
                 this.orders = {};
                 const fetchedOrders = await this.exchange.fetchOpenOrders(symbol);
                 const symbolOrders = fetchedOrders.map((order) => {
