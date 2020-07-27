@@ -1,7 +1,7 @@
 module.exports = class Position {
     constructor({symbol, positionAmount, entryPrice, liquidationPrice, leverage, unRealizedProfit, marginType}) {
         this.symbol = symbol;
-        this.positionAmount = parseFloat(positionAmount);
+        this.positionAmount = parseFloat(Math.abs(positionAmount));
         this.entryPrice = parseFloat(entryPrice);
         this.liquidationPrice = parseFloat(liquidationPrice);
         this.leverage = parseInt(leverage);
