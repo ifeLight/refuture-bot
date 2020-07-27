@@ -44,7 +44,7 @@ module.exports = class OrderExecutor {
             const quoteBalance = await exchangePair.getBalance(quote);
 
             if (signalResult.getSignal()) {
-                signal = signalResult.getSignal()
+                const signal = signalResult.getSignal()
                 // Set last signal
                 exchangePair.setLastSignal(signal);
                 if (signal == 'long') {
@@ -52,13 +52,14 @@ module.exports = class OrderExecutor {
                 }
 
                 if (signal == 'close' || signal == 'short') {
-                    await this.runShort(exchangePair);
+                    await this.runShort(exchangePair, options);
                 }
             } else if (signalResult.getOrderAdvice()) {
                 await this.runAdvice(signalResult.getOrderAdvice(), exchangePair, amount, options);
             }
         } catch (error) {
-            this.logger(`Execute Order: Failed to execute Order [${exchangePair.symbol} (${error.message})]`)
+            console.error(error);
+            this.logger.warn(`Execute Order: Failed to execute Order [${exchangePair.symbol} (${error.message})]`)
         }
     }
 
@@ -105,7 +106,7 @@ module.exports = class OrderExecutor {
             }
             
         } catch (error) {
-            this.logger(`Execute Futures Order: Failed to execute Order [${exchangePair.symbol} (${error.message})]`)
+            this.logger.warn(`Execute Futures Order: Failed to execute Order [${exchangePair.symbol} (${error.message})]`)
         }
     }
 
