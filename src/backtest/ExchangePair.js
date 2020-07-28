@@ -92,4 +92,8 @@ module.exports = class ExchangePair {
     getTime() {
         return this._time;
     }
+
+    isFutures() {
+        return this.exchange.isFutures;
+    }
 }
