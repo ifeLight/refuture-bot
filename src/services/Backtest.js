@@ -5,6 +5,8 @@ const ExchangePair = require('../backtest/ExchangePair');
 
 const logger = require('../backtest/utils/logger');
 const eventEmitter = require('../backtest/utils/eventEmitter');
+const drawChart = require('../backtest/utils/drawChart');
+const Backtester = require('../backtest/Backtest');
 
 const periodToTimeDiff = require('../utils/periodToTimeDiff');
 
@@ -38,6 +40,9 @@ class Backtest {
             period,
             orderType,
             leverage,
+            stopLoss,
+            takeProfit,
+            amount,
             fee
         } = this.parameters;
         let indicatorName, indicatorOptions;
@@ -93,6 +98,18 @@ class Backtest {
             period
         });
 
+        const backtester = new Backtester({
+            candles: mappedCandles,
+            signals,
+            stopLoss,
+            takeProfit,
+            exchangeFee: tradingFee,
+            balanceUSD: amount
+        })
+
+        const result = backtester.start();
+        drawChart(result);
+        process.exit();
     }
 
     async runIndicator ({fetchedCandles, indicatorName, orderType, indicatorOptions, period}) {
@@ -120,6 +137,7 @@ class Backtest {
                 this.exchangePair.setMarkPrice(price);
                 this.exchangePair.setLastPrice(price);
                 this.exchangePair.setTime(time);
+                this.candlesRepository.setDefaultToDate(time);
                 const signalResult = await this.indicatorManager.run(indicatorName, this.exchangePair, indicatorOptions);
 
                 if (!signalResult || (signal && !signalResult.getSignal())) {
