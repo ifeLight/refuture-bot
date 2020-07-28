@@ -1,0 +1,18 @@
+{
+    "exchange": "binance",
+    "symbol": "BTC/USDT",
+    "indicator": {
+        "name": "bollingerSimple",
+        "options": {
+            "period": "5m",
+            "length": 14,
+            "stdDev": 2
+        }
+    },
+    "amount": 1000,
+    "takeProfit": 0.3,
+    "stoploss": 0.4,
+    "leverage": 5,
+    "startDate": "2020-05-20:19:45",
+    "endDate": "2020-05-22:19:45"
+}
