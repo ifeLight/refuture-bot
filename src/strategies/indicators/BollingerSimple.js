@@ -37,11 +37,15 @@ module.exports = class {
             const resMiddle = res[res.length - 1]['middle'];
             const lastPrice = indicatorPeriod.getLastPrice();
 
+            const lastSignal = indicatorPeriod.getLastSignal();
+
             if(resMiddle  > lastPrice) {
+                if(lastSignal == 'long') return indicatorPeriod.createEmptySignal();
                 return SignalResult.createSignal('long', {
                     value: resMiddle
                 })
             } else if (resMiddle  < lastPrice) {
+                if(lastSignal == 'short') return indicatorPeriod.createEmptySignal();
                 return SignalResult.createSignal('short', {
                     value: resMiddle
                 })
