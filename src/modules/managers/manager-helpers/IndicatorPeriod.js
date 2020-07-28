@@ -58,7 +58,7 @@ module.exports = class IndicatorPeriod {
     }
 
     getTime() {
-        return Date.now();
+        return this.exchangePair.getTime();
     }
 
 

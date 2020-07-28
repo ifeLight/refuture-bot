@@ -69,6 +69,10 @@ module.exports = class ExchangePair {
         this._lastSignal = signal;
     }
 
+    getTime() {
+        return Date.now();
+    }
+
     async setLeverage(leverage) {
         if (this.exchange.isFutures) {
             const res = await this.exchange.changeLeverage(this.symbol, parseInt(leverage));
