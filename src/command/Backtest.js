@@ -14,6 +14,8 @@ module.exports = async function ({
     symbol,
     leverage,
     period,
+    orderType,
+    fee,
     indicator, }) {
         const cmdBactestFilePath = configFile ? configFile : 'backtest-config-sample.json';
         const bactestFile = path.join(process.cwd(), cmdBactestFilePath)
@@ -33,6 +35,8 @@ module.exports = async function ({
             leverage: leverage || backtestConfig.leverage || 1,
             indicator: indicator || backtestConfig.indicator || 'bollingerSimple',
             period: period || backtestConfig.period || '15m',
+            orderType: orderType || backtestConfig.orderType || 'market',
+            fee: fee || backtestConfig.orderType.fee
         }
 
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {
