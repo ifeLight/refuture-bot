@@ -62,8 +62,8 @@ class CandleAction {
             laterTime = new Date(from);
         } else {
             const timeDifference = periodToTimeDiff(period);
-            thisTime = new Date(Date.now());
-            laterTime = new Date(Date.now() - (timeDifference * number));
+            thisTime = new Date(to);
+            laterTime = new Date(to - (timeDifference * number));
         }
         try {
             const res = await this.find({
