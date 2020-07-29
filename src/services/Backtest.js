@@ -84,7 +84,7 @@ class Backtest {
         });
 
         // Mapping candles
-        const mappedCandles = fetchedCandles.mapp((candle) => {
+        const mappedCandles = fetchedCandles.map((candle) => {
             const { time, open, high, close, low, volume } = candle
             return [time, open, high, low, close, volume];
         })
@@ -98,13 +98,22 @@ class Backtest {
             period
         });
 
+        let balanceUSD;
+        if (this.exchangePair.isFutures) {
+            balanceUSD = amount * parseInt(leverage);
+        } else {
+            balanceUSD = amount;
+        }
+
+
+        // Running Backtest
         const backtester = new Backtester({
             candles: mappedCandles,
             signals,
             stopLoss,
             takeProfit,
             exchangeFee: tradingFee,
-            balanceUSD: amount
+            balanceUSD
         })
 
         const result = backtester.start();
