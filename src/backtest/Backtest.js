@@ -28,7 +28,7 @@ class Backtest {
 			balanceUSD: balance,
 			stopLoss: stopLoss || defaultStopLoss,
 			takeProfit: takeProfit || defaultTakeProfit,
-			positionType: 'none',
+			positionType: positionTypes.NONE,
 			trades: [],
 			maximumBalance: balance,
 			minimumBalance: balance,
@@ -82,7 +82,7 @@ class Backtest {
     checkStopLossAndTakeProfit(candle) {
 		let isStopLossHit = false;
 		let isTakeProfitHit = false;
-		if (this.state.positionType === 'long') {
+		if (this.state.positionType === positionTypes.LONG) {
 			if (this.state.positionEntry > candle.low) {
 				const difference = this.state.positionEntry - candle.low;
 				const drawdownPercentage = difference / this.state.positionEntry;
@@ -98,7 +98,7 @@ class Backtest {
 				}
 			}
 		}
-		if (this.state.positionType === 'short') {
+		if (this.state.positionType === positionTypes.SHORT) {
 			if (this.state.positionEntry < candle.high) {
 				const difference = candle.high - this.state.positionEntry;
 				const profitPercentage = difference / this.state.positionEntry;
@@ -131,7 +131,7 @@ class Backtest {
 			fee: 0,
 			profit: 0,
 		};
-		const isLongPosition = trade.type === 'long';
+		const isLongPosition = trade.type === positionTypes.LONG;
 		let difference;
 		if (isStopLossHit) {
 			difference = -(trade.entry * trade.stopLoss);
@@ -144,7 +144,7 @@ class Backtest {
 			+ (Math.abs(trade.close - trade.entry) / trade.entry * trade.amount));
 		trade.profit = trade.amount * (difference / trade.entry) - trade.fee;
 		// console.log('new trade:', trade, {isStopLossHit, isTakeProfitHit});
-		this.state.positionType = 'none';
+		this.state.positionType = positionTypes.NONE;
 		this.state.balanceUSD += trade.profit;
 		this.state.trades.push(trade);
 		this.handleBalanceStats();
@@ -182,8 +182,8 @@ class Backtest {
 		// console.log('new state:', logState);
     }
     
-    openPosition(price, positionType = 'long') {
-		if (this.state.positionType !== 'none') {
+    openPosition(price, positionType = positionTypes.LONG) {
+		if (this.state.positionType !== positionTypes.NONE) {
 			return;
 		}
 		// console.log('new position:', price, positionType);
@@ -202,9 +202,9 @@ class Backtest {
 		const signal = this.signals[candleTimestamp];
 		if (signal) {
 			const {positionType, price, orderType} = signal;
-			if (orderType === 'market') {
+			if (orderType === orderTypes.MARKET) {
 				this.openPosition(candle.close, positionType);
-			} else if (orderType === 'limit') {
+			} else if (orderType === orderTypes.LIMIT) {
 				this.placeOrder(price, positionType);
 			}
 		}
@@ -214,7 +214,7 @@ class Backtest {
 		this.calculateIndicators();
 		this.candles.forEach((candle, candleIndex) => {
 			// console.log(`Candle #${candleIndex + 1} (${candle.candleTimestamp}) of ${this.candles.length}`);
-			if (this.state.positionType !== 'none') {
+			if (this.state.positionType !== positionTypes.NONE) {
 				this.checkStopLossAndTakeProfit(candle);
 			}
 			this.tryToFillOrders(candle);
