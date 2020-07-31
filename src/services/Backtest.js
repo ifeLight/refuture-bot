@@ -12,7 +12,6 @@ const Backtester = require('../backtest/Backtest');
 const timeCalc = require('../backtest/utils/timeCalc');
 
 const periodToTimeDiff = require('../utils/periodToTimeDiff');
-const { isJsxSelfClosingElement } = require('typescript');
 
 class Backtest {
     constructor(parameters) {

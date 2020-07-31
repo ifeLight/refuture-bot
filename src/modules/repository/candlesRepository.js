@@ -36,18 +36,18 @@ module.exports = class CandlesRepository {
         try {
             const {name: exchangeName} = exchange;
             this.createEvent(exchange, symbol, period);
-            const fromDatabase = await CandleModel.fetchCandles({period, exchangeName, symbol, from: startTime, to: endTime});
             const timeDifference = periodToTimeDiff(period);
             const startTimeTimestamp = new Date(startTime).getTime();
             const endTimeTimestamp = new Date(endTime).getTime();
             const numberOfCandlesNeeded = Math.abs(endTimeTimestamp - startTimeTimestamp) / timeDifference;
-            if ((numberOfCandlesNeeded ) >= fromDatabase.length) {
+            const fromDatabase = await CandleModel.fetchCandles({period, number: numberOfCandlesNeeded, exchangeName, symbol, from: startTime, to: endTime});
+            if (numberOfCandlesNeeded > fromDatabase.length) {
                 const fromExchange = await exchange.fetchCandles(symbol, period, startTime, endTime);
                 const storeToDatabase = await CandleModel.addCandles(fromExchange);
             } else {
                 return fromDatabase;
             }
-        return CandleModel.fetchCandles({period, exchangeName, symbol, from: startTime, to: endTime});
+            return CandleModel.fetchCandles({period, number: numberOfCandlesNeeded,  exchangeName, symbol, from: startTime, to: endTime});
         } catch (error) {
             this.logger.error(`Candles Repository (fetchCandlesByTimeDifference): Error Fetching Candles [${exchange.name}: ${symbol}] (${error.message})`);
             return undefined;
