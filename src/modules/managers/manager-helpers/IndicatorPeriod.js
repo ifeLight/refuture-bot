@@ -54,7 +54,7 @@ module.exports = class IndicatorPeriod {
     }
 
     createEmptySignal(debug = {}) {
-        return this.SignalResult.createEmptySignal(signal);
+        return this.SignalResult.createEmptySignal(debug);
     }
 
     getTime() {
