@@ -23,7 +23,7 @@ module.exports = async function ({
         const backtestConfig = JSON.parse(fs.readFileSync(bactestFile).toString());
         const defaultStartDate = new Date();
         defaultStartDate.setDate(defaultStartDate.getDate() - 1);
-        
+
         const parameters = {
             amount: amount || backtestConfig.amount || 1000,
             takeProfit: takeProfit || backtestConfig.takeProfit || 0.3,

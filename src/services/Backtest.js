@@ -1,3 +1,5 @@
+const clc = require('cli-color');
+
 const IndicatorManager = require('../modules/managers/IndicatorManager');
 const CandlesRepository = require('../modules/repository/CandlesRepository');
 const ExchangeManager = require('../modules/managers/ExchangeManager');
@@ -7,8 +9,10 @@ const logger = require('../backtest/utils/logger');
 const eventEmitter = require('../backtest/utils/eventEmitter');
 const drawChart = require('../backtest/utils/drawChart');
 const Backtester = require('../backtest/Backtest');
+const timeCalc = require('../backtest/utils/timeCalc');
 
 const periodToTimeDiff = require('../utils/periodToTimeDiff');
+const { isJsxSelfClosingElement } = require('typescript');
 
 class Backtest {
     constructor(parameters) {
@@ -30,6 +34,10 @@ class Backtest {
         })
     }
 
+    log(data) {
+        process.stdout.write(data + '\n');
+    }
+
     async start() {
         const {
             indicator,
@@ -47,8 +55,13 @@ class Backtest {
         } = this.parameters;
         let indicatorName, indicatorOptions;
         let tradingFee;
+        let timingStart;
+
+        const log = this.log;
+        this.state = {};
 
         // Checking Indicator
+        log(clc.white.bgBlack('Checking Indicator.....'))
         if (typeof indicator === 'string') {
             indicatorName = indicator;
         } if (typeof indicator === 'object' && indicator.name) {
@@ -57,15 +70,20 @@ class Backtest {
         } else {
             throw new Error('Invalid indicator')
         }
+        this.indicatorName = indicatorName;
+        log(clc.greenBright('indicator OK'))
 
         // Init Exchange Pair
         try {
+            timingStart = Date.now();
+            log(clc.white.bgBlack('Setting up the Exchange Pair.....'))
             this.exchangePair.init(exchangeName, symbol);
             await this.exchangePair.setup();
             await this.exchangePair.setLeverage(leverage);
             const pairInfo = this.exchangePair.info;
             const { maker, taker } = pairInfo.fees
-            tradingFee = parseFloat(fee) || Math.max(parseFloat(maker), parseFloat(taker));
+            tradingFee = parseFloat(fee) || Math.max(parseFloat(maker), parseFloat(taker)) * 100;
+            log(clc.greenBright(`Exchange Pair Setup - DONE (${timeCalc(timingStart)}secs)`));
         } catch (error) {
            throw error; 
         }
@@ -75,98 +93,108 @@ class Backtest {
         // Fetching Candles
         const startTime = new Date(startDate);
         const endTime = new Date(endDate);
-        const fetchedCandles = this.candlesRepository.fetchCandlesByTimeDifference({
+
+        log(clc.white.bgBlack('Fetching Candles.....'))
+        log(clc.white.bgBlack(`From ${startDate}.... to ${endDate} `));
+        timingStart = Date.now();
+        const fetchedCandles = await this.candlesRepository.fetchCandlesByTimeDifference({
             exchange,
             symbol,
             period,
             startTime,
             endTime
         });
+        
+        log(clc.greenBright(`Fetching Candles - DONE (${timeCalc(timingStart)}secs)`));
+        log(clc.greenBright(`Candles Fetched: ${fetchedCandles.length} [${exchangeName}:${symbol}:${period}] `));
 
-        // Mapping candles
-        const mappedCandles = fetchedCandles.map((candle) => {
-            const { time, open, high, close, low, volume } = candle
-            return [time, open, high, low, close, volume];
-        })
-
-        // Creating signals
-        const signals = await this.runIndicator({
-            fetchedCandles,
-            indicatorName,
-            orderType,
-            indicatorOptions,
-            period
-        });
-
-        let balanceUSD;
-        if (this.exchangePair.isFutures) {
-            balanceUSD = amount * parseInt(leverage);
-        } else {
-            balanceUSD = amount;
+        //Backfilling
+        const indicatorDefaultOptions = (this.indicatorManager.find(indicatorName)).getOptions();
+        if (indicatorDefaultOptions && indicatorDefaultOptions.period) {
+            await this.backfill({period: indicatorDefaultOptions.period , exchangeName, exchange, symbol, startDate, endDate});
         }
 
-
         // Running Backtest
+        log(clc.white.bgBlack('Running Backtester Started.....'));
         const backtester = new Backtester({
-            candles: mappedCandles,
-            signals,
+            candles: fetchedCandles,
             stopLoss,
             takeProfit,
             exchangeFee: tradingFee,
-            balanceUSD
-        })
-
-        const result = backtester.start();
+            amount,
+            leverage,
+            strategy: this.strategy,
+            parentObject: this
+        });
+        timingStart = Date.now();
+        const result = await backtester.start();
+        log(clc.greenBright(`Backtester - DONE (${timeCalc(timingStart)}secs)`));
         drawChart(result);
         process.exit();
     }
 
-    async runIndicator ({fetchedCandles, indicatorName, orderType, indicatorOptions, period}) {
-        let signals = {};
-        let lastSignal = null;
-        const periodtoTime = periodToTimeDiff(period);
-        const candlePointUnitTime = parseInt(periodtoTime / 3);
-        const isFutures = this.exchangePair.isFutures();
-
-        // Running Indicator Initial
-        await this.indicatorManager.runInit(indicatorName, this.exchangePair, indicatorOptions)
-
-        //Running Indicators For Sinals
-        for (const candle of fetchedCandles) {
-            const {open, high, low, close, time } = candle;
-            const candlePoints = [
-                {price: parseFloat(open), time: time },
-                {price: parseFloat(high), time: time + (candlePointUnitTime * 1)},
-                {price: parseFloat(low), time: time + (candlePointUnitTime * 2)}
-            ]
-
-            for (const candlePoint of candlePoints) {
-                const { time, price } = candlePoint
-                this.exchangePair.setLastSignal(lastSignal);
-                this.exchangePair.setMarkPrice(price);
-                this.exchangePair.setLastPrice(price);
-                this.exchangePair.setTime(time);
-                this.candlesRepository.setDefaultToDate(time);
-                const signalResult = await this.indicatorManager.run(indicatorName, this.exchangePair, indicatorOptions);
-
-                if (!signalResult || (signal && !signalResult.getSignal())) {
-                    // Do nothing
-                } else if (signalResult.getSignal() && signalResult.getSignal() === 'long') {
-                    signals[time] = { positionType: 'long', orderType, price };
-                    lastSignal = 'long';
-                 } else if (signalResult.getSignal() && signalResult.getSignal() === 'short') {
-                        let positionType = isFutures ? 'short' : 'none';
-                        signals[time] = { positionType, orderType, price };
-                        lastSignal = 'short';
-                } else if (signalResult.getSignal() && signalResult.getSignal() === 'close') {
-                    signals[time] = { positionType: 'none', orderType, price };
-                    lastSignal = 'close';
-                }
-                
-            }
-        }
-        return signals;
+    async backfill ({period, exchangeName, exchange, symbol, startDate, endDate}) {
+        const startTime = new Date((new Date(startDate)).getTime() - (periodToTimeDiff(period) * 220));
+        const endTime = new Date(endDate);
+        const log = this.log;
+        log(clc.white.bgBlack('Backfiling Candles.....'))
+        log(clc.white.bgBlack(`From ${startDate}.... to ${endDate} `));
+        let timingStart = Date.now();
+        const backfilledCandles = await this.candlesRepository.fetchCandlesByTimeDifference({
+            exchange,
+            symbol,
+            period,
+            startTime,
+            endTime
+        });
+        
+        log(clc.greenBright(`Backfiling Candles - DONE (${timeCalc(timingStart)}secs)`));
+        log(clc.greenBright(`Backfiling Candles Fetched: ${backfilledCandles.length} [${exchangeName}:${symbol}:${period}] `));
     }
+
+    async strategy (time, price, self) {
+        let timingStart = Date.now();
+        self.state.signals = {};
+        self.state.lastSignal = null;
+        self.state.index = self.state.index  || 0;
+        self.state.totalTime = self.state.totalTime || 0;
+        const isFutures = self.exchangePair.isFutures();
+        const log = self.log;
+        if (self.state.index === 0) {
+            await self.indicatorManager.runInit(self.indicatorName, self.exchangePair, self.indicatorOptions);
+        }
+        const probablyTrials = parseInt(this.candles.length * 3);
+        self.exchangePair.setLastSignal(self.state.lastSignal);
+        self.exchangePair.setMarkPrice(price);
+        self.exchangePair.setLastPrice(price);
+        self.exchangePair.setTime(time);
+        self.candlesRepository.setDefaultToDate(time);
+        const signalResult = await self.indicatorManager.run(self.indicatorName, self.exchangePair, self.indicatorOptions);
+        if (!signalResult || (signalResult && !signalResult.getSignal())) {
+            // Do nothing
+        } else if (signalResult.getSignal() && signalResult.getSignal() === 'long') {
+            this.openPosition(time, price, 'long');
+            self.state.lastSignal = 'long';
+         } else if (signalResult.getSignal() && signalResult.getSignal() === 'short') {
+            let positionType = isFutures ? 'short' : 'none';
+            this.openPosition(time, price, positionType);
+            self.state.lastSignal = 'short';
+        } else if (signalResult.getSignal() && signalResult.getSignal() === 'close') {
+            this.openPosition(time, price, 'none');
+            self.state.lastSignal = 'close';
+        }
+
+        if (self.state.index !== 0) {
+            process.stdout.write(clc.move.up(1));
+            process.stdout.write(clc.erase.line);
+        } 
+        self.state.totalTime = parseInt(self.state.totalTime + parseInt((Date.now() - timingStart)));
+        const avgTime = ((self.state.totalTime / 1000 ) / self.state.index).toFixed(2);
+        log(clc.blue(`Running Indicator: ${self.state.index}/${probablyTrials} [AvgTime: ${avgTime}secs]`))
+        self.state.index++;
+    }
+
+    
 }
 
 module.exports =  Backtest;

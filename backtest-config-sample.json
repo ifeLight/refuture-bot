@@ -11,10 +11,10 @@
     },
     "amount": 1000,
     "takeProfit": 0.3,
-    "stoploss": 0.4,
-    "leverage": 5,
-    "period": "15m",
+    "stopLoss": 0.4,
+    "leverage": 1,
+    "period": "1m",
     "orderType": "market",
     "startDate": "2020-05-20:19:45",
-    "endDate": "2020-05-22:19:45"
+    "endDate": "2020-05-21:22:45"
 }

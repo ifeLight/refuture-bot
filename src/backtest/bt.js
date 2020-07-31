@@ -7,24 +7,21 @@ const {
 
 class Backtest {
     constructor({exchangeFee, candles, amount, leverage, stopLoss, takeProfit, strategy, parentObject}) {
-		const balance = amount || defaultBalance;
-		const lev = parseInt(leverage) || defaultLeverage;
-		const echFee = exchangeFee || defaultExchangeFee;
-        this.amount = amount;
+        const balance = amount || defaultBalance;
+        this.amount;
         this.state = {
-			balance,
+			balance: amount || defaultBalance,
 			stopLoss: stopLoss || defaultStopLoss,
 			takeProfit: takeProfit || defaultTakeProfit,
 			positionType: positionTypes.NONE,
 			trades: [],
 			maximumBalance: balance,
             minimumBalance: balance,
-			entryTime: candles[0].time,
-			leverage: lev,
-			exchangeFee: echFee
+            entryTime: undefined,
         };
-        this.leverage = lev;
-        this.exchangeFee = echFee;
+        this.leverage = leverage || defaultLeverage;
+        this.exchangeFee = exchangeFee || defaultExchangeFee;
+        this.orders = [];
         this.strategy = strategy || (() => {});
         this.candles = candles;
         this.parentObject = parentObject;
@@ -91,7 +88,7 @@ class Backtest {
     }
 
     calcProfit (amount, entry, difference, fee) {
-        return (amount * ((difference / entry) * this.leverage)) - fee;
+        return ((amount) * ((difference / entry) * this.leverage)) - fee;
     }
 
     roundupTrade(trade) {
@@ -103,13 +100,13 @@ class Backtest {
     }
     
     closePositionBasedOnSafety({isStopLossHit, isTakeProfitHit, time}) {
-		const trade = this.createNewEmptyTrade();
+		const trade = this.createNewEmptyTrade(time);
 		const isLongPosition = trade.type === positionTypes.LONG;
 		let difference;
 		if (isStopLossHit) {
-			difference = -(trade.entry * (trade.stopLoss / 100));
+			difference = -(trade.entry * trade.stopLoss);
 		} else if (isTakeProfitHit) {
-			difference = (trade.entry * (trade.takeProfit / 100));
+			difference = (trade.entry * trade.takeProfit);
         }
         trade.closeTime = time;
 		trade.close = isLongPosition ? trade.entry + difference : trade.entry - difference;
@@ -142,12 +139,12 @@ class Backtest {
     }
     
     handleBalanceStats() {
-		const {balance, maximumBalance, minimumBalance} = this.state;
-		if (balance > maximumBalance) {
-			this.state.maximumBalance = balance;
+		const {balanceUSD, maximumBalance, minimumBalance} = this.state;
+		if (balanceUSD > maximumBalance) {
+			this.state.maximumBalance = balanceUSD;
 		}
-		if (balance < minimumBalance) {
-			this.state.minimumBalance = balance;
+		if (balanceUSD < minimumBalance) {
+			this.state.minimumBalance = balanceUSD;
 		}
 	}
 
@@ -158,34 +155,31 @@ class Backtest {
     }
 
     openPosition(time, price, positionType = positionTypes.LONG) {
-		let entryTime = time;
 		if (this.state.positionType === positionType) {
 			return;
 		}
-        if (this.state.positionType !== positionTypes.NONE) {
-            this.closePositionBasedOnPositionChange(time, price);
-        }
+        this.closePositionBasedOnPositionChange(price);
         if (positionType !== positionTypes.NONE) {
             this.state.positionEntry = price;
             this.state.positionType = positionType;
-            this.state.entryTime = entryTime;
-		}
+            this.state.entryTime = time;
+        }
 	}
 
     async start() {
         if (this.candles.length < 2) {
             throw new Error('Candles not sufficient');
         }
-        const candlePointUnitTime = parseInt(Math.abs(parseInt(this.candles[0].time) - parseInt(this.candles[1].time)) / 3)
+        const candlePointUnitTime = parseInt(Math.abs(parseInt(this.candles[0]), parseInt(this.candles[1])) / 3)
         for (const candle of this.candles) {
             const {open, high, low, close, time } = candle;
             const candlePoints = [
                 {price: parseFloat(open), time: time },
-                {price: parseFloat(low), time: time + (candlePointUnitTime * 1)},
-                {price: parseFloat(high), time: time + (candlePointUnitTime * 2)},
+                {price: parseFloat(low), time: time + (candlePointUnitTime * 2)},
+                {price: parseFloat(high), time: time + (candlePointUnitTime * 1)},
             ]
             for (const candlePoint of candlePoints) {
-				const { time, price } = candlePoint;
+                const { time, price } = candlePoint;
                 if (this.state.positionType !== positionTypes.NONE) {
                     this.checkStopLossAndTakeProfit(time, price);
                 }
@@ -196,5 +190,3 @@ class Backtest {
 		return this.state;
 	}
 }
-
-module.exports = Backtest;

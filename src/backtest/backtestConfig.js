@@ -13,4 +13,5 @@ module.exports = {
 		MARKET: 'market',
 	},
 	defaultIndicatorPeriod: 14,
+	defaultLeverage: 1,
 };
