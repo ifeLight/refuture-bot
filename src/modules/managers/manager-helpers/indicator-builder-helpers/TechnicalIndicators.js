@@ -12,6 +12,7 @@ module.exports = class Candles {
     
     init(options) {
         this.name = options.name;
+        this.period = options.length;
     }
 
     async build() {
