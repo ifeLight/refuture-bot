@@ -1,5 +1,9 @@
-const BB = require('technicalindicators').BollingerBands
+/***
+ * It was designed for Testing
+ * Its a Failed Indicator
+ */
 
+const BB = require('technicalindicators').BollingerBands
 
 module.exports = class {
     constructor(){}
@@ -18,7 +22,6 @@ module.exports = class {
         // Meant for prebuilding Indicator Strategies
         // And it only runs once
         // and u can make use of the indicatorPeriod.storage
-        console.info(`Starting: ${indicatorPeriod.getTime()}`);
     }
 
     async period(indicatorPeriod, options) {
