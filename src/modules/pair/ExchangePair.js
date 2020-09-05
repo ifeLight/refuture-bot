@@ -105,7 +105,17 @@ module.exports = class ExchangePair {
             const orders = await this.exchange.fetchActiveOrders(this.symbol);
             return orders;
         } catch (error) {
-            this.logger(`Pair(${this.symbol}): Unable to Get Orders (${error.message})`);
+            this.logger(`Pair(${this.symbol}): Unable to Open Get Orders (${error.message})`);
+            return undefined;
+        }
+    }
+
+    async getClosedOrders() {
+        try {
+            const orders = await this.exchange.fetchClosedOrders(this.symbol);
+            return orders;
+        } catch (error) {
+            this.logger(`Pair(${this.symbol}): Unable to Get Closed Orders (${error.message})`);
             return undefined;
         }
     }

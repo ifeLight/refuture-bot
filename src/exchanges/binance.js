@@ -280,12 +280,23 @@ module.exports = class BinanceExchange {
     }
     async fetchActiveOrders(symbol) {
         try {
-            if (!this.orders || (this.orders && !this.orders[symbol])) {
-                await this.syncWebsocketOrders(symbol);
+            if (!this.openOrders || (this.openOrders && !this.openOrders[symbol])) {
+                await this.syncWebsocketOpenOrders(symbol);
             }
-            return this.orders[symbol];
+            return this.openOrders[symbol];
         } catch (error) {
             this.logger.info(`Binance: Failed to fetch active orders [${symbol}] (${error.message})`)
+        }
+    }
+
+    async fetchClosedOrders(symbol) {
+        try {
+            if (!this.closedOrders || (this.closedOrders && !this.closedOrders[symbol])) {
+                await this.syncWebsocketClosedOrders(symbol);
+            }
+            return this.closedOrders[symbol];
+        } catch (error) {
+            this.logger.info(`Binance: Failed to fetch Closed orders [${symbol}] (${error.message})`)
         }
     }
 
@@ -350,7 +361,8 @@ module.exports = class BinanceExchange {
 
                 if (response.eventType && response.eventType == 'executionReport') {
                     const symbol = self.exchange.markets_by_id[response.symbol]['symbol']
-                    await self.syncWebsocketOrders(symbol);
+                    await self.syncWebsocketOpenOrders(symbol);
+                    await self.syncWebsocketClosedOrders(symbol);
                 }
             })
         } catch (error) {
@@ -358,11 +370,11 @@ module.exports = class BinanceExchange {
         }
     }
 
-    async syncWebsocketOrders (symbol) {
+    async syncWebsocketOpenOrders (symbol) {
         try {
             const self = this;
-            if (!this.orders) {
-                this.orders = {};
+            if (!this.openOrders) {
+                this.openOrders = {};
             }
             const fetchedOrders = await this.exchange.fetchOpenOrders(symbol);
             const mappedOrders = fetchedOrders.map((order) => {
@@ -371,12 +383,32 @@ module.exports = class BinanceExchange {
                     time: order.timestamp
                 })
             })
-            this.orders[symbol] =  mappedOrders;
+            this.openOrders[symbol] =  mappedOrders;
             
         } catch (error) {
             this.logger.info(`Binance: Failed to sync websocket orders (${error.message})`)
         }
-      }
+    }
+
+    async syncWebsocketClosedOrders (symbol) {
+        try {
+            const self = this;
+            if (!this.closedOrders) {
+                this.closedOrders = {};
+            }
+            const fetchedOrders = await this.exchange.fetchClosedOrders(symbol);
+            const mappedOrders = fetchedOrders.map((order) => {
+                return new Order({
+                    ...order,
+                    time: order.timestamp
+                })
+            })
+            this.closedOrders[symbol] =  mappedOrders;
+            
+        } catch (error) {
+            this.logger.info(`Binance: Failed to sync websocket orders (${error.message})`)
+        }
+    }
 
 }
 

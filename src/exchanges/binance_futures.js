@@ -345,8 +345,8 @@ module.exports = class BinanceFuturesExchange {
     }
     async fetchActiveOrders(symbol) {
         try {
-            if (!this.orders || (this.orders && !this.orders[symbol])) {
-                this.orders = {};
+            if (!this.openOrders || (this.openOrders && !this.openOrders[symbol])) {
+                this.openOrders = {};
                 const fetchedOrders = await this.exchange.fetchOpenOrders(symbol);
                 const symbolOrders = fetchedOrders.map((order) => {
                     return new Order({
@@ -354,13 +354,35 @@ module.exports = class BinanceFuturesExchange {
                         time: order.timestamp
                     })
                 })
-                this.orders[symbol] =  symbolOrders;
+                this.openOrders[symbol] =  symbolOrders;
                 return symbolOrders;
             }
-            return this.orders[symbol];
+            return this.openOrders[symbol];
             
         } catch (error) {
             this.logger.info(`Binance Futures: Failed to fetch active orders [${symbol}] (${error.message})`);
+            return undefined;
+        }
+    }
+
+    async fetchClosedOrders(symbol) {
+        try {
+            if (!this.closedOrders || (this.closedOrders && !this.closedOrders[symbol])) {
+                this.closedOrders = {};
+                const fetchedOrders = await this.exchange.fetchClosedOrders(symbol);
+                const symbolOrders = fetchedOrders.map((order) => {
+                    return new Order({
+                        ...order,
+                        time: order.timestamp
+                    })
+                })
+                this.closedOrders[symbol] =  symbolOrders;
+                return symbolOrders;
+            }
+            return this.closedOrders[symbol];
+            
+        } catch (error) {
+            this.logger.info(`Binance Futures: Failed to fetch Closed orders [${symbol}] (${error.message})`);
             return undefined;
         }
     }
@@ -500,17 +522,28 @@ module.exports = class BinanceFuturesExchange {
             const {s: symbolId} = order;
             const asset = symbolId.split('USDT')[0];
             const symbol = asset + '/' + 'USDT';
-            if (!this.orders) {
-                this.orders = {};
+            if (!this.openOrders) {
+                this.openOrders = {};
             }
-            const fetchedOrders = await this.exchange.fetchOpenOrders(symbol);
-            const symbolOrders = fetchedOrders.map((order) => {
+            if (!this.closedOrders) {
+                this.closedOrders = {};
+            }
+            const fetchedOpenOrders = await this.exchange.fetchOpenOrders(symbol);
+            const fetchedClosedOrders = await this.exchange.fetchClosedOrders(symbol);
+            const symbolOpenOrders = fetchedOpenOrders.map((order) => {
                 return new Order({
                     ...order,
                     time: order.timestamp
                 })
-            })
-            this.orders[symbol] =  symbolOrders;
+            });
+            const symbolClosedOrders = fetchedClosedOrders.map((order) => {
+                return new Order({
+                    ...order,
+                    time: order.timestamp
+                })
+            });
+            this.closedOrders[symbol] = symbolClosedOrders;
+            this.openOrders[symbol] =  symbolOpenOrders;
             
         } catch (error) {
             this.logger.info(`Binance Futures: Failed to sync websocket orders (${error.message})`)

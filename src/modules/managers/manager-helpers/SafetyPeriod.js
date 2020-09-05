@@ -13,6 +13,10 @@ class SafetyPeriod extends IndicatorPeriod {
         return this.exchangePair.getActiveOrders()
     }
 
+    async getClosedOrders() {
+        return this.exchangePair.getClosedOrders()
+    }
+
     async getPositions() {
         return this.exchangePair.getPositions()
     }
