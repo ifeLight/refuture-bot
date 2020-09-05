@@ -156,10 +156,10 @@ class StrategyManager {
             for (let safety of safeties) {
                 let safetyResult;
                 if (typeof safety === 'string') {
-                    safetyResult = await this.safetyManager.run(safety, exchangePair, null, init);
+                    safetyResult = await this.safetyManager.run(safety, exchangePair, null, init, strat);
                 } else if (typeof safety === 'object') {
                     const { name, options} = safety;
-                    safetyResult = await this.safetyManager.run(name, exchangePair, options, init);
+                    safetyResult = await this.safetyManager.run(name, exchangePair, options, init, strat);
                 }
                 // await this.orderExecutor.execute(safetyResult, exchangePair, strat);
                 console.log(safetyResult);

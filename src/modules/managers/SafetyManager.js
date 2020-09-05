@@ -42,7 +42,7 @@ class SafetyManager {
         return (await this.run(safetyName, exchangePair, options, true));
     }
 
-    async run(safetyName, exchangePair, options, init=false) {
+    async run(safetyName, exchangePair, options, init=false, strat) {
         const { symbol, exchangeName } = exchangePair;
         try {
             const theSafety = this.find(safetyName);
@@ -76,7 +76,7 @@ class SafetyManager {
 
             await safetyPeriod.setup(exchangePair, indicatorBuilder)
             
-            let safetyResult = await theSafety.period(safetyPeriod, safetyOptions);
+            let safetyResult = await theSafety.period(safetyPeriod, safetyOptions, strat);
             if (!init) {
                 if (!safetyResult) {
                     let safetyResult = SignalResult.createEmptySignal();
