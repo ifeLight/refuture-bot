@@ -32,7 +32,7 @@ module.exports = {
         port: 27017,
         username: "",
         password: "",
-        dbname: "refuture",
+        dbname: process.env.DB_NAME || "refuture",
         optionsCollection: process.env.OPTIONS_COLLECTION_NAME || 'options',
         uri: defer(function () {
             const { host, port, username, password, dbname} = this.db;
