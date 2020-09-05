@@ -205,7 +205,7 @@ class StrategyManager {
         }
         const signalResults = await this.runInidicatorsStrategyTick(strat);
         let signalResult = this.indicatorSignalsResolver(signalResults);
-        signalResult = await this.insuranceManager.runAllInsurances(insurances, exchangePair, signalResult)
+        signalResult = await this.insuranceManager.runAllInsurances(strat, insurances, exchangePair, signalResult)
         // await this.orderExecutor.execute(signalResult, exchangePair, strat);
         console.log(signalResult);
     }

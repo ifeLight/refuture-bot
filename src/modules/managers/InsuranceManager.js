@@ -37,7 +37,7 @@ class InsuranceManager {
         return this.insurances; // It returns an Object
     }
 
-    async run(insuranceName, signalResult, exchangePair, options) {
+    async run(insuranceName, signalResult, exchangePair, options, strat) {
         let signalResultTag;
         if (!signalResult) {
             return SignalResult.createEmptySignal()
@@ -78,7 +78,7 @@ class InsuranceManager {
 
             await safetyPeriod.setup(exchangePair, indicatorBuilder)
             
-            let insuranceResult = await theInsurance.period(safetyPeriod, signalResult, insuranceOptions);
+            let insuranceResult = await theInsurance.period(safetyPeriod, signalResult, insuranceOptions, strat);
             if (insuranceResult) {
                 insuranceResult.setTag(signalResultTag)
                 return insuranceResult;
@@ -90,16 +90,16 @@ class InsuranceManager {
         }
     }
 
-    async runAllInsurances (insurancesConfig, exchangePair, signalResult) {
+    async runAllInsurances (strat, insurancesConfig, exchangePair, signalResult) {
         if (insurancesConfig && Array.isArray(insurancesConfig) && insurancesConfig.length > 0) {
             let currentSignalResult = signalResult;
             for (let insurance of insurancesConfig) {
                 let insuranceResult;
                 if (typeof insurance === 'string') {
-                    insuranceResult = await this.run(insurance, currentSignalResult, exchangePair, null);
+                    insuranceResult = await this.run(insurance, currentSignalResult, exchangePair, null, strat);
                 } else if (typeof insurance === 'object') {
                     const { name, options} = insurance;
-                    insuranceResult = await this.safetyManager.run(name, currentSignalResult, exchangePair, options);
+                    insuranceResult = await this.safetyManager.run(name, currentSignalResult, exchangePair, options, strat);
                 }
                 currentSignalResult = insuranceResult;
             }
