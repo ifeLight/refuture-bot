@@ -70,7 +70,8 @@ class Backtest {
             throw new Error('Invalid indicator')
         }
         this.indicatorName = indicatorName;
-        log(clc.greenBright('indicator OK'))
+        log(clc.greenBright('indicator OK'));
+
 
         // Init Exchange Pair
         try {
@@ -107,10 +108,13 @@ class Backtest {
         log(clc.greenBright(`Fetching Candles - DONE (${timeCalc(timingStart)}secs)`));
         log(clc.greenBright(`Candles Fetched: ${fetchedCandles.length} [${exchangeName}:${symbol}:${period}] `));
 
-        //Backfilling
+        // Setting up Indicator Options
         const indicatorDefaultOptions = (this.indicatorManager.find(indicatorName)).getOptions();
-        if (indicatorDefaultOptions && indicatorDefaultOptions.period) {
-            await this.backfill({period: indicatorDefaultOptions.period , exchangeName, exchange, symbol, startDate, endDate});
+        this.indicatorOptions = indicatorOptions || indicatorDefaultOptions;
+
+        //Backfilling
+        if (this.indicatorOptions && this.indicatorOptions.period) {
+            await this.backfill({period: this.indicatorOptions.period , exchangeName, exchange, symbol, startDate, endDate});
         }
 
         // Running Backtest
