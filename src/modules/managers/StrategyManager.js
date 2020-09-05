@@ -32,15 +32,12 @@ class StrategyManager {
         } = this;
 
         this.orderExecutor = new OrderExecutor({logger, eventEmitter, notifier});
-
-        const exchangeManager = new ExchangeManager(eventEmitter, logger);
-
         this.indicatorManager = new IndicatorManager({candlesRepository, logger, eventEmitter, exchangeManager});
         this.safetyManager = new SafetyManager({logger, eventEmitter, exchangeManager, candlesRepository});
+        this.insuranceManager = new InsuranceManager({logger, eventEmitter, exchangeManager, candlesRepository});
 
         // NOTE - on progress
         // this.policyManger = new PolicyManger();
-        // this.insuranceManager = new InsuranceManager();
         // this.watchdogManager = new WatchdogManager();
 
     }
@@ -198,7 +195,7 @@ class StrategyManager {
     } 
 
     async runIndicatorStrategyUnit(strat) {
-        const { symbol, exchange: exchangeName} = strat;
+        const { symbol, exchange: exchangeName, insurances} = strat;
         let exchangePair;
         if (this.getExchangePair(exchangeName, symbol)) {
             exchangePair = this.getExchangePair(exchangeName, symbol)
@@ -207,7 +204,8 @@ class StrategyManager {
             exchangePair = createdExchangePair;
         }
         const signalResults = await this.runInidicatorsStrategyTick(strat);
-        const signalResult = this.indicatorSignalsResolver(signalResults);
+        let signalResult = this.indicatorSignalsResolver(signalResults);
+        signalResult = await this.insuranceManager.runAllInsurances(insurances, exchangePair, signalResult)
         // await this.orderExecutor.execute(signalResult, exchangePair, strat);
         console.log(signalResult);
     }

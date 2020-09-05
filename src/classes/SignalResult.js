@@ -8,6 +8,7 @@ module.exports = class SignalResult {
   constructor() {
     this._debug = {};
     this._signal = undefined;
+    this._tag = undefined;
   }
 
   mergeDebug(debug) {
