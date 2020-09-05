@@ -471,14 +471,15 @@ module.exports = class BinanceFuturesExchange {
 
             if (message.e && message.e.toUpperCase() === 'ORDER_TRADE_UPDATE') {
                 const order = message.o;
-                await self.syncWebsocketOrders(order);
-                
+                // await self.syncWebsocketOrders(order); //Added Throttler
+                self.throttle('syncwebsocket_orders_key', self.syncWebsocketOrders, order, 3000);
             }
 
             if (message.e && message.e.toUpperCase() === 'ACCOUNT_UPDATE') {
                 const {B: balances, P: positions} = message.a;
                 self.syncWebsocketBalances(balances);
-                await self.syncWebsocketPositions();
+                self.throttle('syncwebsocket_position_key', self.syncWebsocketPositions);
+                // await self.syncWebsocketPositions(); // Added throttler
             }
           }
         };
@@ -490,7 +491,7 @@ module.exports = class BinanceFuturesExchange {
           } catch (e) {
             this.logger.error(`Binance Futures: user stream ping error: ${String(e)}`);
           }
-        }, 3000);
+        }, 1000 * 60 * 10);
     
         ws.onclose = function() {
           self.logger.info('Binance futures: User stream connection closed.');
@@ -577,6 +578,29 @@ module.exports = class BinanceFuturesExchange {
           } catch (error) {
             this.logger.info(`Binance Futures: Failed to sync websocket Positions (${error.message})`);
           }
+      }
+
+      throttle(key, func, parameter = null, timeout = 1000) {
+        if (!(func instanceof Promise)) {
+          throw new Error(`Throttler no async / promise function given: ${key}`);
+        }
+
+        if (!this.throttleTasks) {
+            this.throttleTasks = {};
+        }
+    
+        if (key in this.throttleTasks) {
+          this.logger.debug(`Throttler clear existing event: ${key} - ${timeout}ms`);
+    
+          clearTimeout(this.throttleTasks[key]);
+          delete this.throttleTasks[key];
+        }
+    
+        const me = this;
+        this.throttleTasks[key] = setTimeout(async () => {
+          delete me.throttleTasks[key];
+          await func(parameter);
+        }, timeout);
       }
 
 }

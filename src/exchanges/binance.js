@@ -361,8 +361,11 @@ module.exports = class BinanceExchange {
 
                 if (response.eventType && response.eventType == 'executionReport') {
                     const symbol = self.exchange.markets_by_id[response.symbol]['symbol']
-                    await self.syncWebsocketOpenOrders(symbol);
-                    await self.syncWebsocketClosedOrders(symbol);
+                    self.throttle('sync_open_orders', syncWebsocketOpenOrders, symbol, 3000);
+                    self.throttle('sync_open_orders', syncWebsocketClosedOrders, symbol, 3000);
+                    //  Changed to throttle
+                    // await self.syncWebsocketOpenOrders(symbol);
+                    // await self.syncWebsocketClosedOrders(symbol);
                 }
             })
         } catch (error) {
@@ -410,5 +413,27 @@ module.exports = class BinanceExchange {
         }
     }
 
+    throttle(key, func, parameter = null, timeout = 1000) {
+        if (!(func instanceof Promise)) {
+          throw new Error(`Throttler no async / promise function given: ${key}`);
+        }
+
+        if (!this.throttleTasks) {
+            this.throttleTasks = {};
+        }
+    
+        if (key in this.throttleTasks) {
+          this.logger.debug(`Throttler clear existing event: ${key} - ${timeout}ms`);
+    
+          clearTimeout(this.throttleTasks[key]);
+          delete this.throttleTasks[key];
+        }
+    
+        const me = this;
+        this.throttleTasks[key] = setTimeout(async () => {
+          delete me.throttleTasks[key];
+          await func(parameter);
+        }, timeout);
+      }
 }
 
