@@ -11,72 +11,35 @@ const OrderExecutor = require('../src/modules/managers/manager-helpers/OrderExec
 const ExchangeManager = require('../src/modules/managers/ExchangeManager')
 const ExchangePair = require('../src/modules/pair/ExchangePair');
 
-const SignalResult = require('../src/classes/SignalResult')
-
 const exchangeManager = new ExchangeManager(eventEmitter, logger);
 const candlesRepository = new CandlesRepository(eventEmitter, logger);
 
 const indicatorManager = new IndicatorManager({candlesRepository, logger, eventEmitter, exchangeManager});
-const safetyManager = new SafetyManager({logger, eventEmitter, exchangeManager, candlesRepository})
 const exchangePair = new ExchangePair(eventEmitter, logger, exchangeManager);
 
-const notifier = undefined;
-
-const orderExecutor = new OrderExecutor({logger, eventEmitter, notifier});
 
 exchangePair.init('binance_futures', 'BTC/USDT');
 
-const strat = {
-    symbol : "BTC/USDT",
-    exchange: "binance_futures",
-    trade: {
-        amount: 0.001,
-        order_type: "limit",
-        leverage: 2
-    },
-    strategies: {
-        indicators: [
-            {
-                name: "bollingerSimple",
-                options: {
-                    period: "5m",
-                    length: 14,
-                    stdDev: 2
-                }
-            }
-        ],
-        safeties: [
-            {
-                name: "simpleBollinger",
-                options: {
-                    period: "5m",
-                    length: 14,
-                    stdDev: 2
-                }
-            }
-        ]
-    }
-};
 
 (async ()=> {
     try {
         await exchangePair.setup();
-        // const lst = indicatorManager.getList();
-        // const res = await indicatorManager.run('bollingerSimple', exchangePair, {
-        //     period: '5m',
-        //     length: 14,
-        //     stdDev: 2
-        // })
+        const res = await indicatorManager.run('dense-neural', exchangePair, {
+            period: '5m',
+            modelFolder: 'BTC',
+            normalization: {
+                time: 10000000000000,
+                open: 50000,
+                high: 50000,
+                close: 50000,
+                low: 50000,
+                volume: 50000,
+            }
+        });
 
 
-        // console.log(lst);
-        // console.log(res);
+        console.log(res);
 
-
-        // const signalResult = SignalResult.createSignal('close');
-        // console.info(await orderExecutor.execute(signalResult, exchangePair, strat));
-
-        // console.info(await exchangePair.exchange.exchange);
         
     } catch (error) {
         console.error(error);
