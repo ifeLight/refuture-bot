@@ -23,6 +23,8 @@ mongoose.connect(connectionUri, {
     ...authCollectionName
 });
 
+mongoose.set('useUnifiedTopology', true);
+
 /**
  * To set Debug
  */
