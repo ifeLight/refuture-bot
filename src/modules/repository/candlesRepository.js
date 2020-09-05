@@ -15,6 +15,10 @@ module.exports = class CandlesRepository {
         this._defaultToDate = time;
     }
 
+    setBacktest(status) {
+        this._backtest = status;
+    }
+
     createEvent(exchange, symbol, period) {
         const self  = this;
         const {name: exchangeName} = exchange;

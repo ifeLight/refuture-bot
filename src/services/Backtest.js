@@ -1,8 +1,6 @@
 const clc = require('cli-color');
 
 const IndicatorManager = require('../modules/managers/IndicatorManager');
-const CandlesRepository = require('../modules/repository/CandlesRepository');
-const ExchangeManager = require('../modules/managers/ExchangeManager');
 const ExchangePair = require('../backtest/ExchangePair');
 
 const logger = require('../backtest/utils/logger');
@@ -13,18 +11,17 @@ const timeCalc = require('../backtest/utils/timeCalc');
 
 const periodToTimeDiff = require('../utils/periodToTimeDiff');
 
+const { candlesRepository, exchangeManager } = require('./preService')
+
 class Backtest {
     constructor(parameters) {
         this.parameters = parameters,
         this.logger = logger,
         this.eventEmitter = eventEmitter;
-        this.exchangeManager = new ExchangeManager(eventEmitter, logger);
-        this.exchangePair = new ExchangePair(eventEmitter, logger, this.exchangeManager);
-        this.candlesRepository = new CandlesRepository(eventEmitter, logger, true);
-        const {
-            candlesRepository,
-            exchangeManager
-        } = this;
+        this.exchangeManager = exchangeManager;
+        candlesRepository.setBacktest(true)
+        this.exchangePair = exchangeManager;
+        this.candlesRepository = candlesRepository;
         this.indicatorManager = new IndicatorManager({
             candlesRepository,
             logger,
@@ -133,6 +130,7 @@ class Backtest {
         const result = await backtester.start();
         log(clc.greenBright(`Backtester - DONE (${timeCalc(timingStart)}secs)`));
         drawChart(result);
+        candlesRepository.setBacktest(false)
         process.exit();
     }
 

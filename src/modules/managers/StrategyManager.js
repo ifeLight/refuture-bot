@@ -5,37 +5,36 @@ const PolicyManger = require('./PolicyManager');
 const InsuranceManager = require('./InsuranceManager');
 const SafetyManager = require('./SafetyManager');
 const WatchdogManager = require('./WatchdogManager');
-const ExchangeManager = require('./ExchangeManager');
 const OrderExecutor = require('./manager-helpers/OrderExecutor')
 
 const ExchangePair = require('../pair/ExchangePair');
 
-const CandlesRepository = require('../repository/CandlesRepository');
-
 const SignalResult = require('../../classes/SignalResult');
 
 class StrategyManager {
-    constructor ({eventEmitter, logger, notifier}) {
+    constructor ({eventEmitter, logger, notifier, exchangeManager, candlesRepository }) {
         this.eventEmitter = eventEmitter;
         this.logger = logger;
         this.notifier = notifier;
         this._list = [];
         this._exchangePairs = [];
+        this.exchangeManager = exchangeManager;
+        this.candlesRepository = candlesRepository
     }
 
     async init() {
         const {
             logger,
             eventEmitter,
-            notifier
+            notifier,
+            exchangeManager,
+            candlesRepository
         } = this;
 
         this.orderExecutor = new OrderExecutor({logger, eventEmitter, notifier});
 
         const exchangeManager = new ExchangeManager(eventEmitter, logger);
-        const candlesRepository = new CandlesRepository(eventEmitter, logger);
 
-        this.exchangeManager = exchangeManager;
         this.indicatorManager = new IndicatorManager({candlesRepository, logger, eventEmitter, exchangeManager});
         this.safetyManager = new SafetyManager({logger, eventEmitter, exchangeManager, candlesRepository});
 

@@ -2,6 +2,8 @@ const StrategyManager = require('../modules/managers/StrategyManager');
 
 const eventEmitter = require('../events/EventEmitter');
 const logger = require('../utils/logger');
+
+const { candlesRepository, exchangeManager } = require('./preService')
 // const notifier = require('../notify/index');
 
 class Trader {
@@ -14,7 +16,7 @@ class Trader {
     start(instances) {
         try {
             const { logger, eventEmitter, notifier } = this;
-            const strategyManager = new StrategyManager({ logger, eventEmitter, notifier });
+            const strategyManager = new StrategyManager({ logger, eventEmitter, notifier, candlesRepository, exchangeManager });
             (async () => {
                 await strategyManager.init();
                 instances.forEach(instance => {
