@@ -34,7 +34,8 @@ program
     .option('-y, --end <value>', 'the end date of the backtest period')
     .option('-z, --leverage <value>', 'the leverage for futures trading')
     .option('-p, --period <value>', 'the period to run every tick')
-    .option('-fee, --fee <value>', 'the fee for each completed order')
+    .option('-f, --fee <value>', 'the fee for each completed order')
+    .option('-n, --nointerruption <value>', 'no interruption when there is a trade')
     .action(async (cmdObj) => {
         const { config: configFile, profit: takeProfit, loss: stopLoss, end: endDate, start: startDate } = cmdObj;
         await backtestCommand({

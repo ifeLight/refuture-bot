@@ -6,7 +6,7 @@ const {
 } = require('./backtestConfig');
 
 class Backtest {
-    constructor({exchangeFee, candles, amount, leverage, stopLoss, takeProfit, strategy, parentObject}) {
+    constructor({exchangeFee, candles, amount, leverage, stopLoss, takeProfit, strategy, parentObject, noInterruption = false}) {
 		const balance = amount || defaultBalance;
 		const lev = parseInt(leverage) || defaultLeverage;
 		const echFee = exchangeFee || defaultExchangeFee;
@@ -27,7 +27,8 @@ class Backtest {
         this.exchangeFee = echFee;
         this.strategy = strategy || (() => {});
         this.candles = candles;
-        this.parentObject = parentObject;
+		this.parentObject = parentObject;
+		this.noInterruption = noInterruption;
     }
 
     checkStopLossAndTakeProfit(time, price) {
@@ -111,7 +112,8 @@ class Backtest {
 		} else if (isTakeProfitHit) {
 			difference = (trade.entry * (trade.takeProfit / 100));
         }
-        trade.closeTime = time;
+		trade.closeTime = time;
+		trade.closedBy = isStopLossHit ? 'stoploss' : isTakeProfitHit ? 'take-rofit': 'unknown';
 		trade.close = isLongPosition ? trade.entry + difference : trade.entry - difference;
 		trade.fee = this.calcFee(trade.amount, trade.entry, trade.close); 
 		trade.profit = this.calcProfit(trade.amount, trade.entry, difference, trade.fee);
@@ -129,7 +131,8 @@ class Backtest {
         } else {
             difference = trade.entry - price;
         }
-        trade.closeTime = time;
+		trade.closeTime = time;
+		trade.closedBy = 'change-position';
         trade.profit = this.calcProfit(trade.amount, trade.entry, difference, trade.fee);
         this.roundupTrade(trade)
     }
@@ -160,6 +163,10 @@ class Backtest {
     openPosition(time, price, positionType = positionTypes.LONG) {
 		let entryTime = time;
 		if (this.state.positionType === positionType) {
+			return;
+		}
+
+		if (this.noInterruption && this.state.positionType !== positionTypes.NONE) {
 			return;
 		}
         if (this.state.positionType !== positionTypes.NONE) {

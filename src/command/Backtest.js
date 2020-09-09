@@ -16,6 +16,7 @@ module.exports = async function ({
     period,
     orderType,
     fee,
+    nointerruption: noInterruption,
     indicator, }) {
         const cmdBactestFilePath = configFile ? configFile : 'backtest-config-sample.json';
         const bactestFile = path.join(process.cwd(), cmdBactestFilePath)
@@ -36,7 +37,8 @@ module.exports = async function ({
             indicator: indicator || backtestConfig.indicator || 'bollingerSimple',
             period: period || backtestConfig.period || '15m',
             orderType: orderType || backtestConfig.orderType || 'market',
-            fee: fee || backtestConfig.orderType.fee
+            fee: fee || backtestConfig.fee,
+            noInterruption: noInterruption || backtestConfig.noInterruption || false,
         }
 
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {

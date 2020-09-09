@@ -47,6 +47,7 @@ class Backtest {
             stopLoss,
             takeProfit,
             amount,
+            noInterruption,
             fee
         } = this.parameters;
         let indicatorName, indicatorOptions;
@@ -125,7 +126,8 @@ class Backtest {
             amount,
             leverage,
             strategy: this.strategy,
-            parentObject: this
+            parentObject: this,
+            noInterruption
         });
         timingStart = Date.now();
         const result = await backtester.start();
