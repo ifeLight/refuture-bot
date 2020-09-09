@@ -20,7 +20,7 @@ class Backtest {
         this.eventEmitter = eventEmitter;
         this.exchangeManager = exchangeManager;
         candlesRepository.setBacktest(true)
-        this.exchangePair = exchangeManager;
+        this.exchangePair = new ExchangePair(eventEmitter, logger, exchangeManager);
         this.candlesRepository = candlesRepository;
         this.indicatorManager = new IndicatorManager({
             candlesRepository,
@@ -60,13 +60,14 @@ class Backtest {
         log(clc.white.bgBlack('Checking Indicator.....'))
         if (typeof indicator === 'string') {
             indicatorName = indicator;
-        } if (typeof indicator === 'object' && indicator.name) {
+        } else if (typeof indicator === 'object' && indicator.name) {
             indicatorName = indicator.name;
             indicatorOptions = indicator.options;
         } else {
             throw new Error('Invalid indicator')
         }
         this.indicatorName = indicatorName;
+        console.log(this.indicatorName)
         log(clc.greenBright('indicator OK'));
 
 
