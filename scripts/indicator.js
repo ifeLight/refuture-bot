@@ -24,17 +24,9 @@ exchangePair.init('binance_futures', 'BTC/USDT');
 (async ()=> {
     try {
         await exchangePair.setup();
-        const res = await indicatorManager.run('dense-neural', exchangePair, {
+        const res = await indicatorManager.run('simple-forecast-dense-neural', exchangePair, {
             period: '5m',
-            modelFolder: 'BTC',
-            normalization: {
-                time: 10000000000000,
-                open: 50000,
-                high: 50000,
-                close: 50000,
-                low: 50000,
-                volume: 50000,
-            }
+            modelFolder: 'fdnBinanceFuturesBTCUSDT',
         });
 
 
