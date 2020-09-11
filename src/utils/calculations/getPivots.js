@@ -4,10 +4,6 @@ module.exports = function (candles, depth= 5) {
 
     for (let index = 0; index < candles.length - (depth + 1); index++) {
         if (index <= depth) continue;
-        const rightCandle = candles[index - 1];
-        const farRightCandle = candles[index - 2];
-        const leftCandle = candles[index + 1];
-        const farLeftCandle = candles[index + 2];
         const candle = candles[index];
 
         //Asuming they are highcandle and low candle
@@ -30,8 +26,6 @@ module.exports = function (candles, depth= 5) {
             }
             if (!highCandleBoolean && !lowCandleBoolean) break;
         }
-        // const highCandleBoolean = (Number(rightCandle.high) < Number(candle.high)) && (Number(leftCandle.high) < Number(candle.high)) && (Number(farRightCandle.high) < Number(candle.high)) && (Number(farLeftCandle.high) < Number(candle.high))
-        // const lowCandleBoolean = (Number(rightCandle.low) > Number(candle.low)) && (Number(leftCandle.low) > Number(candle.low)) && (Number(farLeftCandle.low) > Number(candle.low)) && (Number(farRightCandle.low) > Number(candle.low))
         if (highCandleBoolean) {
             highCandles.push(candle);
         }
