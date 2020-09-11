@@ -24,9 +24,9 @@ exchangePair.init('binance_futures', 'BTC/USDT');
 (async ()=> {
     try {
         await exchangePair.setup();
-        const res = await indicatorManager.run('simple-forecast-dense-neural', exchangePair, {
+        const res = await indicatorManager.run('trendline-reversal', exchangePair, {
             period: '5m',
-            modelFolder: 'fdnBinanceFuturesBTCUSDT',
+            length: 100,
         });
 
 

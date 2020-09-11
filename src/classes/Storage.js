@@ -8,7 +8,7 @@ module.exports = class Storage {
 
     async get(key) {
         try {
-            return OptionsStorage.get(personalizeKey(key));
+            return OptionsStorage.get(this.personalizeKey(key));
         } catch (error) {
             throw new Error(`Storage:[${this.symbol}:${this.exchangeName}:${key}]: Unable to fetch storage data(${error.message})`)
             return undefined;
@@ -17,7 +17,7 @@ module.exports = class Storage {
 
     async set(key, value) {
         try {
-            await OptionsStorage.set(personalizeKey(key), value)
+            await OptionsStorage.set(this.personalizeKey(key), value)
         } catch (error) {
             throw new Error(`Storage:[${this.symbol}:${this.exchangeName}:${key}]: Unable to store  data(${error.message})`)
         }
@@ -25,7 +25,7 @@ module.exports = class Storage {
 
     async delete(key) {
         try {
-            await OptionsStorage.delete(personalizeKey(key))
+            await OptionsStorage.delete(this.personalizeKey(key))
         } catch (error) {
             throw new Error(`Storage:[${this.symbol}:${this.exchangeName}:${key}]: Unable to delete storage data(${error.message})`)
         }
