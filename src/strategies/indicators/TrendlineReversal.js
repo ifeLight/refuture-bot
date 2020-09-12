@@ -1,8 +1,5 @@
-const sma = require('technicalindicators').sma;
-const rsi = require('technicalindicators').rsi;
-
-const { BollingerBands, 
-    SMA, EMA,
+const { 
+    BollingerBands, sma, rsi,
     bullishengulfingpattern, bullishhammerstick,
     tweezerbottom, tweezertop,
     shootingstar, threeblackcrows,
@@ -40,7 +37,10 @@ module.exports = class {
 
     async period(indicatorPeriod, options) {
         try {
-            const { period: candlePeriod, length } = options;
+            const { period: candlePeriod, length, longRSI, shortRSI, useRSI} = options;
+            this.longRSI = longRSI;
+            this.shortRSI = shortRSI,
+            this.useRSI = useRSI;
             this.indicatorPeriod = indicatorPeriod;
             this.candlePeriod = candlePeriod;
             
@@ -59,28 +59,36 @@ module.exports = class {
 
             //Remove the last incomplete candle
             let incompleteCandle;
-            if (!this.isLastCandleComplete()) {
+            if (!this.isLastCandleComplete(candles, presentTime)) {
                 incompleteCandle = candles.pop();
             }
 
-            // Last Five Candles
+            //Last Five Candles
             const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
 
             // Fetch Active lower and upper lines
             let lowerLine, upperLine, generatedLines;
             let fetchedLowerLine = await this.getLine('lower');
             let fetchedUpperLine = await this.getLine('upper');
+
             if (!fetchedUpperLine || !fetchedLowerLine) {
                 generatedLines = generateLines(generateLinesConfig);
                 lowerLine = fetchedLowerLine ? fetchedLowerLine : generatedLines.lowerLines[0];
                 upperLine = fetchedUpperLine ? fetchedUpperLine : generatedLines.upperLines[0]
+                // Store Lines if available
+                if (lowerLine) {
+                    await this.storeLine(lowerLine, 'lower')
+                }
+                if (upperLine) {
+                    await this.storeLine(upperLine, 'upper')
+                }
             } else {
                 lowerLine = fetchedLowerLine;
                 upperLine = fetchedUpperLine;
             }
 
             //Checking to Buy long on Upper Line
-            if (this.upperLineLongCheck(upperLine, lastFiveCandles)) {
+            if (upperLine && this.upperLineLongCheck(upperLine, candles)) {
                 let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'long');
                 return indicatorPeriod.createSignal('long', {
                     stoploss: recommendedStoploss
@@ -88,7 +96,7 @@ module.exports = class {
             }
 
             // Checking To buy Short on UpperLine
-            if (this.upperLineShortCheck(upperLine, lastFiveCandles)) {
+            if (upperLine && this.upperLineShortCheck(upperLine, candles)) {
                 let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'short');
                 return indicatorPeriod.createSignal('short', {
                     stoploss: recommendedStoploss
@@ -96,16 +104,16 @@ module.exports = class {
             } else {
                 // Check the Validity of the upperLine
                 const stillValid = this.lineValidityCheck(upperLine, lastFiveCandles);
-                if (!stillValid) {
+                if (!stillValid || !upperLine) {
                     generatedLines = generateLines(generateLinesConfig);
                     upperLine = generatedLines.upperLines[0];
-                    await this.storeLine(upperLine, 'upper')
+                    await this.storeLine(upperLine, 'upper');
                 }
             }
 
 
             //Checking to Buy long on Lower Line
-            if (this.upperLineLongCheck(lowerLine, lastFiveCandles)) {
+            if (lowerLine && this.lowerLineLongCheck(lowerLine, candles)) {
                 let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'long');
                 return indicatorPeriod.createSignal('long', {
                     stoploss: recommendedStoploss
@@ -113,7 +121,7 @@ module.exports = class {
             }
 
             // Checking To buy Short on LowerLine
-            if (this.upperLineShortCheck(lowerLine, lastFiveCandles)) {
+            if (lowerLine && this.lowerLineShortCheck(lowerLine, candles)) {
                 let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'short');
                 return indicatorPeriod.createSignal('short', {
                     stoploss: recommendedStoploss
@@ -121,7 +129,7 @@ module.exports = class {
             } else {
                 // Check the Validity of the lowerLine
                 const stillValid = this.lineValidityCheck(lowerLine, lastFiveCandles);
-                if (!stillValid) {
+                if (!stillValid && !lowerLine) {
                     generatedLines = generateLines(generateLinesConfig);
                     lowerLine = generatedLines.lowerLines[0];
                     await this.storeLine(lowerLine, 'lower')
@@ -139,14 +147,34 @@ module.exports = class {
 
     async storeLine(line, type) {
         //type can be 'lower' or 'upper'
-        const key = `${this.candlePeriod}_${type}`
+        const key = `${this.candlePeriod}_${type}`;
         await this.indicatorPeriod.storage.set(key, line);
     }
 
     async getLine(type) {
-        const key = `${this.candlePeriod}_${type}`
+        const key = `${this.candlePeriod}_${type}`;
         const line = await this.indicatorPeriod.storage.get(key);
         return line;
+    }
+
+    rsiCrossoverCheck(candles, signal = 'long') {
+        // signal can be long or short
+        // The RSI will check for a last value bullish sign
+        const theClosePrices = candles.map((candle) => candle.close);
+        const longInput = {
+            values: theClosePrices,
+            period: this.longRSI
+        }
+        const shortInput = {
+            values: theClosePrices,
+            period: this.shortRSI
+        }
+        const longResult = rsi(longInput);
+        const shortResult = rsi(shortInput);
+        const longLastValue = longResult[longResult.length - 1]
+        const shortLastValue = shortResult[shortResult.length - 1]
+        if (signal === 'long') return shortLastValue > longLastValue;
+        if (signal === 'short') return shortLastValue < longLastValue;
     }
 
     isLastCandleComplete(candles, presentTime) {
@@ -201,15 +229,15 @@ module.exports = class {
 
     }
 
-    isBullishPatterFormed() {
-        this.calculateCandleStickPattern()
+    isBullishPatterFormed(candles) {
+        this.calculateCandleStickPattern(candles)
         const cond1 = this.bullishengulfingpattern || this.threewhitesoldiers || this.tweezerbottom;
         const cond2 = this.bullishhammerstick || this.abandonedbaby;
         return cond1 || cond2;
     }
 
-    isBearishPatternFormed() {
-        this.calculateCandleStickPattern()
+    isBearishPatternFormed(candles) {
+        this.calculateCandleStickPattern(candles)
         const cond1 = this.bearishengulfingpattern || this.threeblackcrows || this.tweezertop;
         const cond2 = this.shootingstar || this.darkcloudcover || this.eveningdojistar;
         return cond1 || cond2;
@@ -218,7 +246,7 @@ module.exports = class {
 
     generateCandlesticksInputs(candles, length) {
         const retouchedCandles = {open: [], close: [], high: [], volume: [], low: []};
-        const startingPoint = length && (length < candles.length)? candles.length - length: 0;
+        const startingPoint = length && (length < candles.length) ? candles.length - length: 0;
         for (let x = startingPoint; x < candles.length; x++) {
             const { open, high, close, low, volume } = candles[x];
             retouchedCandles.open.push(open);
@@ -253,6 +281,7 @@ module.exports = class {
     }
 
     lineValidityCheck (line, candles) {
+        if (!line) return false;
         const averageHeight = this.getAverageHeight(candles);
         const lastCandle = candles[candles.length - 1];
         const priceEnd = this.getPriceFromLine(line, lastCandle.time);
@@ -262,35 +291,51 @@ module.exports = class {
         return isValid;
     }
 
-    upperLineLongCheck(line, lastFiveCandles) {
+    upperLineLongCheck(line, candles) {
+        if (this.useRSI) {
+            if(!this.rsiCrossoverCheck(candles, 'long')) return false;
+        }
+        const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         if (!this.lastCandleAboveLine(line, lastFiveCandles)) return false;
-        if (!this.isBullishPatterFormed()) return false;
+        if (!this.isBullishPatterFormed(lastFiveCandles)) return false;
         return true;
     }
 
-    upperLineShortCheck(line, lastFiveCandles) {
+    upperLineShortCheck(line, candles) {
+        if (this.useRSI) {
+            if(!this.rsiCrossoverCheck(candles, 'short')) return false;
+        }
+        const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         const averageHeight = this.getAverageHeight(lastFiveCandles);
         const priceEnd = this.getPriceFromLine(line, lastFiveCandles[lastFiveCandles.length - 1].time);
         const allowedSpace = priceEnd - averageHeight;
         const inAllowableSpace = lastFiveCandles.some((candle) => candle.high > allowedSpace);
-        if (inAllowableSpace && this.isBearishPatternFormed()) {
+        if (inAllowableSpace && this.isBearishPatternFormed(lastFiveCandles)) {
             return true;
         }
         return false;
     }
 
-    lowerLineShortCheck(line, lastFiveCandles) {
+    lowerLineShortCheck(line, candles) {
+        if (this.useRSI) {
+            if(!this.rsiCrossoverCheck(candles, 'short')) return false;
+        }
+        const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         if (!this.lastCandleBelowLine(line, lastFiveCandles)) return false;
-        if (!this.isBearishPatternFormed()) return false;
+        if (!this.isBearishPatternFormed(lastFiveCandles)) return false;
         return true;
     }
 
-    lowerLineLongCheck(line, lastFiveCandles) {
+    lowerLineLongCheck(line, candles) {
+        if (this.useRSI) {
+            if(!this.rsiCrossoverCheck(candles, 'long')) return false;
+        }
+        const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         const averageHeight = this.getAverageHeight(lastFiveCandles);
         const priceEnd = this.getPriceFromLine(line, lastFiveCandles[lastFiveCandles.length - 1].time);
         const allowedSpace = priceEnd + averageHeight;
         const inAllowableSpace = lastFiveCandles.some((candle) => candle.low < allowedSpace);
-        if (inAllowableSpace && this.isBullishPatterFormed()) {
+        if (inAllowableSpace && this.isBullishPatterFormed(lastFiveCandles)) {
             return true;
         }
         return false;
@@ -300,6 +345,9 @@ module.exports = class {
         return {
             period: '5m',
             length: 100,
+            longRSI: 14,
+            shortRSI: 6,
+            useRSI: true
         }
     }
 
