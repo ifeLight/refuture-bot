@@ -96,6 +96,8 @@ class Backtest {
     }
 
     roundupTrade(trade) {
+		trade.entryDate = new Date(trade.entryTime).toString();
+		trade.closeDate = new Date(trade.closeTime).toString();
         this.state.positionType = positionTypes.NONE;
 		this.state.balance += trade.profit;
 		this.state.trades.push(trade);
@@ -113,7 +115,7 @@ class Backtest {
 			difference = (trade.entry * (trade.takeProfit / 100));
         }
 		trade.closeTime = time;
-		trade.closedBy = isStopLossHit ? 'stoploss' : isTakeProfitHit ? 'take-rofit': 'unknown';
+		trade.closedBy = isStopLossHit ? 'stoploss' : isTakeProfitHit ? 'take-profit': 'unknown';
 		trade.close = isLongPosition ? trade.entry + difference : trade.entry - difference;
 		trade.fee = this.calcFee(trade.amount, trade.entry, trade.close); 
 		trade.profit = this.calcProfit(trade.amount, trade.entry, difference, trade.fee);
