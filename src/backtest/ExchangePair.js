@@ -65,6 +65,12 @@ module.exports = class ExchangePair {
         return this._lastSignal;
     }
 
+    getEnvironment() {
+        return {
+            backtest: true
+        }
+    }
+
     setLastSignal(signal) {
         if (!['long', 'short', 'close'].includes(signal)) return;
         this._lastSignal = signal;

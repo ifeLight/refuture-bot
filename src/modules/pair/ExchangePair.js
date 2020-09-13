@@ -87,6 +87,12 @@ module.exports = class ExchangePair {
         }
         return undefined;
     }
+
+    getEnvironment() {
+        return {
+            backtest: false
+        }
+    }
     
     /**
      * Private Trade Functions
