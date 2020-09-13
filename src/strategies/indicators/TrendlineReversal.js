@@ -4,8 +4,7 @@ const {
     tweezerbottom, tweezertop,
     shootingstar, threeblackcrows,
     threewhitesoldiers, bearishengulfingpattern,
-    abandonedbaby, darkcloudcover,
-    eveningdojistar,
+    abandonedbaby, eveningdojistar,
 } = require('technicalindicators');
 
 
@@ -229,7 +228,7 @@ module.exports = class {
 
     }
 
-    isBullishPatterFormed(candles) {
+    isBullishPatternFormed(candles) {
         this.calculateCandleStickPattern(candles)
         const cond1 = this.bullishengulfingpattern || this.threewhitesoldiers || this.tweezerbottom;
         const cond2 = this.bullishhammerstick || this.abandonedbaby;
@@ -239,7 +238,7 @@ module.exports = class {
     isBearishPatternFormed(candles) {
         this.calculateCandleStickPattern(candles)
         const cond1 = this.bearishengulfingpattern || this.threeblackcrows || this.tweezertop;
-        const cond2 = this.shootingstar || this.darkcloudcover || this.eveningdojistar;
+        const cond2 = this.shootingstar || this.eveningdojistar;
         return cond1 || cond2;
     }
     
@@ -297,7 +296,7 @@ module.exports = class {
         }
         const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         if (!this.lastCandleAboveLine(line, lastFiveCandles)) return false;
-        if (!this.isBullishPatterFormed(lastFiveCandles)) return false;
+        if (!this.isBullishPatternFormed(lastFiveCandles)) return false;
         return true;
     }
 
@@ -335,7 +334,7 @@ module.exports = class {
         const priceEnd = this.getPriceFromLine(line, lastFiveCandles[lastFiveCandles.length - 1].time);
         const allowedSpace = priceEnd + averageHeight;
         const inAllowableSpace = lastFiveCandles.some((candle) => candle.low < allowedSpace);
-        if (inAllowableSpace && this.isBullishPatterFormed(lastFiveCandles)) {
+        if (inAllowableSpace && this.isBullishPatternFormed(lastFiveCandles)) {
             return true;
         }
         return false;
