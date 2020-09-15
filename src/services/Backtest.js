@@ -198,6 +198,33 @@ class Backtest {
         self.state.index++;
     }
 
+
+    async safety (time, price, self) {
+        self.state.index = self.state.index  || 0;
+        const isFutures = self.exchangePair.isFutures();
+        if (self.state.index === 0) {
+            await self.indicatorManager.runInit(self.indicatorName, self.exchangePair, self.indicatorOptions);
+        }
+        self.exchangePair.setLastSignal(self.state.lastSignal);
+        self.exchangePair.setMarkPrice(price);
+        self.exchangePair.setLastPrice(price);
+        self.exchangePair.setTime(time);
+        self.candlesRepository.setDefaultToDate(time);
+
+
+
+        const signalResult = await self.indicatorManager.run(self.indicatorName, self.exchangePair, self.indicatorOptions);
+        if (!signalResult || (signalResult && !signalResult.getSignal())) {
+            // Do nothing
+        } else if (signalResult.getSignal() && signalResult.getSignal() === 'long') {
+            this.openPosition(time, price, 'long');
+         } else if (signalResult.getSignal() && signalResult.getSignal() === 'short') {
+            let positionType = isFutures ? 'short' : 'none';
+            this.openPosition(time, price, positionType);
+        } else if (signalResult.getSignal() && signalResult.getSignal() === 'close') {
+            this.closePosition(time, price, self.indicatorName);
+        }
+    }
     
 }
 
