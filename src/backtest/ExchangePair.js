@@ -3,6 +3,7 @@ module.exports = class ExchangePair {
         this.eventEmitter = eventEmitter;
         this.logger = logger;
         this.exchangeManager = exchangeManager;
+        this.positions = [];
     }
 
     init(exchangeName, symbol) {
@@ -101,5 +102,20 @@ module.exports = class ExchangePair {
 
     isFutures() {
         return this.exchange.isFutures;
+    }
+
+    setPosition(entryPrice, positionSide) {
+        this.positions = [{
+            entryPrice,
+            positionSide
+        }]
+    }
+
+    emptyPosition() {
+        this.positions = [];
+    }
+
+    async getPositions() {
+        return this.positions;
     }
 }
