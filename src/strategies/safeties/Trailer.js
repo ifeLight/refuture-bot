@@ -46,7 +46,7 @@ module.exports = class Trailer {
         // This is for  function to request for a closure
         this.shouldClose = false;
     
-        if (isFutures) {
+        if (isFutures || isBacktest) {
             const positions = await getPositions();
             if (positions && Array.isArray(positions) && positions.length > 0) {
                 const position = positions[0];
@@ -58,7 +58,7 @@ module.exports = class Trailer {
             }
         }
 
-        if (!isFutures) {
+        if (!isFutures && !isBacktest) {
             const {amount, currency_amount} = strat.trade;
             let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
             const baseCurrency = (safetyPeriod.getPairInfo()).base;
