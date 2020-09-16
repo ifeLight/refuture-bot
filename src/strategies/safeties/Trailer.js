@@ -45,46 +45,51 @@ module.exports = class Trailer {
         this.checkCandles = safetyPeriod.indicatorBuilder.get('checkCandles');
         // This is for  function to request for a closure
         this.shouldClose = false;
+        
+        try {
+            if (isFutures || isBacktest) {
+                const positions = await safetyPeriod.getPositions();
+                if (positions && Array.isArray(positions) && positions.length > 0) {
+                    const position = positions[0];
+                    const {positionSide, entryPrice } = position;
+                    this.trail = await this.retrievePosition(entryPrice, positionSide);
+                    const result = this.calculateSignal();
+                    await this.storePosition(this.trail);
+                    return result;
+                }
+            }
     
-        if (isFutures) {
-            const positions = await getPositions();
-            if (positions && Array.isArray(positions) && positions.length > 0) {
-                const position = positions[0];
-                const {positionSide, entryPrice } = position;
-                this.trail = await this.retrievePosition(entryPrice, positionSide);
-                const result = this.calculateSignal();
-                await this.storePosition(this.trail);
-                return result;
+            if (!isFutures && !isBacktest) {
+                const {amount, currency_amount} = strat.trade;
+                let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
+                const baseCurrency = (safetyPeriod.getPairInfo()).base;
+                let baseBalance = await safetyPeriod.getBalance(baseCurrency);
+                const totalBalance = baseBalance.locked + baseBalance.free;
+                const closedOrders = await safetyPeriod.getClosedOrders();
+                const closedOrdersValidityCheck = closedOrders && Array.isArray(closedOrders) && closedOrders.length > 0;
+                const balanceAvailabilityCheck = totalBalance > (tradeAmount - (tradeAmount * 0.9));
+                if (balanceAvailabilityCheck && closedOrdersValidityCheck) {
+                    const filteredOrder = closedOrders.filter((order) => {
+                        return order.side == 'buy';
+                    })
+                    const latestClosedOrder = filteredOrder.reduce((prev, current) => {
+                        if (!prev) return current;
+                        if (parseInt(prev.time) > parseInt(current.time) ) return prev;
+                        return current;
+                    });
+                    const { price: entryPrice  } = latestClosedOrder;
+                    const positionSide = 'LONG';
+                    this.trail = await this.retrievePosition(entryPrice, positionSide);
+                    const result = this.calculateSignal();
+                    await this.storePosition(this.trail);
+                    return result;
+                }
+    
             }
+        } catch (error) {
+            console.error(error);
         }
-
-        if (!isFutures) {
-            const {amount, currency_amount} = strat.trade;
-            let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
-            const baseCurrency = (safetyPeriod.getPairInfo()).base;
-            let baseBalance = await safetyPeriod.getBalance(baseCurrency);
-            const totalBalance = baseBalance.locked + baseBalance.free;
-            const closedOrders = await safetyPeriod.getClosedOrders();
-            const closedOrdersValidityCheck = closedOrders && Array.isArray(closedOrders) && closedOrders.length > 0;
-            const balanceAvailabilityCheck = totalBalance > (tradeAmount - (tradeAmount * 0.9));
-            if (balanceAvailabilityCheck && closedOrdersValidityCheck) {
-                const filteredOrder = closedOrders.filter((order) => {
-                    return order.side == 'buy';
-                })
-                const latestClosedOrder = filteredOrder.reduce((prev, current) => {
-                    if (!prev) return current;
-                    if (parseInt(prev.time) > parseInt(current.time) ) return prev;
-                    return current;
-                });
-                const { price: entryPrice  } = latestClosedOrder;
-                const positionSide = 'LONG';
-                this.trail = await this.retrievePosition(entryPrice, positionSide);
-                const result = this.calculateSignal();
-                await this.storePosition(this.trail);
-                return result;
-            }
-
-        }
+        
         return safetyPeriod.createEmptySignal();
     }
 
@@ -217,7 +222,7 @@ module.exports = class Trailer {
         const lastCandle = candles[candles.length - 1];
         const candlesMinusLastCandle = candles.slice(0, candles.length - 1);
         const averageCandlesHeight = this.getAverageHeight(candlesMinusLastCandle);
-        const lastCandleHeight = candle.high - candle.low;
+        const lastCandleHeight = lastCandle.high - lastCandle.low;
         const secondToLastCandle = candles[candles.length - 2];
         const thirdToLastCandle = candles[candles.length - 3];
 

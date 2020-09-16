@@ -6,7 +6,7 @@ const {
 } = require('./backtestConfig');
 
 class Backtest {
-    constructor({exchangeFee, candles, amount, leverage, stopLoss, takeProfit, strategy, parentObject, noInterruption = false}) {
+    constructor({exchangeFee, candles, amount, leverage, useDefaultSafety =true,  stopLoss, takeProfit, safety, strategy, parentObject, noInterruption = false}) {
 		const balance = amount || defaultBalance;
 		const lev = parseInt(leverage) || defaultLeverage;
 		const echFee = exchangeFee || defaultExchangeFee;
@@ -25,10 +25,12 @@ class Backtest {
         };
         this.leverage = lev;
         this.exchangeFee = echFee;
-        this.strategy = strategy || (() => {});
+		this.strategy = strategy || (() => {});
+		this.safety = safety || (() => {});
         this.candles = candles;
 		this.parentObject = parentObject;
 		this.noInterruption = noInterruption;
+		this.useDefaultSafety = useDefaultSafety;
     }
 
     checkStopLossAndTakeProfit(time, price) {
@@ -122,7 +124,7 @@ class Backtest {
 		this.roundupTrade(trade)
     }
 
-    closePositionBasedOnPositionChange(time, price) {
+    closePositionBasedOnPositionChange(time, price, reason = 'change-position') {
         const trade = this.createNewEmptyTrade();
         let difference;
         trade.close = price;
@@ -134,7 +136,7 @@ class Backtest {
             difference = trade.entry - price;
         }
 		trade.closeTime = time;
-		trade.closedBy = 'change-position';
+		trade.closedBy = reason;
         trade.profit = this.calcProfit(trade.amount, trade.entry, difference, trade.fee);
         this.roundupTrade(trade)
     }
@@ -160,7 +162,11 @@ class Backtest {
 		const logState = JSON.parse(JSON.stringify(this.state));
 		logState.trades = logState.trades.length;
 		// console.log('new state:', logState);
-    }
+	}
+	
+	closePosition(time, price, reason = 'safety') {
+		this.closePositionBasedOnPositionChange(time, price, reason);
+	}
 
     openPosition(time, price, positionType = positionTypes.LONG) {
 		let entryTime = time;
@@ -195,9 +201,10 @@ class Backtest {
             ]
             for (const candlePoint of candlePoints) {
 				const { time, price } = candlePoint;
-                if (this.state.positionType !== positionTypes.NONE) {
+                if (this.state.positionType !== positionTypes.NONE && this.useDefaultSafety) {
                     this.checkStopLossAndTakeProfit(time, price);
-                }
+				}
+				await this.safety(time, price, this.parentObject);
                 await this.strategy(time, price, this.parentObject);
             }
         }

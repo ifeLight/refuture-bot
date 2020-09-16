@@ -223,7 +223,6 @@ module.exports = class {
         this.threeblackcrows = threeblackcrows(lastThreeCandles);
         this.tweezertop = tweezertop(lastFiveCandles);
         this.shootingstar = shootingstar(lastFiveCandles);
-        this.darkcloudcover = darkcloudcover(lastTwoCandles);
         this.eveningdojistar = eveningdojistar(lastThreeCandles)
 
     }

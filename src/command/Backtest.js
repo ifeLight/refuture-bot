@@ -16,8 +16,12 @@ module.exports = async function ({
     period,
     orderType,
     fee,
+    safety,
+    usedefaultsafety: useDefaultSafety,
     nointerruption: noInterruption,
-    indicator, }) {
+    backfillperiods: backfillPeriods,
+    indicator, 
+    }) {
         const cmdBactestFilePath = configFile ? configFile : 'backtest-config-sample.json';
         const bactestFile = path.join(process.cwd(), cmdBactestFilePath)
         if (!fs.existsSync(bactestFile)) throw new Error(`Instance File: Instance File does not Exist (${bactestFile})`);
@@ -39,8 +43,10 @@ module.exports = async function ({
             orderType: orderType || backtestConfig.orderType || 'market',
             fee: fee || backtestConfig.fee,
             noInterruption: noInterruption || backtestConfig.noInterruption || false,
+            safeties: safety || backtestConfig.safeties || 'trailer',
+            useDefaultSafety: useDefaultSafety ? useDefaultSafety : backtestConfig.hasOwnProperty('useDefaultSafety') && backtestConfig.useDefaultSafety == false ? backtestConfig.useDefaultSafety : true,
+            backfillPeriods: backfillPeriods || backtestConfig.backfillPeriods || backtestConfig.period || period|| '15m',
         }
-
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {
             throw new Error('Start date should be lesser than End Date')
         }
