@@ -111,7 +111,7 @@ module.exports = class ExchangePair {
         }]
     }
 
-    emptyPosition() {
+    emptyPositions() {
         this.positions = [];
     }
 
