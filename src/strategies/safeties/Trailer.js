@@ -221,8 +221,6 @@ module.exports = class Trailer {
         const secondToLastCandle = candles[candles.length - 2];
         const thirdToLastCandle = candles[candles.length - 3];
 
-
-
         if (positionSide == 'LONG') {
             if (longDiff < profitDiff) return;
             if ((lastCandleHeight > (2 * averageCandlesHeight)) && (lastCandle.high - lastCandle.close) > (0.5 *lastCandleHeight)) {
