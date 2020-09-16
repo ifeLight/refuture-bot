@@ -49,7 +49,8 @@ class IndicatorManager {
             const theExchange = this.exchangeManager.find(exchangeName);
             if (!theExchange) throw new Error(`Exchange not found`);
 
-            let indicatorOptions = options || theIndicator.getOptions();
+            let indicatorDefaultOptions = theIndicator.getOptions();
+            let indicatorOptions = {...indicatorDefaultOptions, ...options};
 
             const {
                 candlesRepository,

@@ -52,7 +52,8 @@ class InsuranceManager {
             const theExchange = this.exchangeManager.find(exchangeName);
             if (!theExchange) throw new Error(`Exchange not found`);
 
-            let insuranceOptions = options || theInsurance.getOptions();
+            let insuranceDefaultOptions = theInsurance.getOptions();
+            let insuranceOptions = {...insuranceDefaultOptions, ...options};
 
             const {
                 candlesRepository,

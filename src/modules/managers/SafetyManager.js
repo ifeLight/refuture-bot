@@ -50,7 +50,8 @@ class SafetyManager {
             const theExchange = this.exchangeManager.find(exchangeName);
             if (!theExchange) throw new Error(`Exchange not found`);
 
-            let safetyOptions = options || theSafety.getOptions();
+            let safetyDefaultOptions = theSafety.getOptions();
+            let safetyOptions = {...safetyDefaultOptions, ...options};
 
             const {
                 candlesRepository,
