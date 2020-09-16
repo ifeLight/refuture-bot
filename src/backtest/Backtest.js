@@ -6,7 +6,7 @@ const {
 } = require('./backtestConfig');
 
 class Backtest {
-    constructor({exchangeFee, candles, amount, leverage, useDefaultSafety =true,  stopLoss, takeProfit, safety, strategy, parentObject, noInterruption = false}) {
+    constructor({exchangeFee, candles, amount, leverage, useDefaultSafety =true,  stopLoss, takeProfit, safety, strategy, timeMetrics,  parentObject, noInterruption = false}) {
 		const balance = amount || defaultBalance;
 		const lev = parseInt(leverage) || defaultLeverage;
 		const echFee = exchangeFee || defaultExchangeFee;
@@ -30,10 +30,14 @@ class Backtest {
         this.exchangeFee = echFee;
 		this.strategy = strategy || (() => {});
 		this.safety = safety || (() => {});
+		this.timeMetrics = timeMetrics || (() => {});
         this.candles = candles;
 		this.parentObject = parentObject;
 		this.noInterruption = noInterruption;
 		this.useDefaultSafety = useDefaultSafety;
+		this.timeState = {
+			index: 0
+		}
     }
 
     checkStopLossAndTakeProfit(time, price) {
@@ -111,7 +115,7 @@ class Backtest {
 		trade.closeDate = new Date(trade.closeTime).toString();
         this.state.positionType = positionTypes.NONE;
 		this.state.balance += trade.profit;
-		trade.profitInPercentage = ((trade.profit / this.amount) * 100).toFixed(4);
+		trade.profitInPercentage = parseFloat(((trade.profit / this.amount) * 100).toFixed(4));
 		this.state.trades.push(trade);
 		this.handleMaxLossProfitStat(trade)
 		this.handleBalanceStats();
@@ -217,6 +221,21 @@ class Backtest {
 		}
 	}
 
+	calcPerformanceInTimeStats({periodStartTime, totalLength}) {
+		const {index} =  this.timeState;
+		this.timeState.totalTime = this.timeState.totalTime || 0;
+		this.timeState.totalTime = parseInt(this.timeState.totalTime + parseInt((Date.now() - periodStartTime)));
+		const averageTime = ((this.timeState.totalTime / 1000 ) / this.timeState.index).toFixed(2); //in seconds
+		const timeRemaining = ((totalLength - this.timeState.index) * (averageTime / 60)).toFixed(2); //In minutes
+		this.timeState.index++;
+		return {
+			totalLength,
+			averageTime,
+			timeRemaining,
+			index
+		}
+	}
+
     async start() {
         if (this.candles.length < 2) {
             throw new Error('Candles not sufficient');
@@ -230,12 +249,18 @@ class Backtest {
                 {price: parseFloat(high), time: time + (candlePointUnitTime * 2)},
             ]
             for (const candlePoint of candlePoints) {
+				let periodStartTime = Date.now();
+				this
 				const { time, price } = candlePoint;
                 if (this.state.positionType !== positionTypes.NONE && this.useDefaultSafety) {
                     this.checkStopLossAndTakeProfit(time, price);
 				}
 				await this.safety(time, price, this.parentObject);
-                await this.strategy(time, price, this.parentObject);
+				await this.strategy(time, price, this.parentObject);
+
+				//Time Perfomance Calc
+				const timeMetricsData = this.calcPerformanceInTimeStats({periodStartTime, totalLength: parseInt(this.candles.length * 3) });
+				this.timeMetrics(timeMetricsData, this.parentObject)
             }
         }
 		this.countTrades();

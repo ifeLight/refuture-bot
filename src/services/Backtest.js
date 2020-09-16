@@ -159,6 +159,7 @@ class Backtest {
             safety: this.safety,
             parentObject: this,
             noInterruption,
+            timeMetrics: this.performanceUpdate,
             useDefaultSafety: useDefaultSafety ? true : false,
         });
         timingStart = Date.now();
@@ -188,18 +189,24 @@ class Backtest {
         log(clc.greenBright(`Backfiling Candles Fetched: ${backfilledCandles.length} [${exchangeName}:${symbol}:${period}] `));
     }
 
+    performanceUpdate(data, self) {
+        const {totalLength, averageTime, timeRemaining, index} = data;
+        const log = self.log;
+        if (index !== 0) {
+            process.stdout.write(clc.move.up(1));
+            process.stdout.write(clc.erase.line);
+        } 
+        log(clc.blue(`Backtest Running: ${index}/${totalLength} periods [AvgTime: ${averageTime}secs] [Time Remaining: ${timeRemaining}mins]`))
+    }
+
     async strategy (time, price, self) {
-        let timingStart = Date.now();
         self.state.signals = {};
         self.state.lastSignal = null;
         self.state.index = self.state.index  || 0;
-        self.state.totalTime = self.state.totalTime || 0;
         const isFutures = self.exchangePair.isFutures();
-        const log = self.log;
         if (self.state.index === 0) {
             await self.indicatorManager.runInit(self.indicatorName, self.exchangePair, self.indicatorOptions);
         }
-        const probablyTrials = parseInt(this.candles.length * 3);
         self.exchangePair.setLastSignal(self.state.lastSignal);
         self.exchangePair.setMarkPrice(price);
         self.exchangePair.setLastPrice(price);
@@ -219,15 +226,7 @@ class Backtest {
             this.openPosition(time, price, 'none');
             self.state.lastSignal = 'close';
         }
-
-        if (self.state.index !== 0) {
-            process.stdout.write(clc.move.up(1));
-            process.stdout.write(clc.erase.line);
-        } 
-        self.state.totalTime = parseInt(self.state.totalTime + parseInt((Date.now() - timingStart)));
-        const avgTime = ((self.state.totalTime / 1000 ) / self.state.index).toFixed(2);
-        log(clc.blue(`Running Indicator: ${self.state.index}/${probablyTrials} [AvgTime: ${avgTime}secs]`))
-        self.state.index++;
+        self.state.index++; 
     }
 
 
@@ -281,7 +280,7 @@ class Backtest {
         } else if (typeof safeties === 'object' && safeties.name) {
             this.safeties.push({
                 name: safeties.name,
-                options: safety.options,
+                options: safeties.options,
             })
         } else if (Array.isArray(safeties) && typeof safeties[0] === 'string') {
             for (const safety of safeties) {
@@ -294,7 +293,7 @@ class Backtest {
             for (const safety of safeties) {
                 this.safeties.push({
                     name: safety.name,
-                    options: safeties.options
+                    options: safety.options
                 });
             }
         } else {
