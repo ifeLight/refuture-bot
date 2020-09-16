@@ -21,7 +21,10 @@ class Backtest {
             minimumBalance: balance,
 			entryTime: candles[0].time,
 			leverage: lev,
-			exchangeFee: echFee
+			exchangeFee: echFee,
+			maximumDrawdown: 0,
+			maximumProfit: 0,
+			maximumLoss: 0
         };
         this.leverage = lev;
         this.exchangeFee = echFee;
@@ -75,12 +78,18 @@ class Backtest {
     }
 
     createNewEmptyTrade() {
+		let defaultSafetyOptions = {};
+		if (this.useDefaultSafety) {
+			defaultSafetyOptions = {
+				stopLoss: this.state.stopLoss,
+				takeProfit: this.state.takeProfit,
+			}
+		}
         return {
             type: this.state.positionType,
             entryTime: this.state.entryTime,
 			entry: this.state.positionEntry,
-			stopLoss: this.state.stopLoss,
-			takeProfit: this.state.takeProfit,
+			...defaultSafetyOptions,
             amount: this.amount,
 			close: 0,
 			fee: 0,
@@ -102,8 +111,11 @@ class Backtest {
 		trade.closeDate = new Date(trade.closeTime).toString();
         this.state.positionType = positionTypes.NONE;
 		this.state.balance += trade.profit;
+		trade.profitInPercentage = ((trade.profit / this.amount) * 100).toFixed(4);
 		this.state.trades.push(trade);
+		this.handleMaxLossProfitStat(trade)
 		this.handleBalanceStats();
+		this.handleDrawdownStats();
 		this.logState();
     }
     
@@ -155,6 +167,24 @@ class Backtest {
 		}
 		if (balance < minimumBalance) {
 			this.state.minimumBalance = balance;
+		}
+	}
+
+	handleMaxLossProfitStat(trade) {
+		const {profitInPercentage} = trade;
+		const {maximumLoss, maximumProfit} = this.state;
+		if (profitInPercentage > maximumProfit) {
+			this.state.maximumProfit = profitInPercentage
+		} if (profitInPercentage < maximumLoss) {
+			this.state.maximumLoss = profitInPercentage;
+		}
+	}
+
+	handleDrawdownStats() {
+		const { maximumBalance, maximumDrawdown, balance} = this.state;
+		const presentDrawdown = ((maximumBalance - balance) / balance) * 100;
+		if (presentDrawdown > maximumDrawdown) {
+			this.state.maximumDrawdown = parseFloat(presentDrawdown.toFixed(2));
 		}
 	}
 
