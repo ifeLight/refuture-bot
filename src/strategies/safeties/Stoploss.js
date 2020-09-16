@@ -17,7 +17,8 @@ module.exports = class FixedStopLoss {
         const percentage = options.percentage;
         const isFutures = safetyPeriod.isFutures();
         const presentPrice = safetyPeriod.getLastPrice();
-        if (isFutures) {
+        this.isBacktest = (this.safetyPeriod.getEnvironment()).backtest;
+        if (isFutures || isBacktest) {
             const positions = await getPositions();
             if (positions && Array.isArray(positions) && positions.length > 0) {
                 const position = positions[0];
@@ -45,7 +46,7 @@ module.exports = class FixedStopLoss {
             }
         }
 
-        if (!isFutures) {
+        if (!isFutures && !isBacktest) {
             const {amount, currency_amount} = strat.trade;
             let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
             const baseCurrency = (safetyPeriod.getPairInfo()).base;
