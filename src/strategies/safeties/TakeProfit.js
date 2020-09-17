@@ -17,9 +17,9 @@ module.exports = class FixedStopLoss {
         const percentage = options.percentage;
         const isFutures = safetyPeriod.isFutures();
         const presentPrice = safetyPeriod.getLastPrice();
-        this.isBacktest = (this.safetyPeriod.getEnvironment()).backtest;
+        const isBacktest = (safetyPeriod.getEnvironment()).backtest;
         if (isFutures || isBacktest) {
-            const positions = await getPositions();
+            const positions = await safetyPeriod.getPositions();
             if (positions && Array.isArray(positions) && positions.length > 0) {
                 const position = positions[0];
                 const {positionSide, entryPrice} = position;
