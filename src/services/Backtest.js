@@ -273,15 +273,19 @@ class Backtest {
 
     setupSafeties (safeties) {
         if (typeof safeties === 'string') {
-            this.safeties.push({
-                name: safeties,
-                options: null
-            });
+            if (safeties !== "") {
+                this.safeties.push({
+                    name: safeties,
+                    options: null
+                });
+            }
         } else if (typeof safeties === 'object' && safeties.name) {
             this.safeties.push({
                 name: safeties.name,
                 options: safeties.options,
             })
+        } else if (Array.isArray(safeties) && safeties.length === 0) {
+            //Do nothing
         } else if (Array.isArray(safeties) && typeof safeties[0] === 'string') {
             for (const safety of safeties) {
                 this.safeties.push({
@@ -289,7 +293,7 @@ class Backtest {
                     options: null
                 });
             }
-        } else if (Array.isArray(safeties) && typeof safeties[0] === 'string' && safeties[0].name) {
+        } else if (Array.isArray(safeties) && typeof safeties[0] === 'object' && safeties[0].name) {
             for (const safety of safeties) {
                 this.safeties.push({
                     name: safety.name,

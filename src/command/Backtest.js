@@ -43,7 +43,7 @@ module.exports = async function ({
             orderType: orderType || backtestConfig.orderType || 'market',
             fee: fee || backtestConfig.fee,
             noInterruption: noInterruption || backtestConfig.noInterruption || false,
-            safeties: safety || backtestConfig.safeties || 'trailer',
+            safeties: safety || backtestConfig.safeties || [],
             useDefaultSafety: useDefaultSafety ? useDefaultSafety : backtestConfig.hasOwnProperty('useDefaultSafety') && backtestConfig.useDefaultSafety == false ? backtestConfig.useDefaultSafety : true,
             backfillPeriods: backfillPeriods || backtestConfig.backfillPeriods || backtestConfig.period || period|| '15m',
         }
