@@ -11,7 +11,7 @@ module.exports = async function (instanceFilePath) {
     if (!Array.isArray(instances)) {
         throw new Error('Bad Instance File');
     }
-
+    
     async function runTradeServices (instances) {
         const tradeService = new Trader();
         tradeService.start(instances);
