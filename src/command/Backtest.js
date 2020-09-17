@@ -50,7 +50,7 @@ module.exports = async function ({
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {
             throw new Error('Start date should be lesser than End Date')
         }
-
+        
         try {
             const backTestService = new BactestService(parameters);
             await backTestService.start()
