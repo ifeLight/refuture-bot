@@ -1,6 +1,7 @@
 {
     "exchange": "binance",
     "symbol": "BTC/USDT",
+    "safeties": "trailer",
     "indicator": {
         "name": "smaRsi",
         "options": {
@@ -19,5 +20,9 @@
     "period": "5m",
     "orderType": "market",
     "startDate": "2020-06-20:19:45",
-    "endDate": "2020-06-26:22:45"
+    "endDate": "2020-06-26:22:45",
+    "fee": 0.1,
+    "noInterruption": false,
+    "useDefaultSafety": false,
+    "backfillPeriods": "5m"
 }

@@ -61,5 +61,9 @@ module.exports = class IndicatorPeriod {
         return this.exchangePair.getTime();
     }
 
+    getEnvironment() {
+        return this.exchangePair.getEnvironment()
+    }
+
 
 }

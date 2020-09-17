@@ -7,6 +7,7 @@ module.exports = class DenseNeural {
     /**
      * For a Simple Non Window Dense Neural Network
      */
+    constructor() {}
     getName() {
         return 'dense-neural';
     }
@@ -37,7 +38,7 @@ module.exports = class DenseNeural {
             const timeDiff = (indicatorPeriod.getTime() - lastCandle.time) / timeLength;
             const onRightTime = timeDiff >= 0 && timeDiff < 0.5;
 
-            if (true) {
+            if (onRightTime) {
                 //Normalization of previous Candle
                 const timeNorm = time / normalization.time;
                 const openNorm = open / normalization.open;
@@ -49,6 +50,9 @@ module.exports = class DenseNeural {
                 const model =  await tf.loadLayersModel(`file://./var/models/${modelFolder}/model.json`);
                 const pred = model.predict(inputTensor);
                 const predDirection =  (pred.argMax(1).dataSync())[0];
+                if (predDirection > 0) {
+                    console.log(predDirection)
+                }
                 if (predDirection === 0) {
                     return indicatorPeriod.createSignal('close', {
                         ...prevCandle

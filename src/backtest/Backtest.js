@@ -6,7 +6,7 @@ const {
 } = require('./backtestConfig');
 
 class Backtest {
-    constructor({exchangeFee, candles, amount, leverage, stopLoss, takeProfit, strategy, parentObject}) {
+    constructor({exchangeFee, candles, amount, leverage, useDefaultSafety =true,  stopLoss, takeProfit, safety, strategy, timeMetrics,  parentObject, noInterruption = false}) {
 		const balance = amount || defaultBalance;
 		const lev = parseInt(leverage) || defaultLeverage;
 		const echFee = exchangeFee || defaultExchangeFee;
@@ -21,13 +21,23 @@ class Backtest {
             minimumBalance: balance,
 			entryTime: candles[0].time,
 			leverage: lev,
-			exchangeFee: echFee
+			exchangeFee: echFee,
+			maximumDrawdown: 0,
+			maximumProfit: 0,
+			maximumLoss: 0
         };
         this.leverage = lev;
         this.exchangeFee = echFee;
-        this.strategy = strategy || (() => {});
+		this.strategy = strategy || (() => {});
+		this.safety = safety || (() => {});
+		this.timeMetrics = timeMetrics || (() => {});
         this.candles = candles;
-        this.parentObject = parentObject;
+		this.parentObject = parentObject;
+		this.noInterruption = noInterruption;
+		this.useDefaultSafety = useDefaultSafety;
+		this.timeState = {
+			index: 0
+		}
     }
 
     checkStopLossAndTakeProfit(time, price) {
@@ -72,12 +82,18 @@ class Backtest {
     }
 
     createNewEmptyTrade() {
+		let defaultSafetyOptions = {};
+		if (this.useDefaultSafety) {
+			defaultSafetyOptions = {
+				stopLoss: this.state.stopLoss,
+				takeProfit: this.state.takeProfit,
+			}
+		}
         return {
             type: this.state.positionType,
             entryTime: this.state.entryTime,
 			entry: this.state.positionEntry,
-			stopLoss: this.state.stopLoss,
-			takeProfit: this.state.takeProfit,
+			...defaultSafetyOptions,
             amount: this.amount,
 			close: 0,
 			fee: 0,
@@ -95,10 +111,15 @@ class Backtest {
     }
 
     roundupTrade(trade) {
+		trade.entryDate = new Date(trade.entryTime).toString();
+		trade.closeDate = new Date(trade.closeTime).toString();
         this.state.positionType = positionTypes.NONE;
 		this.state.balance += trade.profit;
+		trade.profitInPercentage = parseFloat(((trade.profit / this.amount) * 100).toFixed(4));
 		this.state.trades.push(trade);
+		this.handleMaxLossProfitStat(trade)
 		this.handleBalanceStats();
+		this.handleDrawdownStats();
 		this.logState();
     }
     
@@ -111,14 +132,15 @@ class Backtest {
 		} else if (isTakeProfitHit) {
 			difference = (trade.entry * (trade.takeProfit / 100));
         }
-        trade.closeTime = time;
+		trade.closeTime = time;
+		trade.closedBy = isStopLossHit ? 'stoploss' : isTakeProfitHit ? 'take-profit': 'unknown';
 		trade.close = isLongPosition ? trade.entry + difference : trade.entry - difference;
 		trade.fee = this.calcFee(trade.amount, trade.entry, trade.close); 
 		trade.profit = this.calcProfit(trade.amount, trade.entry, difference, trade.fee);
 		this.roundupTrade(trade)
     }
 
-    closePositionBasedOnPositionChange(time, price) {
+    closePositionBasedOnPositionChange(time, price, reason = 'change-position') {
         const trade = this.createNewEmptyTrade();
         let difference;
         trade.close = price;
@@ -129,7 +151,8 @@ class Backtest {
         } else {
             difference = trade.entry - price;
         }
-        trade.closeTime = time;
+		trade.closeTime = time;
+		trade.closedBy = reason;
         trade.profit = this.calcProfit(trade.amount, trade.entry, difference, trade.fee);
         this.roundupTrade(trade)
     }
@@ -151,15 +174,41 @@ class Backtest {
 		}
 	}
 
+	handleMaxLossProfitStat(trade) {
+		const {profitInPercentage} = trade;
+		const {maximumLoss, maximumProfit} = this.state;
+		if (profitInPercentage > maximumProfit) {
+			this.state.maximumProfit = profitInPercentage
+		} if (profitInPercentage < maximumLoss) {
+			this.state.maximumLoss = profitInPercentage;
+		}
+	}
+
+	handleDrawdownStats() {
+		const { maximumBalance, maximumDrawdown, balance} = this.state;
+		const presentDrawdown = ((maximumBalance - balance) / maximumBalance) * 100;
+		if (presentDrawdown > maximumDrawdown) {
+			this.state.maximumDrawdown = parseFloat(presentDrawdown.toFixed(2));
+		}
+	}
+
 	logState() {
 		const logState = JSON.parse(JSON.stringify(this.state));
 		logState.trades = logState.trades.length;
 		// console.log('new state:', logState);
-    }
+	}
+	
+	closePosition(time, price, reason = 'safety') {
+		this.closePositionBasedOnPositionChange(time, price, reason);
+	}
 
     openPosition(time, price, positionType = positionTypes.LONG) {
 		let entryTime = time;
 		if (this.state.positionType === positionType) {
+			return;
+		}
+
+		if (this.noInterruption && this.state.positionType !== positionTypes.NONE) {
 			return;
 		}
         if (this.state.positionType !== positionTypes.NONE) {
@@ -169,6 +218,21 @@ class Backtest {
             this.state.positionEntry = price;
             this.state.positionType = positionType;
             this.state.entryTime = entryTime;
+		}
+	}
+
+	calcPerformanceInTimeStats({periodStartTime, totalLength}) {
+		const {index} =  this.timeState;
+		this.timeState.totalTime = this.timeState.totalTime || 0;
+		this.timeState.totalTime = parseInt(this.timeState.totalTime + parseInt((Date.now() - periodStartTime)));
+		const averageTime = ((this.timeState.totalTime / 1000 ) / this.timeState.index).toFixed(2); //in seconds
+		const timeRemaining = ((totalLength - this.timeState.index) * (averageTime / 60)).toFixed(2); //In minutes
+		this.timeState.index++;
+		return {
+			totalLength,
+			averageTime,
+			timeRemaining,
+			index
 		}
 	}
 
@@ -185,11 +249,18 @@ class Backtest {
                 {price: parseFloat(high), time: time + (candlePointUnitTime * 2)},
             ]
             for (const candlePoint of candlePoints) {
+				let periodStartTime = Date.now();
+				this
 				const { time, price } = candlePoint;
-                if (this.state.positionType !== positionTypes.NONE) {
+                if (this.state.positionType !== positionTypes.NONE && this.useDefaultSafety) {
                     this.checkStopLossAndTakeProfit(time, price);
-                }
-                await this.strategy(time, price, this.parentObject);
+				}
+				await this.safety(time, price, this.parentObject);
+				await this.strategy(time, price, this.parentObject);
+
+				//Time Perfomance Calc
+				const timeMetricsData = this.calcPerformanceInTimeStats({periodStartTime, totalLength: parseInt(this.candles.length * 3) });
+				this.timeMetrics(timeMetricsData, this.parentObject)
             }
         }
 		this.countTrades();

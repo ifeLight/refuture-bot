@@ -3,6 +3,7 @@ module.exports = class ExchangePair {
         this.eventEmitter = eventEmitter;
         this.logger = logger;
         this.exchangeManager = exchangeManager;
+        this.positions = [];
     }
 
     init(exchangeName, symbol) {
@@ -65,6 +66,12 @@ module.exports = class ExchangePair {
         return this._lastSignal;
     }
 
+    getEnvironment() {
+        return {
+            backtest: true
+        }
+    }
+
     setLastSignal(signal) {
         if (!['long', 'short', 'close'].includes(signal)) return;
         this._lastSignal = signal;
@@ -95,5 +102,20 @@ module.exports = class ExchangePair {
 
     isFutures() {
         return this.exchange.isFutures;
+    }
+
+    setPosition(entryPrice, positionSide) {
+        this.positions = [{
+            entryPrice,
+            positionSide
+        }]
+    }
+
+    emptyPositions() {
+        this.positions = [];
+    }
+
+    async getPositions() {
+        return this.positions;
     }
 }

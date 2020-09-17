@@ -1,6 +1,7 @@
 const clc = require('cli-color');
 
 const IndicatorManager = require('../modules/managers/IndicatorManager');
+const SafetyManager = require('../modules/managers/SafetyManager');
 const ExchangePair = require('../backtest/ExchangePair');
 
 const logger = require('../backtest/utils/logger');
@@ -20,9 +21,15 @@ class Backtest {
         this.eventEmitter = eventEmitter;
         this.exchangeManager = exchangeManager;
         candlesRepository.setBacktest(true)
-        this.exchangePair = exchangeManager;
+        this.exchangePair = new ExchangePair(eventEmitter, logger, exchangeManager);
         this.candlesRepository = candlesRepository;
         this.indicatorManager = new IndicatorManager({
+            candlesRepository,
+            logger,
+            eventEmitter,
+            exchangeManager
+        });
+        this.safetymanager = new SafetyManager({
             candlesRepository,
             logger,
             eventEmitter,
@@ -47,27 +54,39 @@ class Backtest {
             stopLoss,
             takeProfit,
             amount,
-            fee
+            noInterruption,
+            fee,
+            useDefaultSafety,
+            safeties,
+            backfillPeriods
         } = this.parameters;
+
         let indicatorName, indicatorOptions;
         let tradingFee;
         let timingStart;
 
         const log = this.log;
         this.state = {};
+        this.safeties = []
 
         // Checking Indicator
         log(clc.white.bgBlack('Checking Indicator.....'))
         if (typeof indicator === 'string') {
             indicatorName = indicator;
-        } if (typeof indicator === 'object' && indicator.name) {
+        } else if (typeof indicator === 'object' && indicator.name) {
             indicatorName = indicator.name;
             indicatorOptions = indicator.options;
         } else {
             throw new Error('Invalid indicator')
         }
         this.indicatorName = indicatorName;
+        console.log(this.indicatorName)
         log(clc.greenBright('indicator OK'));
+
+        // Checking Safeties
+        log(clc.white.bgBlack('Checking Safeties.....'))
+        this.setupSafeties(safeties);
+        log(clc.greenBright('Safeties OK'));
 
 
         // Init Exchange Pair
@@ -114,6 +133,19 @@ class Backtest {
             await this.backfill({period: this.indicatorOptions.period , exchangeName, exchange, symbol, startDate, endDate});
         }
 
+        //Run backfill periods
+        if (backfillPeriods) {
+            let toBeBackfilledPeriods = []
+            if (typeof backfillPeriods === 'string') {
+                toBeBackfilledPeriods = backfillPeriods.split(',');
+            } else if (Array.isArray(backfillPeriods)) {
+                toBeBackfilledPeriods = backfillPeriods
+            }
+            for (const period of toBeBackfilledPeriods) {
+                await this.backfill({period, exchangeName, exchange, symbol, startDate, endDate});
+            }
+        }
+
         // Running Backtest
         log(clc.white.bgBlack('Running Backtester Started.....'));
         const backtester = new Backtester({
@@ -124,7 +156,11 @@ class Backtest {
             amount,
             leverage,
             strategy: this.strategy,
-            parentObject: this
+            safety: this.safety,
+            parentObject: this,
+            noInterruption,
+            timeMetrics: this.performanceUpdate,
+            useDefaultSafety: useDefaultSafety ? true : false,
         });
         timingStart = Date.now();
         const result = await backtester.start();
@@ -153,18 +189,24 @@ class Backtest {
         log(clc.greenBright(`Backfiling Candles Fetched: ${backfilledCandles.length} [${exchangeName}:${symbol}:${period}] `));
     }
 
+    performanceUpdate(data, self) {
+        const {totalLength, averageTime, timeRemaining, index} = data;
+        const log = self.log;
+        if (index !== 0) {
+            process.stdout.write(clc.move.up(1));
+            process.stdout.write(clc.erase.line);
+        } 
+        log(clc.blue(`Backtest Running: ${index}/${totalLength} periods [AvgTime: ${averageTime}secs] [Time Remaining: ${timeRemaining}mins]`))
+    }
+
     async strategy (time, price, self) {
-        let timingStart = Date.now();
         self.state.signals = {};
         self.state.lastSignal = null;
         self.state.index = self.state.index  || 0;
-        self.state.totalTime = self.state.totalTime || 0;
         const isFutures = self.exchangePair.isFutures();
-        const log = self.log;
         if (self.state.index === 0) {
             await self.indicatorManager.runInit(self.indicatorName, self.exchangePair, self.indicatorOptions);
         }
-        const probablyTrials = parseInt(this.candles.length * 3);
         self.exchangePair.setLastSignal(self.state.lastSignal);
         self.exchangePair.setMarkPrice(price);
         self.exchangePair.setLastPrice(price);
@@ -184,17 +226,84 @@ class Backtest {
             this.openPosition(time, price, 'none');
             self.state.lastSignal = 'close';
         }
-
-        if (self.state.index !== 0) {
-            process.stdout.write(clc.move.up(1));
-            process.stdout.write(clc.erase.line);
-        } 
-        self.state.totalTime = parseInt(self.state.totalTime + parseInt((Date.now() - timingStart)));
-        const avgTime = ((self.state.totalTime / 1000 ) / self.state.index).toFixed(2);
-        log(clc.blue(`Running Indicator: ${self.state.index}/${probablyTrials} [AvgTime: ${avgTime}secs]`))
-        self.state.index++;
+        self.state.index++; 
     }
 
+
+    async safety (time, price, self) {
+        const safeties = self.safeties;
+        for (const safety of safeties) {
+            const safetyName = safety.name;
+            const safetyOptions = safety.options;
+
+            self.state.index = self.state.index  || 0;
+            const isFutures = self.exchangePair.isFutures();
+            self.exchangePair.setLastSignal(self.state.lastSignal);
+            self.exchangePair.setMarkPrice(price);
+            self.exchangePair.setLastPrice(price);
+            self.exchangePair.setTime(time);
+            self.candlesRepository.setDefaultToDate(time);
+            if (this.state.positionType === 'long') {
+                self.exchangePair.setPosition(this.state.positionEntry, 'LONG');
+            } else if (this.state.positionType === 'short') {
+                self.exchangePair.setPosition(this.state.positionEntry, 'SHORT');
+            } else {
+                self.exchangePair.emptyPositions();
+            }
+
+            if (self.state.index === 0) {
+                await self.safetymanager.runInit(safetyName, self.exchangePair, safetyOptions);
+            }
+       
+            const signalResult = await self.safetymanager.run(safetyName, self.exchangePair, safetyOptions);
+            if (!signalResult || (signalResult && !signalResult.getSignal())) {
+                // Do nothing
+            } else if (signalResult.getSignal() && signalResult.getSignal() === 'long') {
+                this.openPosition(time, price, 'long');
+            } else if (signalResult.getSignal() && signalResult.getSignal() === 'short') {
+                let positionType = isFutures ? 'short' : 'none';
+                this.openPosition(time, price, positionType);
+            } else if (signalResult.getSignal() && signalResult.getSignal() === 'close') {
+                this.closePosition(time, price, safetyName);
+                // console.log('close');
+                // console.log('');
+            }
+        }
+    }
+
+    setupSafeties (safeties) {
+        if (typeof safeties === 'string') {
+            if (safeties !== "") {
+                this.safeties.push({
+                    name: safeties,
+                    options: null
+                });
+            }
+        } else if (typeof safeties === 'object' && safeties.name) {
+            this.safeties.push({
+                name: safeties.name,
+                options: safeties.options,
+            })
+        } else if (Array.isArray(safeties) && safeties.length === 0) {
+            //Do nothing
+        } else if (Array.isArray(safeties) && typeof safeties[0] === 'string') {
+            for (const safety of safeties) {
+                this.safeties.push({
+                    name: safety,
+                    options: null
+                });
+            }
+        } else if (Array.isArray(safeties) && typeof safeties[0] === 'object' && safeties[0].name) {
+            for (const safety of safeties) {
+                this.safeties.push({
+                    name: safety.name,
+                    options: safety.options
+                });
+            }
+        } else {
+            throw new Error('Invalid Safeties')
+        }
+    }
     
 }
 

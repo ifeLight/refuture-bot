@@ -25,7 +25,7 @@ program
     .description('Run a backtest of a Strategy')
     .option('-e, --exchange <value>', 'the exchange to use')
     .option('-s, --symbol <value>', 'the symbol of the pair')
-    .option('-i, --indicator <value>', 'the indicator to backtest')
+    .option('-I, --indicator <value>', 'the indicator to backtest')
     .option('-r, --profit <value>', 'the take pofit in percentage')
     .option('-o, --loss <value>', 'the stop loss in percentage')
     .option('-a, --amount <value>', 'the amount to start with')
@@ -34,7 +34,11 @@ program
     .option('-y, --end <value>', 'the end date of the backtest period')
     .option('-z, --leverage <value>', 'the leverage for futures trading')
     .option('-p, --period <value>', 'the period to run every tick')
-    .option('-fee, --fee <value>', 'the fee for each completed order')
+    .option('-f, --fee <value>', 'the fee for each completed order')
+    .option('-n, --nointerruption <value>', 'no interruption when there is a trade')
+    .option('-S, --safety <value>', 'select the safety to be used')
+    .option('-D, --usedefaultsafety <value>', 'use default safety')
+    .option('-B, --backfillperiods <value>', 'set some periods to backfill, should seperated by comma')
     .action(async (cmdObj) => {
         const { config: configFile, profit: takeProfit, loss: stopLoss, end: endDate, start: startDate } = cmdObj;
         await backtestCommand({
