@@ -186,7 +186,7 @@ class Backtest {
 
 	handleDrawdownStats() {
 		const { maximumBalance, maximumDrawdown, balance} = this.state;
-		const presentDrawdown = ((maximumBalance - balance) / balance) * 100;
+		const presentDrawdown = ((maximumBalance - balance) / maximumBalance) * 100;
 		if (presentDrawdown > maximumDrawdown) {
 			this.state.maximumDrawdown = parseFloat(presentDrawdown.toFixed(2));
 		}
