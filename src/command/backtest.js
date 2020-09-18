@@ -52,8 +52,9 @@ module.exports = async function ({
         }
         
         try {
-            const backTestService = new BactestService(parameters);
-            await backTestService.start()
+            const backTestService = new BactestService();
+            await backTestService.start(parameters);
+            process.exit();
         } catch (error) {
             console.error("Backtest Service Failed while running");
             console.error(error.message);

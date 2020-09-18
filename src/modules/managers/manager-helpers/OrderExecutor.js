@@ -1,4 +1,4 @@
-module.exports = class OrderExecutor {
+class OrderExecutor {
     constructor({logger, eventEmitter, notifier}) {
         this.logger = logger;
         this.eventEmitter = eventEmitter;
@@ -663,3 +663,5 @@ module.exports = class OrderExecutor {
     }
 
 }
+
+module.exports = OrderExecutor;

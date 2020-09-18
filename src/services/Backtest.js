@@ -15,12 +15,10 @@ const periodToTimeDiff = require('../utils/periodToTimeDiff');
 const { candlesRepository, exchangeManager } = require('./preService')
 
 class Backtest {
-    constructor(parameters) {
-        this.parameters = parameters,
-        this.logger = logger,
+    constructor() {
+        this.logger = logger;
         this.eventEmitter = eventEmitter;
         this.exchangeManager = exchangeManager;
-        candlesRepository.setBacktest(true)
         this.exchangePair = new ExchangePair(eventEmitter, logger, exchangeManager);
         this.candlesRepository = candlesRepository;
         this.indicatorManager = new IndicatorManager({
@@ -35,13 +33,15 @@ class Backtest {
             eventEmitter,
             exchangeManager
         })
+        this.toLog = true;
     }
 
     log(data) {
+        if (!this.toLog) return;
         process.stdout.write(data + '\n');
     }
 
-    async start() {
+    async start(parameters) {
         const {
             indicator,
             startDate,
@@ -58,19 +58,24 @@ class Backtest {
             fee,
             useDefaultSafety,
             safeties,
-            backfillPeriods
-        } = this.parameters;
+            backfillPeriods,
+            toLog = true,
+        } = parameters;
 
         let indicatorName, indicatorOptions;
         let tradingFee;
         let timingStart;
 
         const log = this.log;
+        this.toLog = toLog === undefined ? true: toLog;
         this.state = {};
         this.safeties = []
 
+        // Let Candles Repository knows its runnind a Backtest
+        candlesRepository.setBacktest(false);
+
         // Checking Indicator
-        log(clc.white.bgBlack('Checking Indicator.....'))
+        this.log(clc.white.bgBlack('Checking Indicator.....'))
         if (typeof indicator === 'string') {
             indicatorName = indicator;
         } else if (typeof indicator === 'object' && indicator.name) {
@@ -80,26 +85,26 @@ class Backtest {
             throw new Error('Invalid indicator')
         }
         this.indicatorName = indicatorName;
-        console.log(this.indicatorName)
-        log(clc.greenBright('indicator OK'));
+        this.log(this.indicatorName)
+        this.log(clc.greenBright('indicator OK'));
 
         // Checking Safeties
-        log(clc.white.bgBlack('Checking Safeties.....'))
+        this.log(clc.white.bgBlack('Checking Safeties.....'))
         this.setupSafeties(safeties);
-        log(clc.greenBright('Safeties OK'));
+        this.log(clc.greenBright('Safeties OK'));
 
 
         // Init Exchange Pair
         try {
             timingStart = Date.now();
-            log(clc.white.bgBlack('Setting up the Exchange Pair.....'))
+            this.log(clc.white.bgBlack('Setting up the Exchange Pair.....'))
             this.exchangePair.init(exchangeName, symbol);
             await this.exchangePair.setup();
             await this.exchangePair.setLeverage(leverage);
             const pairInfo = this.exchangePair.info;
             const { maker, taker } = pairInfo.fees
             tradingFee = parseFloat(fee) || Math.max(parseFloat(maker), parseFloat(taker)) * 100;
-            log(clc.greenBright(`Exchange Pair Setup - DONE (${timeCalc(timingStart)}secs)`));
+            this.log(clc.greenBright(`Exchange Pair Setup - DONE (${timeCalc(timingStart)}secs)`));
         } catch (error) {
            throw error; 
         }
@@ -110,8 +115,8 @@ class Backtest {
         const startTime = new Date(startDate);
         const endTime = new Date(endDate);
 
-        log(clc.white.bgBlack('Fetching Candles.....'))
-        log(clc.white.bgBlack(`From ${startDate}.... to ${endDate} `));
+        this.log(clc.white.bgBlack('Fetching Candles.....'))
+        this.log(clc.white.bgBlack(`From ${startDate}.... to ${endDate} `));
         timingStart = Date.now();
         const fetchedCandles = await this.candlesRepository.fetchCandlesByTimeDifference({
             exchange,
@@ -121,8 +126,8 @@ class Backtest {
             endTime
         });
         
-        log(clc.greenBright(`Fetching Candles - DONE (${timeCalc(timingStart)}secs)`));
-        log(clc.greenBright(`Candles Fetched: ${fetchedCandles.length} [${exchangeName}:${symbol}:${period}] `));
+        this.log(clc.greenBright(`Fetching Candles - DONE (${timeCalc(timingStart)}secs)`));
+        this.log(clc.greenBright(`Candles Fetched: ${fetchedCandles.length} [${exchangeName}:${symbol}:${period}] `));
 
         // Setting up Indicator Options
         const indicatorDefaultOptions = (this.indicatorManager.find(indicatorName)).getOptions();
@@ -146,8 +151,10 @@ class Backtest {
             }
         }
 
+        this.log(clc.green.bgBlack(`StopLoss: ${stopLoss} - TakeProfit: ${takeProfit} - Period: ${period}`));
+
         // Running Backtest
-        log(clc.white.bgBlack('Running Backtester Started.....'));
+        this.log(clc.white.bgBlack('Running Backtester Started.....'));
         const backtester = new Backtester({
             candles: fetchedCandles,
             stopLoss,
@@ -164,18 +171,20 @@ class Backtest {
         });
         timingStart = Date.now();
         const result = await backtester.start();
-        log(clc.greenBright(`Backtester - DONE (${timeCalc(timingStart)}secs)`));
-        drawChart(result);
-        candlesRepository.setBacktest(false)
-        process.exit();
+        this.log(clc.greenBright(`Backtester - DONE (${timeCalc(timingStart)}secs)`));
+        if (this.toLog) {
+            drawChart(result);
+        }
+        candlesRepository.setBacktest(false);
+        return result;
     }
 
     async backfill ({period, exchangeName, exchange, symbol, startDate, endDate}) {
         const startTime = new Date((new Date(startDate)).getTime() - (periodToTimeDiff(period) * 220));
         const endTime = new Date(endDate);
         const log = this.log;
-        log(clc.white.bgBlack('Backfiling Candles.....'))
-        log(clc.white.bgBlack(`From ${startDate}.... to ${endDate} `));
+        this.log(clc.white.bgBlack('Backfiling Candles.....'))
+        this.log(clc.white.bgBlack(`From ${startDate}.... to ${endDate} `));
         let timingStart = Date.now();
         const backfilledCandles = await this.candlesRepository.fetchCandlesByTimeDifference({
             exchange,
@@ -185,18 +194,20 @@ class Backtest {
             endTime
         });
         
-        log(clc.greenBright(`Backfiling Candles - DONE (${timeCalc(timingStart)}secs)`));
-        log(clc.greenBright(`Backfiling Candles Fetched: ${backfilledCandles.length} [${exchangeName}:${symbol}:${period}] `));
+        this.log(clc.greenBright(`Backfiling Candles - DONE (${timeCalc(timingStart)}secs)`));
+        this.log(clc.greenBright(`Backfiling Candles Fetched: ${backfilledCandles.length} [${exchangeName}:${symbol}:${period}] `));
     }
 
     performanceUpdate(data, self) {
         const {totalLength, averageTime, timeRemaining, index} = data;
         const log = self.log;
         if (index !== 0) {
-            process.stdout.write(clc.move.up(1));
-            process.stdout.write(clc.erase.line);
+            if (self.toLog) {
+                process.stdout.write(clc.move.up(1));
+                process.stdout.write(clc.erase.line);
+            }
         } 
-        log(clc.blue(`Backtest Running: ${index}/${totalLength} periods [AvgTime: ${averageTime}secs] [Time Remaining: ${timeRemaining}mins]`))
+        self.log(clc.blue(`Backtest Running: ${index}/${totalLength} periods [AvgTime: ${averageTime}secs] [Time Remaining: ${timeRemaining}mins]`))
     }
 
     async strategy (time, price, self) {

@@ -2,6 +2,7 @@ const { Command } = require('commander');
 
 const tradeCommand = require('./src/command/trade');
 const backtestCommand = require('./src/command/backtest');
+const hyperCommand = require('./src/command/hyperparameter')
 
 const program = new Command();
 program.version('0.0.1');
@@ -20,7 +21,7 @@ program
         await tradeCommand(instanceFilePath);
     })
 
- program
+program
     .command('backtest')
     .description('Run a backtest of a Strategy')
     .option('-e, --exchange <value>', 'the exchange to use')
@@ -48,6 +49,18 @@ program
             stopLoss,
             startDate,
             endDate
+        });
+    })
+
+program
+    .command('hyper')
+    .description('For getting best parameters for a symbol')
+    .option('-c, --config <value>', 'the path to the config file')
+    .action(async (cmdObj) => {
+        const { config: configFile,  } = cmdObj;
+        await hyperCommand({
+            ...cmdObj,
+            configFile
         });
     })
  

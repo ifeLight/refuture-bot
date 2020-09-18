@@ -1,5 +1,5 @@
 const technicalindicators = require('technicalindicators');
-const tf = require('@tensorflow/tfjs-node');
+const tf = require('@tensorflow/tfjs');
 
 const periodToTimeDiff = require('../../utils/periodToTimeDiff');
 

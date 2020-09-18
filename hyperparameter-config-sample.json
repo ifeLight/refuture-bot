@@ -1,0 +1,11 @@
+{
+    "optimize": "balance",
+    "exchange": "binance_futures",
+    "symbol": "ETH/USDT",
+    "indicator": "trendline-reversal",
+    "leverage": 5,
+    "startDate": "2020-09-17:10:45",
+    "endDate": "2020-09-17:19:45",
+    "fee": 0.06,
+    "amount": 1000
+}

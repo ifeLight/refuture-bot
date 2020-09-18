@@ -1,5 +1,5 @@
 const TI = require('technicalindicators');
-const tf = require('@tensorflow/tfjs-node');
+const tf = require('@tensorflow/tfjs');
 const crossUp = TI.crossUp;
 const crossDown =TI.crossDown
 

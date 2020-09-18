@@ -251,3 +251,6 @@ tt.js
 instance.json
 backtest.json
 backtest-result.json
+
+# Hyper parameters result
+var/hyper-results/*
