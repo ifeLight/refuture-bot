@@ -166,8 +166,8 @@ class Backtest {
         const result = await backtester.start();
         log(clc.greenBright(`Backtester - DONE (${timeCalc(timingStart)}secs)`));
         drawChart(result);
-        candlesRepository.setBacktest(false)
-        process.exit();
+        candlesRepository.setBacktest(false);
+        return result;
     }
 
     async backfill ({period, exchangeName, exchange, symbol, startDate, endDate}) {
