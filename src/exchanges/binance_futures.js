@@ -581,10 +581,6 @@ module.exports = class BinanceFuturesExchange {
       }
 
       throttle(key, func, parameter = null, timeout = 1000) {
-        if (!(func instanceof Promise)) {
-          throw new Error(`Throttler no async / promise function given: ${key}`);
-        }
-
         if (!this.throttleTasks) {
             this.throttleTasks = {};
         }
