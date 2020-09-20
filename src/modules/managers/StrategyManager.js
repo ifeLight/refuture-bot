@@ -162,7 +162,6 @@ class StrategyManager {
                     safetyResult = await this.safetyManager.run(name, exchangePair, options, init, strat);
                 }
                 await this.orderExecutor.execute(safetyResult, exchangePair, strat);
-                console.log(safetyResult);
             }
         }
     }
@@ -207,7 +206,6 @@ class StrategyManager {
         let signalResult = this.indicatorSignalsResolver(signalResults);
         signalResult = await this.insuranceManager.runAllInsurances(strat, insurances, exchangePair, signalResult)
         await this.orderExecutor.execute(signalResult, exchangePair, strat);
-        console.log(signalResult);
     }
 
     runStrategies() {
