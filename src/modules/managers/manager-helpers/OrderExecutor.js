@@ -108,6 +108,8 @@ class OrderExecutor {
             }
 
             const leverage = parseInt(await exchangePair.getLeverage());
+            const ticker = exchangePair.getTicker()
+            const { bidPrice, askPrice, lastPrice} = ticker;
             let amount;
             if (tradeOptions.amount) {
                 amount = parseFloat(tradeOptions.amount) * leverage;
