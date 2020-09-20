@@ -472,13 +472,13 @@ module.exports = class BinanceFuturesExchange {
             if (message.e && message.e.toUpperCase() === 'ORDER_TRADE_UPDATE') {
                 const order = message.o;
                 // await self.syncWebsocketOrders(order); //Added Throttler
-                self.throttle('syncwebsocket_orders_key', self.syncWebsocketOrders, order, 3000);
+                self.throttle('syncwebsocket_orders_key', 'syncWebsocketOrders', order, 3000);
             }
 
             if (message.e && message.e.toUpperCase() === 'ACCOUNT_UPDATE') {
                 const {B: balances, P: positions} = message.a;
                 self.syncWebsocketBalances(balances);
-                self.throttle('syncwebsocket_position_key', self.syncWebsocketPositions);
+                self.throttle('syncwebsocket_position_key', 'syncWebsocketPositions');
                 // await self.syncWebsocketPositions(); // Added throttler
             }
           }
@@ -595,7 +595,7 @@ module.exports = class BinanceFuturesExchange {
         const me = this;
         this.throttleTasks[key] = setTimeout(async () => {
           delete me.throttleTasks[key];
-          await func(parameter);
+          await me[func](parameter);
         }, timeout);
       }
 
