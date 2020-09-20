@@ -10,9 +10,15 @@ const {
     BINANCE_FUTURES_API_SECRET,
     OKEX_API_KEY,
     OKEX_API_SECRET,
+    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHAT_ID
 } = process.env;
 
 module.exports = {
+    notify: {
+        telegram_key: TELEGRAM_BOT_TOKEN,
+        telegram_chat_id: TELEGRAM_CHAT_ID
+    },
     exchange: {
         binance: {
             apiKey: BINANCE_API_KEY,

@@ -44,6 +44,15 @@ class OrderExecutor {
             const baseBalance = await exchangePair.getBalance(base);
             const quoteBalance = await exchangePair.getBalance(quote);
 
+            //Create info for Notifier
+            this.notifierInfo = {
+                symbol: exchangePair.symbol,
+                exchange: exchangePair.exchangeName,
+                tag: signalResult.getTag(),
+                ...signalResult.getDebug(),
+                order_type: tradeOptions["order_type"]
+            }
+
             if (signalResult.getSignal()) {
                 const signal = signalResult.getSignal()
                 // Set last signal
@@ -62,6 +71,17 @@ class OrderExecutor {
             console.error(error);
             this.logger.warn(`Execute Order: Failed to execute Order [${exchangePair.symbol} (${error.message})]`)
         }
+    }
+
+    notifyCreatedOrder(data) {
+        const message = {
+            level: 'order',
+            message: 'An order has been created',
+            date: (Date.now()).toString(),
+            ...this.notifierInfo,
+            ...data,
+        }
+        this.notifier.send(message)
     }
 
     async executeFutures(signalResult, exchangePair, options) {
@@ -451,6 +471,9 @@ class OrderExecutor {
         const orderType = options.trade["order_type"];
         if (orderType == 'market') {
             const sellDetails = await exchangePair.createMarketOrder(side, amount);
+            if (sellDetails) {
+                this.notifyCreatedOrder({side, amount})
+            }
         }
 
         if (orderType == 'limit') {
@@ -464,8 +487,10 @@ class OrderExecutor {
                 price = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : askPrice).toFixed(pricePrecision))
             }
             const orderDetails = await exchangePair.createLimitOrder(side, amount, price);
+            if (orderDetails) {
+                this.notifyCreatedOrder({side, amount, price})
+            }
         }
-        // TODO - A Notifier
         return;
     }
 
@@ -553,6 +578,9 @@ class OrderExecutor {
             const sellingAmount = parseFloat(parseFloat(baseBalance.total).toFixed(amountPrecision))
             if (orderType == 'market') {
                 const sellDetails = await exchangePair.createMarketOrder('sell', sellingAmount);
+                if (sellDetails) {
+                    this.notifyCreatedOrder({side: 'sell', amount: sellingAmount})
+                }
             }
 
             if (orderType == 'limit') {
@@ -560,8 +588,10 @@ class OrderExecutor {
                 const { bidPrice, askPrice, lastPrice} = ticker;
                 const sellingPrice = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : askPrice).toFixed(pricePrecision))
                 const sellDetails = await exchangePair.createLimitOrder('sell', sellingAmount, sellingPrice);
+                if (sellDetails) {
+                    this.notifyCreatedOrder({side: 'sell', amount: sellingAmount, price:sellingPrice })
+                }
             }
-            // TODO - A Notifier
             return;
         }
 
@@ -624,6 +654,9 @@ class OrderExecutor {
             if ((remainingBal * lastPrice) > quoteBalance.free) return;
             if (orderType == 'market') {
                 const buyDetails = await exchangePair.createMarketOrder('buy', buyingAmount);
+                if (buyDetails) {
+                    this.notifyCreatedOrder({side: 'buy', amount: buyingAmount })
+                }
             }
 
             if (orderType == 'limit') {
@@ -631,9 +664,10 @@ class OrderExecutor {
                 const { bidPrice, askPrice, lastPrice} = ticker;
                 const buyingPrice = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : bidPrice).toFixed(pricePrecision))
                 const buyDetails = await exchangePair.createLimitOrder('buy', buyingAmount, buyingPrice);
-                
+                if (buyDetails) {
+                    this.notifyCreatedOrder({side: 'buy', amount: buyingAmount, price: buyingPrice })
+                }
             }
-            // TODO - A Notifier
             return;
         }
 

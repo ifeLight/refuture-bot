@@ -3,8 +3,7 @@ const StrategyManager = require('../modules/managers/StrategyManager');
 const eventEmitter = require('../events/EventEmitter');
 const logger = require('../utils/logger');
 
-const { candlesRepository, exchangeManager } = require('./preService')
-// const notifier = require('../notify/index');
+const { candlesRepository, exchangeManager, notifier } = require('./preService')
 
 class Trader {
     constructor () {
