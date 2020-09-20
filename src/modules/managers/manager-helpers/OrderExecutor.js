@@ -32,6 +32,7 @@ class OrderExecutor {
             }
 
             //Return when no advice and signal
+            if (!signalResult) return;
             if (!signalResult.getSignal() && !signalResult.getOrderAdvice()) return;
             
             // If it is Futures, run Futures Order Execution
