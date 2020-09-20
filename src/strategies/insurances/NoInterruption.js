@@ -15,7 +15,7 @@ module.exports = class NoInterruption {
     async period(safetyPeriod, signalResult,  options, strat) {
         const isFutures = safetyPeriod.isFutures();
         if (isFutures) {
-            const positions = await getPositions();
+            const positions = await safetyPeriod.getPositions();
             if (positions && Array.isArray(positions) && positions.length > 0) {
                 return safetyPeriod.createEmptySignal()
             }
