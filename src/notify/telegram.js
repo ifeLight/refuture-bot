@@ -22,7 +22,7 @@ class TelegramNotifier {
         } else if (typeof message === 'object') {
             const messageLevel = message.level ? message.level.toUpperCase() + ' \n': '';
             const messageMsg = message.message ? message.message + '\n': '';
-            msg = `${messageLevel}${message.message}`; 
+            msg = `${messageLevel}${messageMsg}`; 
             delete message.message;
             delete message.level;
             const messageKeys = Object.keys(message);
