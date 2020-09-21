@@ -9,7 +9,7 @@ class Trader {
     constructor () {
         this.logger = logger;
         this. eventEmitter = eventEmitter;
-        this.notifier = undefined;
+        this.notifier = notifier;
     }
 
     start(instances) {
@@ -21,7 +21,7 @@ class Trader {
                 instances.forEach(instance => {
                     strategyManager.add(instance);
                 });
-                strategyManager.runStrategies();
+                // strategyManager.runStrategies();
             })()
             .catch((err) => {
                 throw err;

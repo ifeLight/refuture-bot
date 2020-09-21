@@ -214,6 +214,7 @@ class StrategyManager {
         list.forEach(async (strat) => {
             const { symbol, exchange: exchangeName} = strat;
             await this.runIndicatorsInitials(strat);
+            await this.runSafetiesInitials(strat);
             pForever(async (i) => {
                 try {
                     await this.runIndicatorStrategyUnit(strat);
@@ -221,8 +222,6 @@ class StrategyManager {
                     self.logger.warn(`Indicator Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`)
                 }
             });
-
-            await this.runSafetiesInitials(strat);
             pForever(async (i) => {
                 try {
                     await this.runSafetiesStrategyUnit(strat);
