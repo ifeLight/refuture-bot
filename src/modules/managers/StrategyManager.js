@@ -218,19 +218,13 @@ class StrategyManager {
             pForever(async (i) => {
                 try {
                     await this.runIndicatorStrategyUnit(strat);
-                } catch (error) {
-                    self.logger.warn(`Indicator Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`)
-                }
-            });
-            pForever(async (i) => {
-                try {
                     await this.runSafetiesStrategyUnit(strat);
                 } catch (error) {
-                    self.logger.warn(`Safety Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`)
+                    self.logger.warn(`Forever Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`)
                 }
             });
+          
         });
-
     }
 
 }
