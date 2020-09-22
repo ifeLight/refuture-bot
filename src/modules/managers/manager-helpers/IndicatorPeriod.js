@@ -64,6 +64,9 @@ module.exports = class IndicatorPeriod {
     getEnvironment() {
         return this.exchangePair.getEnvironment()
     }
+    createAdvice(signal, price) {
+        return this.SignalResult.createAdvice(signal, price)
+    }
 
 
 }
