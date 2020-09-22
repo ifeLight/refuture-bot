@@ -9,6 +9,7 @@ module.exports = class SignalResult {
     this._debug = {};
     this._signal = undefined;
     this._tag = undefined;
+    this._orderAdvice = {}
   }
 
   mergeDebug(debug) {
@@ -75,6 +76,12 @@ module.exports = class SignalResult {
 
     result.mergeDebug(debug);
 
+    return result;
+  }
+
+  static createAdvice(signal, price) {
+    const result = new SignalResult();
+    result.setOrderAdvice(signal, price);
     return result;
   }
 };
