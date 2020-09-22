@@ -69,7 +69,13 @@ class Backtest {
         const log = this.log;
         this.toLog = toLog === undefined ? true: toLog;
         this.state = {};
-        this.safeties = []
+        this.safeties = [];
+
+        if (!this.exchangeManager.setupDone) {
+            this.log(clc.white.bgBlack('setting up Exchange Manager.....'))
+            await this.exchangeManager.setup();
+            this.log(clc.white.bgBlack('Exchange Manager set up Done'))
+        }
 
         // Let Candles Repository knows its runnind a Backtest
         candlesRepository.setBacktest(false);

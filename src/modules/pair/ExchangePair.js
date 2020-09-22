@@ -12,6 +12,9 @@ module.exports = class ExchangePair {
 
     async setup() {
         try {
+            if (!this.exchangeManager.setupDone) {
+                await this.exchangeManager.setup();
+            }
             this.exchange = this.exchangeManager.find(this.exchangeName);
             if (!this.exchange)  throw new Error(`Unable to find exchange ${this.exchangeName}`);
             const { symbol, exchangeName } = this;

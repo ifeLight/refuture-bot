@@ -306,7 +306,10 @@ module.exports = class BinanceFuturesExchange {
                 symbol: retouchedSymbol,
                 leverage: leverageNumber
             });
-            this._leverage = leverage;
+            if (!this._leverage) {
+                this._leverage = {};
+            }
+            this._leverage[symbol] = leverage;
             return res;
         } catch (error) {
             this.logger.error(`Binance Futures: Unable to change leverage [${symbol}:${leverage}] (${error.message})`);
@@ -315,8 +318,8 @@ module.exports = class BinanceFuturesExchange {
 
     async getLeverage(symbol) {
         try {
-            if (this._leverage) return this._leverage;
-            throw new Error('Leverage not set');
+            if (this._leverage && this._leverage[symbol]) return this._leverage[symbol];
+            return undefined;
         } catch (error) {
             this.logger.error(`Binance Futures: Unable to fetch leverage [${symbol}] (${error.message})`);
             return undefined;
@@ -472,13 +475,14 @@ module.exports = class BinanceFuturesExchange {
             if (message.e && message.e.toUpperCase() === 'ORDER_TRADE_UPDATE') {
                 const order = message.o;
                 // await self.syncWebsocketOrders(order); //Added Throttler
-                self.throttle('syncwebsocket_orders_key', 'syncWebsocketOrders', order, 3000);
+                self.throttle('syncwebsocket_orders_key', 'syncWebsocketOrders', order, 1000);
             }
 
             if (message.e && message.e.toUpperCase() === 'ACCOUNT_UPDATE') {
                 const {B: balances, P: positions} = message.a;
                 self.syncWebsocketBalances(balances);
-                self.throttle('syncwebsocket_position_key', 'syncWebsocketPositions');
+                self.websocketQuickPositionsUpdate(positions);
+                self.throttle('syncwebsocket_position_key', 'syncWebsocketPositions', null, 2000);
                 // await self.syncWebsocketPositions(); // Added throttler
             }
           }
@@ -554,19 +558,27 @@ module.exports = class BinanceFuturesExchange {
       async syncWebsocketPositions () {
           try {
             const self = this;
+            this.positions = {};
             const response = await this.exchange.fapiPrivateGetPositionRisk();
-            const mappedPositions = response.map((pos) => {
-                const { symbol: symbolId, positionAmt: positionAmount} = pos;
+            const filteredPositions = response.filter((position) => {
+                const {positionAmt, entryPrice} = position;
+                if (parseFloat(positionAmt) === 0) return false;
+                if (parseFloat(entryPrice) === 0) return false;
+                return true;
+            })
+            const mappedPositions = filteredPositions.map((pos) => {
+                const { symbol: symbolId, positionAmt: positionAmount, entryPrice, liquidationPrice} = pos;
                 const asset = symbolId.split('USDT')[0];
                 const sym = asset + '/' + 'USDT';
+                let positionSide = parseFloat(entryPrice) < parseFloat(liquidationPrice) ? 'SHORT' :'LONG';
                 return new Position({
                     ...pos,
                     symbol: sym,
                     positionAmount,
+                    positionSide
                 });
             });
 
-            this.positions = {};
             mappedPositions.forEach((pos) => {
                 const { symbol } = pos;
                 if (this.positions[symbol] && Array.isArray(this.positions[symbol])) {
@@ -580,23 +592,50 @@ module.exports = class BinanceFuturesExchange {
           }
       }
 
-      throttle(key, func, parameter = null, timeout = 1000) {
-        if (!this.throttleTasks) {
-            this.throttleTasks = {};
+        websocketQuickPositionsUpdate(positions) {
+            const filteredPositions = positions.filter((position) => {
+                const {pa: positionAmount, ep: entryPrice} = position;
+                if (parseFloat(positionAmount) === 0) return false;
+                if (parseFloat(entryPrice) === 0) return false;
+                return true;
+            });
+            this.positions = {}
+            filteredPositions.forEach((position) => {
+                const {pa: positionAmount, ep: entryPrice, up: unRealizedProfit, s: exchangeSymbol} = position;
+                let positionSide = parseFloat(positionAmount) > 0 ? 'LONG' : 'SHORT';
+                const asset = exchangeSymbol.split('USDT')[0];
+                const symbol = asset + '/' + 'USDT';
+                const leverage = this.getLeverage(symbol);
+                const newPositionUpdate = new Position({symbol, positionAmount, entryPrice, unRealizedProfit, positionSide, leverage})
+                if (!this.positions[symbol]) {
+                    this.positions[symbol] = [newPositionUpdate]
+                } else if (this.positions[symbol] && Array.isArray(this.positions[symbol])) {
+                    this.positions[symbol].push(newPositionUpdate);
+                }
+            });
         }
-    
-        if (key in this.throttleTasks) {
-          this.logger.debug(`Throttler clear existing event: ${key} - ${timeout}ms`);
-    
-          clearTimeout(this.throttleTasks[key]);
-          delete this.throttleTasks[key];
+
+        websocketQuickOrderUpdate() {
+
         }
-    
-        const me = this;
-        this.throttleTasks[key] = setTimeout(async () => {
-          delete me.throttleTasks[key];
-          await me[func](parameter);
-        }, timeout);
-      }
+
+        throttle(key, func, parameter = null, timeout = 1000) {
+            if (!this.throttleTasks) {
+                this.throttleTasks = {};
+            }
+        
+            if (key in this.throttleTasks) {
+            this.logger.debug(`Throttler clear existing event: ${key} - ${timeout}ms`);
+        
+            clearTimeout(this.throttleTasks[key]);
+            delete this.throttleTasks[key];
+            }
+        
+            const me = this;
+            this.throttleTasks[key] = setTimeout(async () => {
+            delete me.throttleTasks[key];
+            await me[func](parameter);
+            }, timeout);
+        }
 
 }

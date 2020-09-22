@@ -17,6 +17,9 @@ class Trader {
             const { logger, eventEmitter, notifier } = this;
             const strategyManager = new StrategyManager({ logger, eventEmitter, notifier, candlesRepository, exchangeManager });
             (async () => {
+                if (!exchangeManager.setupDone) {
+                    await exchangeManager.setup();
+                }
                 await strategyManager.init();
                 instances.forEach(instance => {
                     strategyManager.add(instance);
