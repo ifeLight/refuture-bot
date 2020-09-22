@@ -475,7 +475,8 @@ module.exports = class BinanceFuturesExchange {
             if (message.e && message.e.toUpperCase() === 'ORDER_TRADE_UPDATE') {
                 const order = message.o;
                 // await self.syncWebsocketOrders(order); //Added Throttler
-                self.throttle('syncwebsocket_orders_key', 'syncWebsocketOrders', order, 1000);
+                self.websocketQuickOrderUpdate(order);
+                self.throttle('syncwebsocket_orders_key', 'syncWebsocketOrders', order, 4000);
             }
 
             if (message.e && message.e.toUpperCase() === 'ACCOUNT_UPDATE') {
@@ -518,7 +519,7 @@ module.exports = class BinanceFuturesExchange {
             if (!self.balances) {
                 self.balances = {};
             }
-            self.balances[asset] = new Balance(asset, free, locked)
+            self.balances[asset] = new Balance(asset, free, locked);
         })
       }
 
@@ -549,7 +550,6 @@ module.exports = class BinanceFuturesExchange {
             });
             this.closedOrders[symbol] = symbolClosedOrders;
             this.openOrders[symbol] =  symbolOpenOrders;
-            
         } catch (error) {
             this.logger.info(`Binance Futures: Failed to sync websocket orders (${error.message})`)
         }
@@ -615,8 +615,67 @@ module.exports = class BinanceFuturesExchange {
             });
         }
 
-        websocketQuickOrderUpdate() {
+        websocketQuickOrderUpdate(order) {
+            const stillOpen = ['NEW', 'PARTIALLY_FILLED'];
+            const nowClosed = ['FILLED'];
 
+            const {s: exchangeSymbol, } = order;
+            const side = order.S.toLowerCase();
+            const time = parseInt(order.T);
+            const id = String(order.i);
+            const price = parseFloat(order.p);
+            const status = stillOpen.indexOf(order.X) > -1 ? 'open': 'closed';
+            const type = order.o.toLowerCase();
+            const amount = parseFloat(order.q);
+            const filled = parseFloat(order.z)
+            const remaining = amount - filled;
+            const asset = exchangeSymbol.split('USDT')[0];
+            const symbol = asset + '/' + 'USDT';
+
+            if (!this.openOrders) {
+                this.openOrders = {};
+            }
+
+            if (!this.closedOrders) {
+                this.closedOrders = {};
+            }
+
+            const updatedOrder = new Order({
+                side, time, id, type, price, status, symbol, amount, filled, remaining
+            });
+
+            //Remove a open order by id
+            function openOrdersRemoveById (self, symbol, id) {
+                if (self.openOrders[symbol] && Array.isArray(self.openOrders[symbol])) {
+                    self.openOrders[symbol] = self.openOrders[symbol].filter(order => order.id != id);
+                }
+            }
+
+            // For Open Orders
+            if (stillOpen.indexOf(order.X) > -1 ) {
+                if (this.openOrders[symbol] && Array.isArray(this.openOrders[symbol])) {
+                    openOrdersRemoveById(this, symbol, id);
+                    this.openOrders[symbol].push(updatedOrder);
+                }  else {
+                    this.openOrders[symbol] = [updatedOrder];
+                }
+            }
+
+            // For Incomplete or Canceled Order
+            if (order.X === 'CANCELED' || order.X === 'EXPIRED') {
+                openOrdersRemoveById(this, symbol, id);
+            }
+
+            //For closed order
+            const stillAllowed = (order.X === 'CANCELED' || order.X === 'EXPIRED') && (filled > 0);
+            if (nowClosed.indexOf(order.X) > -1 || stillAllowed) {
+                openOrdersRemoveById(this, symbol, id)
+                if (this.closedOrders[symbol] && Array.isArray(this.closedOrders[symbol])) {
+                    this.closedOrders[symbol].push(updatedOrder);
+                } else {
+                    this.closedOrders[symbol] = [updatedOrder];
+                }
+            }
         }
 
         throttle(key, func, parameter = null, timeout = 1000) {
