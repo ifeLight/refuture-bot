@@ -29,7 +29,7 @@ module.exports = class NoInterruption {
             if (tradeAmount < (totalBalance +  (0.1 * totalBalance))) {
                 return safetyPeriod.createEmptySignal()
             }
-            return signalResult
+            return signalResult;
         }
     }
     

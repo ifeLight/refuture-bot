@@ -185,10 +185,12 @@ module.exports = class Trailer {
                 })
             }
         }
-        return (this.safetyPeriod.createEmptySignal({
-                trailPrice,
-                presentPrice
-        })).setOrderAdvice('close', trailPrice)
+        let signalResult = this.safetyPeriod.createEmptySignal({
+            trailPrice,
+            presentPrice
+        })
+        signalResult.setOrderAdvice('close', trailPrice)
+        return signalResult;
     }
 
     starter() {

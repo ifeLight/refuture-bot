@@ -18,6 +18,7 @@ module.exports = class FixedStopLoss {
         const isFutures = safetyPeriod.isFutures();
         const presentPrice = safetyPeriod.getLastPrice();
         const isBacktest = (safetyPeriod.getEnvironment()).backtest;
+        let signalResult = safetyPeriod.createEmptySignal();
         if (isFutures || isBacktest) {
             const positions = await safetyPeriod.getPositions();
             if (positions && Array.isArray(positions) && positions.length > 0) {
@@ -27,21 +28,27 @@ module.exports = class FixedStopLoss {
                 const leastShortSidePrice = (entryPrice + (entryPrice * (percentage/100)));
                 if (positionSide === 'LONG') {
                     if (presentPrice < leastLongSidePrice) {
-                        return safetyPeriod.createSignal('close', {
+                        signalResult.setSignal('close');
+                        signalResult.mergeDebug({
                             entryPrice,
                             presentPrice
                         })
+                        return signalResult;
                     }
-                    return (safetyPeriod.createEmptySignal()).setOrderAdvice('close', leastLongSidePrice);
+                    signalResult.setOrderAdvice('close', leastLongSidePrice);
+                    return signalResult;
                 }
                 if (positionSide === 'SHORT') {
                     if (presentPrice > leastShortSidePrice) {
-                        return safetyPeriod.createSignal('close', {
+                        signalResult.setSignal('close');
+                        signalResult.mergeDebug({
                             entryPrice,
                             presentPrice
                         })
+                        return signalResult;
                     }
-                    return (safetyPeriod.createEmptySignal()).setOrderAdvice('close', leastShortSidePrice);
+                    signalResult.setOrderAdvice('close', leastShortSidePrice)
+                    return signalResult;
                 }
             }
         }
@@ -67,12 +74,15 @@ module.exports = class FixedStopLoss {
                 const { price: entryPrice  } = latestClosedOrder;
                 const leastPrice = (entryPrice - (entryPrice * (percentage/100)))
                 if (presentPrice < leastPrice) {
-                    return safetyPeriod.createSignal('close', {
-                        entryPrice,
-                        presentPrice
-                    }) 
+                    signalResult.setSignal('close');
+                        signalResult.mergeDebug({
+                            entryPrice,
+                            presentPrice
+                        })
+                        return signalResult;
                 }
-                return (safetyPeriod.createEmptySignal()).setOrderAdvice('close', leastPrice);
+                signalResult.setOrderAdvice('close', leastPrice)
+                return signalResult;
             }
 
         }
