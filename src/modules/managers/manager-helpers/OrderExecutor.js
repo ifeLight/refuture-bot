@@ -34,15 +34,6 @@ class OrderExecutor {
             //Return when no advice and signal
             if (!signalResult) return;
             if (!signalResult.getSignal() && !signalResult.getOrderAdvice()) return;
-            
-            // If it is Futures, run Futures Order Execution
-            const isFutures = exchangePair.exchange.isFutures;
-            if (isFutures) {
-                return (await this.executeFutures(signalResult, exchangePair, options));
-            }  
-            const { base, quote} = exchangePair.info;
-            const baseBalance = await exchangePair.getBalance(base);
-            const quoteBalance = await exchangePair.getBalance(quote);
 
             //Create info for Notifier
             this.notifierInfo = {
@@ -52,6 +43,15 @@ class OrderExecutor {
                 ...signalResult.getDebug(),
                 order_type: tradeOptions["order_type"]
             }
+            
+            // If it is Futures, run Futures Order Execution
+            const isFutures = exchangePair.exchange.isFutures;
+            if (isFutures) {
+                return (await this.executeFutures(signalResult, exchangePair, options));
+            }  
+            const { base, quote} = exchangePair.info;
+            const baseBalance = await exchangePair.getBalance(base);
+            const quoteBalance = await exchangePair.getBalance(quote);
 
             if (signalResult.getSignal()) {
                 const signal = signalResult.getSignal()
@@ -77,7 +77,7 @@ class OrderExecutor {
         const message = {
             level: 'order',
             message: 'An order has been created',
-            date: (Date.now()).toString(),
+            date: new Date.now().toString(),
             ...this.notifierInfo,
             ...data,
         }
