@@ -316,7 +316,7 @@ module.exports = class BinanceFuturesExchange {
         }
     }
 
-    async getLeverage(symbol) {
+    getLeverage(symbol) {
         try {
             if (this._leverage && this._leverage[symbol]) return this._leverage[symbol];
             return undefined;
