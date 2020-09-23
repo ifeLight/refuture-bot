@@ -9,7 +9,7 @@ module.exports = class SignalResult {
     this._debug = {};
     this._signal = undefined;
     this._tag = undefined;
-    this._orderAdvice = {}
+    this._orderAdvice = undefined;
   }
 
   mergeDebug(debug) {
@@ -49,7 +49,7 @@ module.exports = class SignalResult {
   }
 
   setOrderAdvice(signal, price) {
-    if (!['long', 'short', 'close'].includes(signal)) {
+    if (!['long', 'short', 'close', 'stoploss', 'take_profit'].includes(signal)) {
       throw `Invalid signal:${signal}`;
     }
     this._orderAdvice = {
