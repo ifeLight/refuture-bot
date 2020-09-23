@@ -102,7 +102,7 @@ class StrategyManager {
         exchangePair.init(exchangeName, symbol);
         await exchangePair.setup();
         if (leverage) {
-            await exchangePair.setLeverage(leverage)
+            await exchangePair.setLeverage(parseInt(leverage))
         }
         this._exchangePairs[`${exchangeName}:${symbol}`] = exchangePair;
         return exchangePair;
@@ -194,7 +194,8 @@ class StrategyManager {
     } 
 
     async runIndicatorStrategyUnit(strat) {
-        const { symbol, exchange: exchangeName, insurances} = strat;
+        const { symbol, exchange: exchangeName, strategies} = strat;
+        const {insurances} = strategies;
         let exchangePair;
         if (this.getExchangePair(exchangeName, symbol)) {
             exchangePair = this.getExchangePair(exchangeName, symbol)
@@ -203,7 +204,8 @@ class StrategyManager {
             exchangePair = createdExchangePair;
         }
         const signalResults = await this.runInidicatorsStrategyTick(strat);
-        let signalResult = this.indicatorSignalsResolver(signalResults);
+        // let signalResult = this.indicatorSignalsResolver(signalResults);
+        let signalResult = SignalResult.createSignal('long')
         signalResult = await this.insuranceManager.runAllInsurances(strat, insurances, exchangePair, signalResult)
         await this.orderExecutor.execute(signalResult, exchangePair, strat);
     }
