@@ -17,19 +17,13 @@ class OrderExecutor {
                 const capitalAmount = parseFloat(tradeOptions['currency_amount']);
                 amount = capitalAmount / parseFloat(lastPrice)
             } else {
-                return;
+                throw new Error('Amount not configured');
             }
 
             const { taker: takerFee, maker: makerFee } = exchangePair.info.fees;
             const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision
             const { min: minimumAmountLimit, max: maximumAmountLimit } = exchangePair.info.limits.amount;
             const { min: minimumPriceLimit, max: maximumPriceLimit } = exchangePair.info.limits.price;
-
-            // Return when the amount is bad or low
-            const exchangeAmountFigure = parseFloat((amount - (parseFloat(takerFee) * amount)).toFixed(amountPrecision));
-            if (exchangeAmountFigure < minimumAmountLimit || exchangeAmountFigure > maximumAmountLimit) {
-                throw new Error('Insufficient or bad amount');
-            }
 
             //Return when no advice and signal
             if (!signalResult) return;
@@ -49,6 +43,13 @@ class OrderExecutor {
             if (isFutures) {
                 return (await this.executeFutures(signalResult, exchangePair, options));
             }  
+
+            // Return when the amount is bad or low
+            const exchangeAmountFigure = parseFloat((amount - (parseFloat(takerFee) * amount)).toFixed(amountPrecision));
+            if (exchangeAmountFigure < minimumAmountLimit || exchangeAmountFigure > maximumAmountLimit) {
+                throw new Error('Insufficient or bad amount');
+            }
+
             const { base, quote} = exchangePair.info;
             const baseBalance = await exchangePair.getBalance(base);
             const quoteBalance = await exchangePair.getBalance(quote);
@@ -81,7 +82,10 @@ class OrderExecutor {
             ...this.notifierInfo,
             ...data,
         }
-        this.notifier.send(message)
+
+        if (this.notifier) {
+            this.notifier.send(message)
+        }
     }
 
     async executeFutures(signalResult, exchangePair, options) {
@@ -117,7 +121,7 @@ class OrderExecutor {
                 const capitalAmount = parseFloat(tradeOptions['currency_amount']);
                 amount = (capitalAmount / parseFloat(lastPrice)) * leverage;
             } else {
-                return;
+                throw new Error('Amount not configured');
             }
 
             if (signalResult.getSignal()) {
@@ -143,29 +147,128 @@ class OrderExecutor {
         }
     }
 
+
+    
+
+    async futuresStoplossAdviceHandler(exchangePair, positionSide, tradingPrice, tradingAmount, ticker, orderType, orderList) {
+        const {openOrders, openBuyOrders, openSellOrders} = orderList;
+        const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision;
+        const { bidPrice, askPrice, lastPrice} = ticker;
+        const stoplossOrderType =  orderType == 'market' ? 'STOP_MARKET': 'STOP';
+
+        const stopPrice = tradingPrice;
+        const futuresCreateStopLossOrder = async (side) => {
+            await exchangePair.createOrder(stoplossOrderType, side, tradingAmount, tradingPrice, {
+                'stopPrice': stopPrice
+            });
+            // Delay need to b done here
+        }
+
+        if (positionSide == 'LONG') {
+            if (tradingPrice > bidPrice) return;
+            if (openOrders.length === 1 && (openBuyOrders.length === 1 || openSellOrders.length === 1)) {
+                const order = openOrders[0];
+                if (openSellOrders.length === 1) {
+                    if (tradingPrice == parseFloat(order.price)) return;
+                } 
+                await exchangePair.cancelActiveOrders(order.id);
+                await futuresCreateStopLossOrder('sell');
+            } 
+            if (openOrders.length === 0) {
+                await futuresCreateStopLossOrder('sell');
+            }
+        }
+        if (positionSide == 'SHORT') {
+            if (tradingPrice < askPrice) return;
+            const stopPrice = tradingPrice;
+            if (openOrders.length === 1 && (openBuyOrders.length === 1 || openSellOrders.length === 1)) {
+                const order = openOrders[0];
+                if (openBuyOrders.length === 1) {
+                    if (tradingPrice == parseFloat(order.price)) return;
+                } 
+                await exchangePair.cancelActiveOrders(order.id);
+                await futuresCreateStopLossOrder('buy');
+            } 
+            if (openOrders.length === 0) {
+                await futuresCreateStopLossOrder('buy');
+            }
+        }
+    }
+
+    async futuresTakeProfitAdviceHandler(exchangePair, positionSide, tradingPrice, tradingAmount, ticker, orderType, orderList) {
+        const {openOrders, openBuyOrders, openSellOrders} = orderList;
+        const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision;
+        const { bidPrice, askPrice, lastPrice} = ticker;
+        const stoplossOrderType =  orderType == 'market' ? 'STOP_MARKET': 'STOP';
+
+        if (positionSide == 'LONG') {
+            if (tradingPrice < askPrice) return;
+            if (openOrders.length === 1 && (openBuyOrders.length === 1 || openSellOrders.length === 1)) {
+                const order = openOrders[0];
+                if (openSellOrders.length === 1) {
+                    if (tradingPrice == parseFloat(order.price)) return;
+                    if (parseFloat(order.price) < bidPrice) return; //Stoploss is of higher preference to Take Profit
+                } 
+                await exchangePair.cancelActiveOrders(order.id);
+                await exchangePair.createLimitOrder('sell', tradingAmount, tradingPrice);
+            } 
+            if (openOrders.length === 0) {
+                await exchangePair.createLimitOrder('sell', tradingAmount, tradingPrice);
+            }
+        }
+
+        if (positionSide == 'SHORT') {
+            if (tradingPrice > bidPrice) return;
+            if (openOrders.length === 1 && (openBuyOrders.length === 1 || openSellOrders.length === 1)) {
+                const order = openOrders[0];
+                if (openBuyOrders.length === 1) {
+                    if (tradingPrice == parseFloat(order.price)) return;
+                    if (parseFloat(order.price) > askPrice) return; //Stoploss is of higher preference to Take Profit
+                } 
+                await exchangePair.cancelActiveOrders(order.id);
+                await exchangePair.createLimitOrder('buy', tradingAmount, tradingPrice);
+            } 
+            if (openOrders.length === 0) {
+                await exchangePair.createLimitOrder('buy', tradingAmount, tradingPrice);
+            }
+        }
+    }
     async runFuturesAdvice(advice, position, exchangePair, amount, options) {
         const {signal, price} = advice;
         const advicePrice = parseFloat(price);
-        if (!['long', 'short', 'close'].includes(signal)) {
+        if (!['long', 'short', 'close', 'stoploss', 'take_profit'].includes(signal)) {
             throw `Invalid signal:${signal}`;
         }
         const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision;
-        const openOrders = await exchangePair.getActiveOrders();
-        const openBuyOrders = openOrders.filter((order) => order.side == 'buy');
-        const openSellOrders = openOrders.filter((order) => order.side == 'sell');
+        let openOrders = await exchangePair.getActiveOrders();
+        let openBuyOrders = openOrders.filter((order) => order.side == 'buy');
+        let openSellOrders = openOrders.filter((order) => order.side == 'sell');
+        const orderType = options.trade["order_type"] || 'market';
+        
+        // Cancel all active orders if greater than 2
+        if (openOrders.length > 1) {
+            await exchangePair.cancelActiveOrders();
+            // TODO - A delay need to be done here
+            const refetchedOrders = await exchangePair.getActiveOrders();
+            openOrders = refetchedOrders
+            openBuyOrders = openOrders.filter((order) => order.side == 'buy');
+            openSellOrders = openOrders.filter((order) => order.side == 'sell');
+        }
+
         const ticker = exchangePair.getTicker();
         const { bidPrice, askPrice, lastPrice} = ticker;
         const tradingAmount = parseFloat((amount).toFixed(amountPrecision));
         const tradingPrice = parseFloat((advicePrice).toFixed(pricePrecision));
+        
         if (!position) {
             if (openOrders.length > 1) return;
-            if (advice === 'close') return;
-            if (advice === 'long') {
+            if (signal === 'close') return;
+            if (signal === 'long') {
                 if (openOrders.length === 1 && (openBuyOrders.length === 1 || openSellOrders.length === 1)) {
                     const order = openOrders[0];
                     if (openBuyOrders.length === 1) {
                         if (tradingPrice > bidPrice) return;
-                        if (tradingPrice < parseFloat(order.price)) return;
+                        if (tradingPrice == parseFloat(order.price)) return;
                     } 
                     await exchangePair.cancelActiveOrders(order.id);
                     await exchangePair.createLimitOrder('buy', tradingAmount, tradingPrice);
@@ -174,12 +277,12 @@ class OrderExecutor {
                     await exchangePair.createLimitOrder('buy', tradingAmount, tradingPrice);
                 }
             }
-            if (advice === 'short') {
+            if (signal === 'short') {
                 if (openOrders.length === 1 && (openBuyOrders.length === 1 || openSellOrders.length === 1)) {
                     const order = openOrders[0];
                     if (openSellOrders.length === 1) {
                         if (tradingPrice < askPrice) return;
-                        if (tradingPrice > parseFloat(order.price)) return;
+                        if (tradingPrice == parseFloat(order.price)) return;
                     } 
                     await exchangePair.cancelActiveOrders(order.id);
                     await exchangePair.createLimitOrder('sell', tradingAmount, tradingPrice);
@@ -192,17 +295,52 @@ class OrderExecutor {
 
         if (position) {
             const { positionSide, positionAmount, leverage } = position;
-            if (advice === 'close') {
-                /**
-                 * Still working on a right thing to do
-                 */
-                if (positionSide == 'SHORT') {
-                    if (tradingPrice < askPrice) return;
-                }
-                if (positionSide == 'LONG') {}
+            const orderList = {
+                openOrders, openBuyOrders, openSellOrders
+            }
+            const handleStoploss = async () => {
+                await this.futuresStoplossAdviceHandler(exchangePair, 
+                    positionSide, tradingPrice, tradingAmount, 
+                    ticker, orderType, orderList
+                );
+            }
+            const handleTakeProfit = async () => {
+                await this.futuresTakeProfitAdviceHandler(exchangePair, 
+                    positionSide, tradingPrice, tradingAmount, ticker, 
+                    orderType, orderList
+                    );
+            }
+            // Stoploss advice
+            if (signal === 'stoploss') {
+               await handleStoploss();
             }
 
-            if (advice === 'long') {
+            // Take Profit Advice
+            if (signal === 'take_profit') {
+                await handleTakeProfit();
+            }
+
+            if (signal === 'close') {
+                if (positionSide == 'SHORT') {
+                    if (tradingPrice > askPrice) {
+                        await handleStoploss();
+                    }
+                    if (tradingPrice < bidPrice) {
+                        await handleTakeProfit();
+                    }
+                }
+                // Closing Long Position with Safeties
+                if (positionSide == 'LONG') {
+                    if (tradingPrice > askPrice) {
+                        await handleTakeProfit();
+                    }
+                    if (tradingPrice < bidPrice) {
+                        await handleStoploss();
+                    }
+                }
+            }
+
+            if (signal === 'long') {
                 if (positionSide == 'SHORT') {
                     if (tradingPrice > bidPrice) return;
                     if(openOrders.length === 0) {
@@ -214,7 +352,7 @@ class OrderExecutor {
                 if (positionSide == 'LONG') {}
             }
             
-            if (advice === 'short') {
+            if (signal === 'short') {
                 if (positionSide == 'SHORT') {}
 
                 if (positionSide == 'LONG') {
@@ -288,7 +426,6 @@ class OrderExecutor {
                 if (remAmount > 0) {
                     const remAmountToQuote = (remAmount * lastPrice) / parseInt(leverage);
                     const { quote } = exchangePair.info;
-                    console.log(quote);
                     const quoteBalance = await exchangePair.getBalance(quote);
                     let newAmount;
                     if (remAmountToQuote < quoteBalance.free) {
@@ -499,7 +636,7 @@ class OrderExecutor {
     async runAdvice(advice, exchangePair, amount, options) {
         const {signal, price} = advice;
         const advicePrice = parseFloat(price);
-        if (!['long', 'short', 'close'].includes(signal)) {
+        if (!['long', 'short', 'close', 'stoploss', 'take_profit'].includes(signal)) {
             throw `Invalid signal:${signal}`;
         }
         const ticker = exchangePair.getTicker()
