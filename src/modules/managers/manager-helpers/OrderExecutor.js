@@ -1,8 +1,16 @@
 class OrderExecutor {
-    constructor({logger, eventEmitter, notifier}) {
+    constructor({logger, eventEmitter, notifier, delayTime = 1.5}) {
         this.logger = logger;
         this.eventEmitter = eventEmitter;
         this.notifier = notifier;
+        let delayTimeInMs = delayTime * 100; // This is orders delay Time
+        this.delay = () => {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve();
+                }, delayTimeInMs);
+            });
+        }
     }
 
     async execute(signalResult, exchangePair, options) {
@@ -78,7 +86,7 @@ class OrderExecutor {
         const message = {
             level: 'order',
             message: 'An order has been created',
-            date: new Date.now().toString(),
+            date: (new Date()).toString(),
             ...this.notifierInfo,
             ...data,
         }
@@ -155,6 +163,7 @@ class OrderExecutor {
         const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision;
         const { bidPrice, askPrice, lastPrice} = ticker;
         const stoplossOrderType =  orderType == 'market' ? 'STOP_MARKET': 'STOP';
+        const self = this;
 
         const stopPrice = tradingPrice;
         const futuresCreateStopLossOrder = async (side) => {
@@ -162,6 +171,7 @@ class OrderExecutor {
                 'stopPrice': stopPrice
             });
             // Delay need to b done here
+            await self.delay();
         }
 
         if (positionSide == 'LONG') {
@@ -200,6 +210,7 @@ class OrderExecutor {
         const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision;
         const { bidPrice, askPrice, lastPrice} = ticker;
         const stoplossOrderType =  orderType == 'market' ? 'STOP_MARKET': 'STOP';
+        const self = this;
 
         if (positionSide == 'LONG') {
             if (tradingPrice < askPrice) return;
@@ -211,9 +222,11 @@ class OrderExecutor {
                 } 
                 await exchangePair.cancelActiveOrders(order.id);
                 await exchangePair.createLimitOrder('sell', tradingAmount, tradingPrice);
+                await self.delay();
             } 
             if (openOrders.length === 0) {
                 await exchangePair.createLimitOrder('sell', tradingAmount, tradingPrice);
+                await self.delay();
             }
         }
 
@@ -227,9 +240,11 @@ class OrderExecutor {
                 } 
                 await exchangePair.cancelActiveOrders(order.id);
                 await exchangePair.createLimitOrder('buy', tradingAmount, tradingPrice);
+                await self.delay();
             } 
             if (openOrders.length === 0) {
                 await exchangePair.createLimitOrder('buy', tradingAmount, tradingPrice);
+                await self.delay();
             }
         }
     }
@@ -248,7 +263,7 @@ class OrderExecutor {
         // Cancel all active orders if greater than 2
         if (openOrders.length > 1) {
             await exchangePair.cancelActiveOrders();
-            // TODO - A delay need to be done here
+            await this.delay();
             const refetchedOrders = await exchangePair.getActiveOrders();
             openOrders = refetchedOrders
             openBuyOrders = openOrders.filter((order) => order.side == 'buy');
@@ -272,9 +287,12 @@ class OrderExecutor {
                     } 
                     await exchangePair.cancelActiveOrders(order.id);
                     await exchangePair.createLimitOrder('buy', tradingAmount, tradingPrice);
+                    await this.delay();
+                    
                 } 
                 if (openOrders.length === 0) {
                     await exchangePair.createLimitOrder('buy', tradingAmount, tradingPrice);
+                    await this.delay();
                 }
             }
             if (signal === 'short') {
@@ -286,9 +304,11 @@ class OrderExecutor {
                     } 
                     await exchangePair.cancelActiveOrders(order.id);
                     await exchangePair.createLimitOrder('sell', tradingAmount, tradingPrice);
+                    await this.delay();
                 } 
                 if (openOrders.length === 0) {
                     await exchangePair.createLimitOrder('sell', tradingAmount, tradingPrice);
+                    await this.delay();
                 }
             }
         }
@@ -346,6 +366,7 @@ class OrderExecutor {
                     if(openOrders.length === 0) {
                         const tradingAmount = parseFloat((parseFloat(positionAmount) * 2).toFixed(amountPrecision));
                         await exchangePair.createLimitOrder('buy', tradingAmount, tradingPrice);
+                        await this.delay();
                     }
                 }
 
@@ -360,6 +381,7 @@ class OrderExecutor {
                     if(openOrders.length === 0) {
                         const tradingAmount = parseFloat((parseFloat(positionAmount) * 2).toFixed(amountPrecision));
                         await exchangePair.createLimitOrder('sell', tradingAmount, tradingPrice);
+                        await this.delay();
                     }
                 }
             }
@@ -382,8 +404,11 @@ class OrderExecutor {
 
             if (openBuyOrders.length === 1 && openOrders.length == 1) {
                 const order = openOrders[0];
+                //{checkSomeStopBuyLimitConfluence}
+                // it helped to fix when an already stop buy limit order is placed
+                const checkSomeStopBuyLimitConfluence = orderPrice > askPrice && order.type == 'stop';
                 const orderPrice = parseFloat(order.price)
-                if (orderPrice < bidPrice ) {
+                if (orderPrice < bidPrice || checkSomeStopBuyLimitConfluence) {
                     await exchangePair.cancelActiveOrders();
                     await this.futuresCreateOrder(exchangePair, amount, 'buy', options);
                     return;
@@ -450,7 +475,10 @@ class OrderExecutor {
                 if (openBuyOrders.length == 1) {
                     const order = openBuyOrders[0];
                     const orderPrice = parseFloat(order.price)
-                    if (orderPrice < bidPrice ) {
+                    //{checkSomeStopBuyLimitConfluence}
+                    // it helped to fix when an already stop buy limit order is placed
+                    const checkSomeStopBuyLimitConfluence = orderPrice > askPrice && order.type == 'stop';
+                    if ((orderPrice < bidPrice) ||  checkSomeStopBuyLimitConfluence) {
                         await exchangePair.cancelActiveOrders();
                         await recreateOrder()
                         return;
@@ -481,7 +509,10 @@ class OrderExecutor {
             if (openSellOrders.length === 1 && openOrders.length == 1) {
                 const order = openOrders[0];
                 const orderPrice = parseFloat(order.price)
-                if (orderPrice > askPrice ) {
+                //{checkSomeStopSellLimitConfluence}
+                // it helped to fix when an already stop buy limit order is placed
+                const checkSomeStopSellLimitConfluence = orderPrice < bidPrice && order.type == 'stop';
+                if (orderPrice > askPrice || checkSomeStopSellLimitConfluence) {
                     await exchangePair.cancelActiveOrders();
                     await this.futuresCreateOrder(exchangePair, amount, 'sell', options);
                     return;
@@ -547,8 +578,11 @@ class OrderExecutor {
                 }
                 if (openSellOrders.length == 1) {
                     const order = openSellOrders[0];
-                    const orderPrice = parseFloat(order.price)
-                    if (orderPrice < bidPrice ) {
+                    const orderPrice = parseFloat(order.price);
+                    //{checkSomeStopSellLimitConfluence}
+                    // it helped to fix when an already stop buy limit order is placed
+                    const checkSomeStopSellLimitConfluence = orderPrice < bidPrice && order.type == 'stop';
+                    if (orderPrice < bidPrice || checkSomeStopSellLimitConfluence) {
                         await exchangePair.cancelActiveOrders();
                         await recreateOrder()
                         return;
@@ -588,9 +622,13 @@ class OrderExecutor {
         if (positionAmount == 0) return;
         const amount = Math.abs(positionAmount);
         if (positionSide == 'LONG') {
-            return (await exchangePair.createMarketOrder('sell', amount));
+            await exchangePair.createMarketOrder('sell', amount);
+            await this.delay();
+            return;
         }
-        return (await exchangePair.createMarketOrder('buy', amount));
+        await exchangePair.createMarketOrder('buy', amount);
+        await this.delay();
+        return;
     }
 
     async futuresClose(position, exchangePair, options) {
@@ -600,9 +638,11 @@ class OrderExecutor {
         const amount = Math.abs(positionAmount);
         if (positionSide == 'LONG') {
             await this.futuresCreateOrder(exchangePair, amount, 'sell', options);
+            await this.delay();
             return;
         }
         await this.futuresCreateOrder(exchangePair, amount, 'buy', options);
+        await this.delay();
         return;
     }
 
@@ -610,6 +650,7 @@ class OrderExecutor {
         const orderType = options.trade["order_type"];
         if (orderType == 'market') {
             const sellDetails = await exchangePair.createMarketOrder(side, amount);
+            await this.delay();
             if (sellDetails) {
                 this.notifyCreatedOrder({side, amount})
             }
@@ -626,6 +667,7 @@ class OrderExecutor {
                 price = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : askPrice).toFixed(pricePrecision))
             }
             const orderDetails = await exchangePair.createLimitOrder(side, amount, price);
+            await this.delay();
             if (orderDetails) {
                 this.notifyCreatedOrder({side, amount, price})
             }
@@ -661,12 +703,14 @@ class OrderExecutor {
                 if (advicePrice < orderPrice) return;
                 await exchangePair.cancelActiveOrders(order.id);
                 await exchangePair.createLimitOrder('buy', buyingAmount, tradingPrice);
+                await this.delay();
                 return;
             }
 
             if (openBuyOrders.length < 1) {
                 if (tradingPrice > bidPrice) return
-                await exchangePair.createLimitOrder('buy', buyingAmount, tradingPrice)
+                await exchangePair.createLimitOrder('buy', buyingAmount, tradingPrice);
+                await this.delay();
             }
         }
 
@@ -679,11 +723,14 @@ class OrderExecutor {
                 if (advicePrice > orderPrice) return;
                 await exchangePair.cancelActiveOrders(order.id);
                 await exchangePair.createLimitOrder('sell', sellingAmount, tradingPrice);
+                await this.delay();
                 return;
             }
             if (openBuyOrders.length < 1) {
                 if (tradingPrice < askPrice) return
                 await exchangePair.createLimitOrder('sell', sellingAmount, tradingPrice)
+                await this.delay();
+                return;
             }
         }
     }
@@ -707,7 +754,8 @@ class OrderExecutor {
         async function cancelAllSellOrders() {
             for (const order of openOrders) {
                 if (order.side == 'buy') {
-                    await exchangePair.cancelActiveOrders(order.id)
+                    await exchangePair.cancelActiveOrders(order.id);
+                    await this.delay();
                 }
             }
         }
@@ -720,6 +768,7 @@ class OrderExecutor {
                 if (sellDetails) {
                     this.notifyCreatedOrder({side: 'sell', amount: sellingAmount})
                 }
+                await this.delay();
             }
 
             if (orderType == 'limit') {
@@ -730,6 +779,7 @@ class OrderExecutor {
                 if (sellDetails) {
                     this.notifyCreatedOrder({side: 'sell', amount: sellingAmount, price:sellingPrice })
                 }
+                await this.delay();
             }
             return;
         }
@@ -760,6 +810,7 @@ class OrderExecutor {
         const orderType = options.trade["order_type"] // 'limit' or 'market
         const { base, quote} = exchangePair.info;
         const baseBalance = await exchangePair.getBalance(base);
+        const self = this;
 
         // const {total, free, locked } = baseBalance;
         if (!baseBalance) throw new Error('Error fetching base balance');
@@ -785,6 +836,7 @@ class OrderExecutor {
             for (const order of openOrders) {
                 if (order.side == 'buy') {
                     await exchangePair.cancelActiveOrders(order.id)
+                    await self.delay();
                 }
             }
         }
@@ -796,6 +848,7 @@ class OrderExecutor {
                 if (buyDetails) {
                     this.notifyCreatedOrder({side: 'buy', amount: buyingAmount })
                 }
+                await self.delay();
             }
 
             if (orderType == 'limit') {
@@ -806,6 +859,7 @@ class OrderExecutor {
                 if (buyDetails) {
                     this.notifyCreatedOrder({side: 'buy', amount: buyingAmount, price: buyingPrice })
                 }
+                await self.delay();
             }
             return;
         }
