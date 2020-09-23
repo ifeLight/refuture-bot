@@ -1,5 +1,3 @@
-const pForever = require('p-forever');
-
 const IndicatorManager = require('./IndicatorManager');
 const PolicyManger = require('./PolicyManager');
 const InsuranceManager = require('./InsuranceManager');
@@ -217,15 +215,14 @@ class StrategyManager {
             const { symbol, exchange: exchangeName} = strat;
             await this.runIndicatorsInitials(strat);
             await this.runSafetiesInitials(strat);
-            pForever(async (i) => {
+            while (true) {
                 try {
                     await this.runIndicatorStrategyUnit(strat);
                     await this.runSafetiesStrategyUnit(strat);
                 } catch (error) {
                     self.logger.warn(`Forever Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`)
                 }
-            });
-          
+            }
         });
     }
 
