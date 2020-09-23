@@ -148,7 +148,11 @@ module.exports = class ExchangePair {
     }
 
     async createLimitOrder(side, amount, price) {
-        return this.exchange.createMarketOrder(this.symbol, side, amount, price);
+        return this.exchange.createLimitOrder(this.symbol, side, amount, price);
+    }
+
+    async createOrder(type, side, amount, price, params = {}) {
+        return this.exchange.createOrder(this.symbol, type, side, amount, price, params);
     }
 
     async cancelActiveOrders(orderId) {
