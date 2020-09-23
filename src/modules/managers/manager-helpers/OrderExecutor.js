@@ -406,7 +406,7 @@ class OrderExecutor {
                 const order = openOrders[0];
                 //{checkSomeStopBuyLimitConfluence}
                 // it helped to fix when an already stop buy limit order is placed
-                const checkSomeStopBuyLimitConfluence = orderPrice > askPrice && order.type == 'stop';
+                const checkSomeStopBuyLimitConfluence = orderPrice > askPrice && (order.type == 'stop'|| order.type == 'stop_market');
                 const orderPrice = parseFloat(order.price)
                 if (orderPrice < bidPrice || checkSomeStopBuyLimitConfluence) {
                     await exchangePair.cancelActiveOrders();
@@ -477,7 +477,7 @@ class OrderExecutor {
                     const orderPrice = parseFloat(order.price)
                     //{checkSomeStopBuyLimitConfluence}
                     // it helped to fix when an already stop buy limit order is placed
-                    const checkSomeStopBuyLimitConfluence = orderPrice > askPrice && order.type == 'stop';
+                    const checkSomeStopBuyLimitConfluence = orderPrice > askPrice && (order.type == 'stop'|| order.type == 'stop_market');
                     if ((orderPrice < bidPrice) ||  checkSomeStopBuyLimitConfluence) {
                         await exchangePair.cancelActiveOrders();
                         await recreateOrder()
@@ -511,7 +511,7 @@ class OrderExecutor {
                 const orderPrice = parseFloat(order.price)
                 //{checkSomeStopSellLimitConfluence}
                 // it helped to fix when an already stop buy limit order is placed
-                const checkSomeStopSellLimitConfluence = orderPrice < bidPrice && order.type == 'stop';
+                const checkSomeStopSellLimitConfluence = orderPrice < bidPrice && (order.type == 'stop'|| order.type == 'stop_market');
                 if (orderPrice > askPrice || checkSomeStopSellLimitConfluence) {
                     await exchangePair.cancelActiveOrders();
                     await this.futuresCreateOrder(exchangePair, amount, 'sell', options);
@@ -581,7 +581,7 @@ class OrderExecutor {
                     const orderPrice = parseFloat(order.price);
                     //{checkSomeStopSellLimitConfluence}
                     // it helped to fix when an already stop buy limit order is placed
-                    const checkSomeStopSellLimitConfluence = orderPrice < bidPrice && order.type == 'stop';
+                    const checkSomeStopSellLimitConfluence = orderPrice < bidPrice && (order.type == 'stop'|| order.type == 'stop_market');
                     if (orderPrice < bidPrice || checkSomeStopSellLimitConfluence) {
                         await exchangePair.cancelActiveOrders();
                         await recreateOrder()
