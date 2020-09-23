@@ -346,6 +346,16 @@ module.exports = class BinanceFuturesExchange {
             return;
         }
     }
+
+    async createOrder (symbol, type, side, amount, price, params) {
+        try {
+            const order = await this.exchange.createOrder(symbol, type, side, amount, price, params);
+            return order;
+        } catch (error) {
+            this.logger.info(`Binance Futures: Unable to create Custom (${type}) Order [${symbol}:${side}:${amount}:${price}] (${error.message})`);
+            return;
+        }
+    }
     async fetchActiveOrders(symbol) {
         try {
             if (!this.openOrders || (this.openOrders && !this.openOrders[symbol])) {
