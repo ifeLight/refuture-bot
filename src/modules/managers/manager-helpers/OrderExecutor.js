@@ -1,10 +1,10 @@
 class OrderExecutor {
-    constructor({logger, eventEmitter, notifier, delayTime = 1.5}) {
+    constructor({logger, eventEmitter, notifier, delayTime = 5}) {
         this.logger = logger;
         this.eventEmitter = eventEmitter;
         this.notifier = notifier;
-        let delayTimeInMs = delayTime * 100; // This is orders delay Time
-        this.delay = () => {
+        let delayTimeInMs = delayTime * 1000; // This is orders delay Time
+        this.delay = async () => {
             return new Promise((resolve, reject) => {
                 setTimeout(() => {
                     resolve();
@@ -180,6 +180,9 @@ class OrderExecutor {
                 const order = openOrders[0];
                 if (openSellOrders.length === 1) {
                     if (tradingPrice == parseFloat(order.price)) return;
+                    // TODO - To fix no price in stop Market
+                    // To know wether its repetitive
+                    if (order.type == 'stop_market' ) return; //Stop market Bug!!
                 } 
                 await exchangePair.cancelActiveOrders(order.id);
                 await futuresCreateStopLossOrder('sell');
@@ -190,11 +193,13 @@ class OrderExecutor {
         }
         if (positionSide == 'SHORT') {
             if (tradingPrice < askPrice) return;
-            const stopPrice = tradingPrice;
             if (openOrders.length === 1 && (openBuyOrders.length === 1 || openSellOrders.length === 1)) {
                 const order = openOrders[0];
                 if (openBuyOrders.length === 1) {
                     if (tradingPrice == parseFloat(order.price)) return;
+                    // TODO - To fix no price in stop Market
+                    // To know wether its repetitive
+                    if (order.type == 'stop_market' ) return; //Stop market Bug!!
                 } 
                 await exchangePair.cancelActiveOrders(order.id);
                 await futuresCreateStopLossOrder('buy');
@@ -218,7 +223,7 @@ class OrderExecutor {
                 const order = openOrders[0];
                 if (openSellOrders.length === 1) {
                     if (tradingPrice == parseFloat(order.price)) return;
-                    if (parseFloat(order.price) < bidPrice) return; //Stoploss is of higher preference to Take Profit
+                    if (parseFloat(order.price) < bidPrice || order.type === 'stop_market') return; //Stoploss is of higher preference to Take Profit
                 } 
                 await exchangePair.cancelActiveOrders(order.id);
                 await exchangePair.createLimitOrder('sell', tradingAmount, tradingPrice);
@@ -236,7 +241,7 @@ class OrderExecutor {
                 const order = openOrders[0];
                 if (openBuyOrders.length === 1) {
                     if (tradingPrice == parseFloat(order.price)) return;
-                    if (parseFloat(order.price) > askPrice) return; //Stoploss is of higher preference to Take Profit
+                    if (parseFloat(order.price) > askPrice || order.type === 'stop_market') return; //Stoploss is of higher preference to Take Profit
                 } 
                 await exchangePair.cancelActiveOrders(order.id);
                 await exchangePair.createLimitOrder('buy', tradingAmount, tradingPrice);
