@@ -32,7 +32,7 @@ module.exports = class FixedStopLoss {
                             presentPrice
                         })
                     }
-                    return safetyPeriod.createAdvice('close', maxLongSidePrice);
+                    return safetyPeriod.createAdvice('take_profit', maxLongSidePrice);
                 }
                 if (positionSide === 'SHORT') {
                     if (presentPrice < maxShortSidePrice) {
@@ -41,7 +41,7 @@ module.exports = class FixedStopLoss {
                             presentPrice
                         })
                     }
-                    return safetyPeriod.createAdvice('close', maxShortSidePrice);
+                    return safetyPeriod.createAdvice('take_profit', maxShortSidePrice);
                 }
             }
         }

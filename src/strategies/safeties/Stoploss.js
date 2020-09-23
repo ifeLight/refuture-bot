@@ -35,7 +35,7 @@ module.exports = class FixedStopLoss {
                         })
                         return signalResult;
                     }
-                    signalResult.setOrderAdvice('close', leastLongSidePrice);
+                    signalResult.setOrderAdvice('stoploss', leastLongSidePrice);
                     return signalResult;
                 }
                 if (positionSide === 'SHORT') {
@@ -47,7 +47,7 @@ module.exports = class FixedStopLoss {
                         })
                         return signalResult;
                     }
-                    signalResult.setOrderAdvice('close', leastShortSidePrice)
+                    signalResult.setOrderAdvice('stoploss', leastShortSidePrice)
                     return signalResult;
                 }
             }
