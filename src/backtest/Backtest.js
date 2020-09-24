@@ -252,7 +252,6 @@ class Backtest {
             ]
             for (const candlePoint of candlePoints) {
 				let periodStartTime = Date.now();
-				this
 				const { time, price } = candlePoint;
                 if (this.state.positionType !== positionTypes.NONE && this.useDefaultSafety) {
                     this.checkStopLossAndTakeProfit(time, price);
