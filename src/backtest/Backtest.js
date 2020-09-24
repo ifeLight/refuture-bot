@@ -225,12 +225,14 @@ class Backtest {
 		const {index} =  this.timeState;
 		this.timeState.totalTime = this.timeState.totalTime || 0;
 		this.timeState.totalTime = parseInt(this.timeState.totalTime + parseInt((Date.now() - periodStartTime)));
-		const averageTime = ((this.timeState.totalTime / 1000 ) / this.timeState.index).toFixed(2); //in seconds
+		
+		const averageTime = ((this.timeState.totalTime / 1000 ) / this.timeState.index)
+		const averageTimeFixed = averageTime.toFixed(2); //in seconds
 		const timeRemaining = ((totalLength - this.timeState.index) * (averageTime / 60)).toFixed(2); //In minutes
 		this.timeState.index++;
 		return {
 			totalLength,
-			averageTime,
+			averageTime: averageTimeFixed,
 			timeRemaining,
 			index
 		}
