@@ -68,9 +68,10 @@ module.exports = class IndicatorPeriod {
         return this.SignalResult.createAdvice(signal, price)
     }
 
-    async safetyBroadCast (price, side = 'long', type = 'stoploss') {
+    async safetyBroadCast (price, side = 'LONG', type = 'stoploss') {
+        const sideToLowerCase = side.toLowerCase();
         const backtestKeyToAdd = (this.getEnvironment()).backtest === true ? ':bt': ''
-        const key = `${side}:${type}${backtestKeyToAdd}`;
+        const key = `${sideToLowerCase}:${type}${backtestKeyToAdd}`;
         await this.storage.set(key, {
             time: this.getTime(),
             side,
@@ -79,9 +80,10 @@ module.exports = class IndicatorPeriod {
         });
     }
     
-    async getSafetyBroadcast () {
+    async getSafetyBroadcast (side, type) {
+        const sideToLowerCase = side.toLowerCase();
         const backtestKeyToAdd = (this.exchangePair.getEnvironment()).backtest === true ? ':bt': ''
-        const key = `${side}:${type}${backtestKeyToAdd}`;
+        const key = `${sideToLowerCase}:${type}${backtestKeyToAdd}`;
         const result = await this.storage.get(key);
         return result;
     }
