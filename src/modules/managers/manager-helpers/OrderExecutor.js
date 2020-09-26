@@ -122,15 +122,23 @@ class OrderExecutor {
             const leverage = parseInt(await exchangePair.getLeverage());
             const ticker = exchangePair.getTicker()
             const { bidPrice, askPrice, lastPrice} = ticker;
-            let amount;
+            let amount, amountToTrade;
             if (tradeOptions.amount) {
-                amount = parseFloat(tradeOptions.amount) * leverage;
+                amountTotrade = parseFloat(tradeOptions.amount);
+                amount = amountTotrade * leverage;
             } else if (tradeOptions['currency_amount']) {
                 const capitalAmount = parseFloat(tradeOptions['currency_amount']);
-                amount = (capitalAmount / parseFloat(lastPrice)) * leverage;
+                amountToTrade = (capitalAmount / parseFloat(lastPrice));
+                amount = amountToTrade * leverage;
             } else {
                 throw new Error('Amount not configured');
             }
+
+            // Check if there is available money to trade
+            // TODO - Stop new trade unless there is available money to trade
+            const quoteCurrency = exchangePair.info.quote;
+            const quoteAvailableBalance = (await exchangePair.getBalance(quoteCurrency)).free;
+            const isThereAvailbleFunds = quoteAvailableBalance >= amountToTrade;
 
             if (signalResult.getSignal()) {
                 const signal = signalResult.getSignal();
