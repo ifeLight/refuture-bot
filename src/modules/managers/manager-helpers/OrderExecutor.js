@@ -143,11 +143,11 @@ class OrderExecutor {
             if (signalResult.getSignal()) {
                 const signal = signalResult.getSignal();
                 if (signal == 'long') {
-                    await this.runFuturesLong(position, exchangePair, amount, options);
+                    await this.runFuturesLong(position, exchangePair, amount, isThereAvailbleFunds, options);
                 }
 
                 if (signal == 'short') {
-                    await this.runFuturesShort(position, exchangePair, amount, options);
+                    await this.runFuturesShort(position, exchangePair, amount, isThereAvailbleFunds, options);
                 }
 
                 if (signal == 'close' ) {
@@ -162,8 +162,6 @@ class OrderExecutor {
             this.logger.warn(`Execute Futures Order: Failed to execute Order [${exchangePair.symbol} (${error.message})]`)
         }
     }
-
-
     
 
     async futuresStoplossAdviceHandler(exchangePair, positionSide, tradingPrice, tradingAmount, ticker, orderType, orderList) {
@@ -402,7 +400,7 @@ class OrderExecutor {
         
     }
 
-    async runFuturesLong(position, exchangePair, amount, options) {
+    async runFuturesLong(position, exchangePair, amount, fundsAvailable, options) {
         const openOrders = await exchangePair.getActiveOrders();
         const openBuyOrders = openOrders.filter((order) => order.side == 'buy');
         const openSellOrders = openOrders.filter((order) => order.side == 'sell');
@@ -427,7 +425,8 @@ class OrderExecutor {
                     return;
                 }
             }
-
+            // Return if no funds available
+            if (!position && !fundsAvailable) return;
             if (openOrders.length < 1) {
                 await this.futuresCreateOrder(exchangePair, amount, 'buy', options)
                 return;
@@ -506,7 +505,7 @@ class OrderExecutor {
         }
     }
 
-    async runFuturesShort(position, exchangePair, amount, options) {
+    async runFuturesShort(position, exchangePair, amount, fundsAvailable, options) {
         const openOrders = await exchangePair.getActiveOrders();
         const openBuyOrders = openOrders.filter((order) => order.side == 'buy');
         const openSellOrders = openOrders.filter((order) => order.side == 'sell');
@@ -531,7 +530,8 @@ class OrderExecutor {
                     return;
                 }
             }
-
+            // Return if no funds available
+            if (!position && !fundsAvailable) return;
             if (openOrders.length < 1) {
                 await this.futuresCreateOrder(exchangePair, amount, 'sell', options)
                 return;
