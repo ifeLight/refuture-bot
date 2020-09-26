@@ -31,7 +31,7 @@ module.exports = async function ({
             orderType,
             fee,
             optimize,
-            maximumIteration = 300
+            maximumIteration = 100
         } = config;
 
         const space = {
