@@ -11,7 +11,8 @@ const {
 
 const linearRegression = require('../../utils/calculations/linearRegression');
 const getPivots = require('../../utils/calculations/getPivots');
-const generateLines = require('../../utils/generateLines')
+const generateLines = require('../../utils/generateLines');
+const periodToTimeDiff = require('../../utils/periodToTimeDiff');
 
 module.exports = class {
     
@@ -57,6 +58,14 @@ module.exports = class {
                 lineAllowancePercentage: 0.1, 
                 priceLineDiffPercentage: 2
             }
+
+            // Only allow this indicator to run 
+            // At the early stage of the candle
+            const lastCandle = candles[candles.length - 1]
+            const timeLength = periodToTimeDiff(candlePeriod);
+            const timeDiff = (indicatorPeriod.getTime() - lastCandle.time) / timeLength;
+            const onRightTime = timeDiff >= 0 && timeDiff < 0.25; //at most quarter time of the candle
+            if (!onRightTime) return indicatorPeriod.createEmptySignal();
 
             //Remove the last incomplete candle
             let incompleteCandle;
