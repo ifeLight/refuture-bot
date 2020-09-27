@@ -251,16 +251,20 @@ module.exports = class {
         //Checking to Buy long on Upper Line
         if (signalInUpperLineLong && toRunLong) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'long');
+            await this.indicatorPeriod.safetyBroadCast(recommendedStoploss, 'LONG', 'stoploss')
             return indicatorPeriod.createSignal('long', {
-                stoploss: recommendedStoploss
+                signalInUpperLineLong,
+                stoplossRecommended : recommendedStoploss
             });
         }
 
         // Checking To buy Short on UpperLine
         if (signalInUpperLineShort && toRunShort) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'short');
+            await this.indicatorPeriod.safetyBroadCast(recommendedStoploss, 'SHORT', 'stoploss')
             return indicatorPeriod.createSignal('short', {
-                stoploss: recommendedStoploss
+                signalInUpperLineShort,
+                stoplossRecommended : recommendedStoploss
             });
         }
 
@@ -268,16 +272,20 @@ module.exports = class {
         //Checking to Buy long on Lower Line
         if (signalInLowerLineLong  && toRunLong) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'long');
+            await this.indicatorPeriod.safetyBroadCast(recommendedStoploss, 'LONG', 'stoploss')
             return indicatorPeriod.createSignal('long', {
-                stoploss: recommendedStoploss
+                signalInLowerLineLong,
+                stoplossRecommended : recommendedStoploss
             });
         }
 
         // Checking To buy Short on LowerLine
         if (signalInLowerLineShort && toRunShort) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'short');
+            await this.indicatorPeriod.safetyBroadCast(recommendedStoploss, 'SHORT', 'stoploss')
             return indicatorPeriod.createSignal('short', {
-                stoploss: recommendedStoploss
+                signalInLowerLineShort,
+                stoplossRecommended : recommendedStoploss
             });
         }
 
