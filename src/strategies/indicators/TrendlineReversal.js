@@ -49,7 +49,7 @@ module.exports = class {
             const candles = indicatorPeriod.indicatorBuilder.get('candles');
 
             //Lines generator configuration
-            const generateLinesConfig = {
+            this.generateLinesConfig = {
                 candles, candleDepth: 5, 
                 maxLines: 5, 
                 lineAllowancePercentage: 0.1, 
@@ -62,81 +62,7 @@ module.exports = class {
                 incompleteCandle = candles.pop();
             }
 
-            //Last Five Candles
-            const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
-
-            // Fetch Active lower and upper lines
-            let lowerLine, upperLine, generatedLines;
-            let fetchedLowerLine = await this.getLine('lower');
-            let fetchedUpperLine = await this.getLine('upper');
-
-            if (!fetchedUpperLine || !fetchedLowerLine) {
-                generatedLines = generateLines(generateLinesConfig);
-                lowerLine = fetchedLowerLine ? fetchedLowerLine : generatedLines.lowerLines[0];
-                upperLine = fetchedUpperLine ? fetchedUpperLine : generatedLines.upperLines[0]
-                // Store Lines if available
-                if (lowerLine) {
-                    await this.storeLine(lowerLine, 'lower')
-                }
-                if (upperLine) {
-                    await this.storeLine(upperLine, 'upper')
-                }
-            } else {
-                lowerLine = fetchedLowerLine;
-                upperLine = fetchedUpperLine;
-            }
-
-            //Checking to Buy long on Upper Line
-            if (upperLine && this.upperLineLongCheck(upperLine, candles)) {
-                let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'long');
-                return indicatorPeriod.createSignal('long', {
-                    stoploss: recommendedStoploss
-                });
-            }
-
-            // Checking To buy Short on UpperLine
-            if (upperLine && this.upperLineShortCheck(upperLine, candles)) {
-                let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'short');
-                return indicatorPeriod.createSignal('short', {
-                    stoploss: recommendedStoploss
-                });
-            } else {
-                // Check the Validity of the upperLine
-                const stillValid = this.lineValidityCheck(upperLine, lastFiveCandles);
-                if (!stillValid || !upperLine) {
-                    generatedLines = generateLines(generateLinesConfig);
-                    upperLine = generatedLines.upperLines[0];
-                    await this.storeLine(upperLine, 'upper');
-                }
-            }
-
-
-            //Checking to Buy long on Lower Line
-            if (lowerLine && this.lowerLineLongCheck(lowerLine, candles)) {
-                let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'long');
-                return indicatorPeriod.createSignal('long', {
-                    stoploss: recommendedStoploss
-                });
-            }
-
-            // Checking To buy Short on LowerLine
-            if (lowerLine && this.lowerLineShortCheck(lowerLine, candles)) {
-                let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'short');
-                return indicatorPeriod.createSignal('short', {
-                    stoploss: recommendedStoploss
-                });
-            } else {
-                // Check the Validity of the lowerLine
-                const stillValid = this.lineValidityCheck(lowerLine, lastFiveCandles);
-                if (!stillValid && !lowerLine) {
-                    generatedLines = generateLines(generateLinesConfig);
-                    lowerLine = generatedLines.lowerLines[0];
-                    await this.storeLine(lowerLine, 'lower')
-                }
-            }
-
-            // Return Empty, when no Signal Generated
-            return indicatorPeriod.createEmptySignal();
+            return this.calculateSignal(candles);
 
         } catch (error) {
              console.error(error);
@@ -289,10 +215,112 @@ module.exports = class {
         return isValid;
     }
 
-    upperLineLongCheck(line, candles) {
+    async calculateSignal(candles) {
+        //Last Five Candles
+        const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
+        // Fetch Active lower and upper lines
+        let lowerLine, upperLine, generatedLines;
+        let fetchedLowerLine = await this.getLine('lower');
+        let fetchedUpperLine = await this.getLine('upper');
+        const generateLinesConfig = this.generateLinesConfig;
+        
+
+        if (!fetchedUpperLine || !fetchedLowerLine) {
+            generatedLines = generateLines(generateLinesConfig);
+            lowerLine = fetchedLowerLine ? fetchedLowerLine : generatedLines.lowerLines[0];
+            upperLine = fetchedUpperLine ? fetchedUpperLine : generatedLines.upperLines[0]
+            // Store Lines if available
+            if (lowerLine) {
+                await this.storeLine(lowerLine, 'lower')
+            }
+            if (upperLine) {
+                await this.storeLine(upperLine, 'upper')
+            }
+        } else {
+            lowerLine = fetchedLowerLine;
+            upperLine = fetchedUpperLine;
+        }
+
+        const signalInUpperLineLong = upperLine && this.upperLineLongCheck(upperLine, candles);
+        const signalInUpperLineShort = upperLine && this.upperLineShortCheck(upperLine, candles);
+        const signalInLowerLineLong = lowerLine && this.lowerLineLongCheck(lowerLine, candles);
+        const signalInLowerLineShort = lowerLine && this.lowerLineShortCheck(lowerLine, candles);
+        const toRunLong = this.toRunLong(candles);
+        const toRunShort = this.toRunShort(candles);
+
+        //Checking to Buy long on Upper Line
+        if (signalInUpperLineLong && toRunLong) {
+            let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'long');
+            return indicatorPeriod.createSignal('long', {
+                stoploss: recommendedStoploss
+            });
+        }
+
+        // Checking To buy Short on UpperLine
+        if (signalInUpperLineShort && toRunShort) {
+            let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'short');
+            return indicatorPeriod.createSignal('short', {
+                stoploss: recommendedStoploss
+            });
+        }
+
+
+        //Checking to Buy long on Lower Line
+        if (signalInLowerLineLong  && toRunLong) {
+            let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'long');
+            return indicatorPeriod.createSignal('long', {
+                stoploss: recommendedStoploss
+            });
+        }
+
+        // Checking To buy Short on LowerLine
+        if (signalInLowerLineShort && toRunShort) {
+            let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'short');
+            return indicatorPeriod.createSignal('short', {
+                stoploss: recommendedStoploss
+            });
+        }
+
+        if (!signalInLowerLineLong && !signalInLowerLineShort) {
+            // Check the Validity of the lowerLine
+            const stillValid = this.lineValidityCheck(lowerLine, lastFiveCandles);
+            if (!stillValid && !lowerLine) {
+                generatedLines = generateLines(generateLinesConfig);
+                lowerLine = generatedLines.lowerLines[0];
+                await this.storeLine(lowerLine, 'lower')
+            }
+        }
+
+        if (!signalInUpperLineLong && !signalInUpperLineShort) {
+            // Check the Validity of the upperLine
+            const stillValid = this.lineValidityCheck(upperLine, lastFiveCandles);
+            if (!stillValid || !upperLine) {
+                generatedLines = generateLines(generateLinesConfig);
+                upperLine = generatedLines.upperLines[0];
+                await this.storeLine(upperLine, 'upper');
+            }
+        }
+
+        // Return Empty, when no Signal Generated
+        return indicatorPeriod.createEmptySignal();
+
+    }
+
+    toRunLong(candles) {
         if (this.useRSI) {
             if(!this.rsiCrossoverCheck(candles, 'long')) return false;
         }
+        return true;
+    }
+
+    toRunShort(candles) {
+        if (this.useRSI) {
+            if(!this.rsiCrossoverCheck(candles, 'short')) return false;
+        }
+        return true;
+    }
+
+    upperLineLongCheck(line, candles) {
         const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         if (!this.lastCandleAboveLine(line, lastFiveCandles)) return false;
         if (!this.isBullishPatternFormed(lastFiveCandles)) return false;
@@ -300,9 +328,6 @@ module.exports = class {
     }
 
     upperLineShortCheck(line, candles) {
-        if (this.useRSI) {
-            if(!this.rsiCrossoverCheck(candles, 'short')) return false;
-        }
         const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         const averageHeight = this.getAverageHeight(lastFiveCandles);
         const priceEnd = this.getPriceFromLine(line, lastFiveCandles[lastFiveCandles.length - 1].time);
@@ -315,9 +340,6 @@ module.exports = class {
     }
 
     lowerLineShortCheck(line, candles) {
-        if (this.useRSI) {
-            if(!this.rsiCrossoverCheck(candles, 'short')) return false;
-        }
         const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         if (!this.lastCandleBelowLine(line, lastFiveCandles)) return false;
         if (!this.isBearishPatternFormed(lastFiveCandles)) return false;
@@ -325,9 +347,6 @@ module.exports = class {
     }
 
     lowerLineLongCheck(line, candles) {
-        if (this.useRSI) {
-            if(!this.rsiCrossoverCheck(candles, 'long')) return false;
-        }
         const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         const averageHeight = this.getAverageHeight(lastFiveCandles);
         const priceEnd = this.getPriceFromLine(line, lastFiveCandles[lastFiveCandles.length - 1].time);
