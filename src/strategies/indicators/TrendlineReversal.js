@@ -179,8 +179,9 @@ module.exports = class {
             SimpleMASignal: false
         }
         const res = macd(input);
-        if (signal === 'long') return res.signal > res.MACD;
-        if (signal === 'short') return res.signal < res.MACD;
+        const lastValue = res[res.length - 1];
+        if (signal === 'long') return lastValue.signal > lastValue.MACD;
+        if (signal === 'short') return lastValue.signal < lastValue.MACD;
         return false;
     }
 
