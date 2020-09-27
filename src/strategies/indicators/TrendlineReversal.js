@@ -1,5 +1,6 @@
 const { 
     BollingerBands, sma, rsi,
+    ema, adx,
     bullishengulfingpattern, bullishhammerstick,
     tweezerbottom, tweezertop,
     shootingstar, threeblackcrows,
@@ -37,6 +38,7 @@ module.exports = class {
     async period(indicatorPeriod, options) {
         try {
             const { period: candlePeriod, length, longRSI, shortRSI, useRSI} = options;
+            this.options = options;
             this.longRSI = longRSI;
             this.shortRSI = shortRSI,
             this.useRSI = useRSI;
@@ -85,14 +87,15 @@ module.exports = class {
     rsiCrossoverCheck(candles, signal = 'long') {
         // signal can be long or short
         // The RSI will check for a last value bullish sign
+        const {shortRSI, longRSI} = this.options;
         const theClosePrices = candles.map((candle) => candle.close);
         const longInput = {
             values: theClosePrices,
-            period: this.longRSI
+            period: longRSI
         }
         const shortInput = {
             values: theClosePrices,
-            period: this.shortRSI
+            period: shortRSI
         }
         const longResult = rsi(longInput);
         const shortResult = rsi(shortInput);
@@ -100,6 +103,74 @@ module.exports = class {
         const shortLastValue = shortResult[shortResult.length - 1]
         if (signal === 'long') return shortLastValue > longLastValue;
         if (signal === 'short') return shortLastValue < longLastValue;
+        return false;
+    }
+
+    // TODO - Add crossovers check EMA, SMA, ADX 
+    emaCrossOverCheck(candles, signal = 'long') {
+        const theClosePrices = candles.map((candle) => candle.close);
+        const {shortEMA, longEMA} = this.options;
+        const longInput = {
+            values: theClosePrices,
+            period: longEMA
+        }
+        const shortInput = {
+            values: theClosePrices,
+            period: shortEMA
+        }
+        const longResult = ema(longInput);
+        const shortResult = ema(shortInput);
+        const longLastValue = longResult[longResult.length - 1]
+        const shortLastValue = shortResult[shortResult.length - 1]
+        if (signal === 'long') return shortLastValue > longLastValue;
+        if (signal === 'short') return shortLastValue < longLastValue;
+        return false;
+    }
+
+    smaCrossOverCheck (candles, signal = 'long') {
+        const theClosePrices = candles.map((candle) => candle.close);
+        const {shortSMA, longSMA} = this.options;
+        const longInput = {
+            values: theClosePrices,
+            period: longSMA
+        }
+        const shortInput = {
+            values: theClosePrices,
+            period: shortSMA
+        }
+        const longResult = sma(longInput);
+        const shortResult = sma(shortInput);
+        const longLastValue = longResult[longResult.length - 1]
+        const shortLastValue = shortResult[shortResult.length - 1]
+        if (signal === 'long') return shortLastValue > longLastValue;
+        if (signal === 'short') return shortLastValue < longLastValue;
+    }
+
+    adxBeyond(candles) {
+        const theClosePrices = candles.map((candle) => candle.close);
+        const {ADXPeriod, ADXTrend} = this.options;
+        const input = this.generateCandlesticksInputs(candles);
+        input = {input, period:ADXPeriod}
+        const results = adx(input);
+        const lastResult = results[results.length - 1];
+        if (lastResult.adx >= ADXTrend) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    // TODO - EMA, SMA, ADX advancing
+    smaAdvancing() {
+
+    }
+
+    emaAdvancing() {
+
+    }
+
+    adxAdvancing() {
+
     }
 
     isLastCandleComplete(candles, presentTime) {
@@ -315,15 +386,35 @@ module.exports = class {
     }
 
     toRunLong(candles) {
-        if (this.useRSI) {
+        const {useSMACrossover, useRSI, useEMACrossover, useADX} = this.options;
+        if (useRSI === true) {
             if(!this.rsiCrossoverCheck(candles, 'long')) return false;
+        }
+        if (useSMACrossover === true) {
+            if(!this.smaCrossOverCheck(candles, 'long')) return false;
+        }
+        if (useEMACrossover === true) {
+            if(!this.emaCrossOverCheck(candles, 'long')) return false;
+        }
+        if (useADX === true) {
+            if(!this.adxBeyond(candles)) return false;
         }
         return true;
     }
 
     toRunShort(candles) {
-        if (this.useRSI) {
+        const {useSMACrossover, useRSI, useEMACrossover, useADX} = this.options;
+        if (useRSI) {
             if(!this.rsiCrossoverCheck(candles, 'short')) return false;
+        }
+        if (useSMACrossover === true) {
+            if(!this.smaCrossOverCheck(candles, 'short')) return false;
+        }
+        if (useEMACrossover === true) {
+            if(!this.emaCrossOverCheck(candles, 'short')) return false;
+        }
+        if (useADX === true) {
+            if(!this.adxBeyond(candles)) return false;
         }
         return true;
     }
@@ -372,7 +463,19 @@ module.exports = class {
             length: 100,
             longRSI: 14,
             shortRSI: 6,
-            useRSI: true
+            useRSI: true,
+            shortSMA: 9,
+            longSMA: 20,
+            useSMACrossover: false,
+            shortEMA: 5,
+            longEMA: 20,
+            useEMACrossover: false,
+            ADXPeriod: 14,
+            ADXTrend: 25,
+            useADX: false,
+            useSMAAdvancing: false,
+            useEMAAdvancing: false,
+            useADXAdvancing: false
         }
     }
 
