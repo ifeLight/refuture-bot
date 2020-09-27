@@ -325,6 +325,7 @@ module.exports = class {
     }
 
     async calculateSignal(candles) {
+        const {onlyReversal: onlyReversalConfig, onlyRebounce: onlyRebounceConfig} = this.options;
         //Last Five Candles
         const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         // Fetch Active lower and upper lines
@@ -332,6 +333,9 @@ module.exports = class {
         let fetchedLowerLine = await this.getLine('lower');
         let fetchedUpperLine = await this.getLine('upper');
         const generateLinesConfig = this.generateLinesConfig;
+
+        const onlyReversal = onlyReversalConfig === true;
+        const onlyRebounce = onlyRebounceConfig === true;
         
 
         if (!fetchedUpperLine || !fetchedLowerLine) {
@@ -358,7 +362,7 @@ module.exports = class {
         const toRunShort = this.toRun(candles, 'short');
 
         //Checking to Buy long on Upper Line
-        if (signalInUpperLineLong && toRunLong) {
+        if (signalInUpperLineLong && toRunLong && !onlyRebounce) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'long');
             await this.indicatorPeriod.safetyBroadCast(recommendedStoploss, 'LONG', 'stoploss')
             return indicatorPeriod.createSignal('long', {
@@ -368,7 +372,7 @@ module.exports = class {
         }
 
         // Checking To buy Short on UpperLine
-        if (signalInUpperLineShort && toRunShort) {
+        if (signalInUpperLineShort && toRunShort && !onlyReversal) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'short');
             await this.indicatorPeriod.safetyBroadCast(recommendedStoploss, 'SHORT', 'stoploss')
             return indicatorPeriod.createSignal('short', {
@@ -379,7 +383,7 @@ module.exports = class {
 
 
         //Checking to Buy long on Lower Line
-        if (signalInLowerLineLong  && toRunLong) {
+        if (signalInLowerLineLong  && toRunLong && !onlyReversal) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'long');
             await this.indicatorPeriod.safetyBroadCast(recommendedStoploss, 'LONG', 'stoploss')
             return indicatorPeriod.createSignal('long', {
@@ -389,7 +393,7 @@ module.exports = class {
         }
 
         // Checking To buy Short on LowerLine
-        if (signalInLowerLineShort && toRunShort) {
+        if (signalInLowerLineShort && toRunShort && !onlyRebounce) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'short');
             await this.indicatorPeriod.safetyBroadCast(recommendedStoploss, 'SHORT', 'stoploss')
             return indicatorPeriod.createSignal('short', {
@@ -511,7 +515,9 @@ module.exports = class {
             useADX: false,
             useSMAAdvancing: false,
             useEMAAdvancing: false,
-            useADXAdvancing: false
+            useADXAdvancing: false,
+            onlyReversal: false,
+            onlyRebounce: false,
         }
     }
 
