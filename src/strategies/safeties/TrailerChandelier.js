@@ -46,14 +46,8 @@ module.exports = class TrailerChandelier {
                 if (positions && Array.isArray(positions) && positions.length > 0) {
                     const position = positions[0];
                     const {positionSide, entryPrice} = position;
-                    if (positionSide === 'LONG') {
-                        const res = await this.handleLongPosition(entryPrice, candles)
-                        return res;
-                    }
-                    if (positionSide === 'SHORT') {
-                        const res = await this.handleShortPosition(entryPrice, candles)
-                        return res;
-                    }
+                    const res = await this.handlePosition(entryPrice, positionSide, candles);
+                    return res;
                 }
             }
 
@@ -77,7 +71,7 @@ module.exports = class TrailerChandelier {
                     });
                     const { price: entryPrice  } = latestClosedOrder;
                     // Same as handle Long Position
-                    const res = await this.handleLongPosition(entryPrice, candles)
+                    const res = await this.handlePosition(entryPrice, 'LONG', candles);
                     return res;
                 }
 
