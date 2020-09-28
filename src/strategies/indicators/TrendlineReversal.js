@@ -61,11 +61,11 @@ module.exports = class {
 
             // Only allow this indicator to run 
             // At the early stage of the candle
-            // const lastCandle = candles[candles.length - 1]
-            // const timeLength = periodToTimeDiff(candlePeriod);
-            // const timeDiff = (indicatorPeriod.getTime() - lastCandle.time) / timeLength;
-            // const onRightTime = timeDiff >= 0 && timeDiff < 0.25; //at most quarter time of the candle
-            // if (!onRightTime) return indicatorPeriod.createEmptySignal();
+            const lastCandle = candles[candles.length - 1]
+            const timeLength = periodToTimeDiff(candlePeriod);
+            const timeDiff = (indicatorPeriod.getTime() - lastCandle.time) / timeLength;
+            const onRightTime = timeDiff >= 0 && timeDiff < 0.35; //at most quarter time of the candle
+            if (!onRightTime) return indicatorPeriod.createEmptySignal();
             // console.log('------------');
             // console.log('Came here')
             // console.log('------------')
@@ -191,6 +191,8 @@ module.exports = class {
         }
         const res = macd(input);
         const lastValue = res[res.length - 1];
+        // console.log(lastValue)
+        // console.log('-----------')
         if (signal === 'long') return lastValue.signal > lastValue.MACD;
         if (signal === 'short') return lastValue.signal < lastValue.MACD;
         return false;
@@ -241,13 +243,14 @@ module.exports = class {
     }
 
     getRecommendedStopLoss (candles, line, signal) {
+        const { recommendedStoplossStep } = this.options;
         const averageHeight = this.getAverageHeight(candles);
         const priceEnd = this.getPriceFromLine(line, candles[candles.length - 1].time);
         if (signal === 'short') {
-            return priceEnd + (4 * averageHeight);
+            return priceEnd + (recommendedStoplossStep * averageHeight);
         }
         if (signal === 'long') {
-            return priceEnd - (4 * averageHeight);
+            return priceEnd - (recommendedStoplossStep * averageHeight);
         }
     }
 
@@ -372,6 +375,10 @@ module.exports = class {
         const toRunLong = this.toRun(candles, 'long');
         const toRunShort = this.toRun(candles, 'short');
 
+        // console.log(`To run long; ${toRunLong}`);
+        // console.log(`To run short; ${toRunShort}`);
+        // console.log('------------------')
+
         //Checking to Buy long on Upper Line
         if (signalInUpperLineLong && toRunLong && !onlyRebounce) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'long');
@@ -454,11 +461,14 @@ module.exports = class {
         }
 
         if (useMACD === true) {
-            if(!this.macdCrossoverCheck(candles), signal) return false;
+            // console.log(`Signal: ${signal} - status: ${this.macdCrossoverCheck(candles, signal)}`);
+            // console.log('---------------');
+            // console.log('------------------')
+            if(!this.macdCrossoverCheck(candles, signal)) return false;
         }
 
         if (useEMACrossover2 === true) {
-            if(!this.emaCrossOverCheck2(candles), signal) return false;
+            if(!this.emaCrossOverCheck2(candles, signal)) return false;
         }
         return true;
     }
@@ -529,6 +539,7 @@ module.exports = class {
             useADXAdvancing: false,
             onlyReversal: false,
             onlyRebounce: false,
+            recommendedStoplossStep: 2,
         }
     }
 
