@@ -61,18 +61,20 @@ module.exports = class {
 
             // Only allow this indicator to run 
             // At the early stage of the candle
-            const lastCandle = candles[candles.length - 1]
-            const timeLength = periodToTimeDiff(candlePeriod);
-            const timeDiff = (indicatorPeriod.getTime() - lastCandle.time) / timeLength;
-            const onRightTime = timeDiff >= 0 && timeDiff < 0.25; //at most quarter time of the candle
-            if (!onRightTime) return indicatorPeriod.createEmptySignal();
+            // const lastCandle = candles[candles.length - 1]
+            // const timeLength = periodToTimeDiff(candlePeriod);
+            // const timeDiff = (indicatorPeriod.getTime() - lastCandle.time) / timeLength;
+            // const onRightTime = timeDiff >= 0 && timeDiff < 0.25; //at most quarter time of the candle
+            // if (!onRightTime) return indicatorPeriod.createEmptySignal();
+            // console.log('------------');
+            // console.log('Came here')
+            // console.log('------------')
 
             //Remove the last incomplete candle
             let incompleteCandle;
             if (!this.isLastCandleComplete(candles, presentTime)) {
                 incompleteCandle = candles.pop();
             }
-
             return this.calculateSignal(candles);
 
         } catch (error) {
@@ -373,8 +375,8 @@ module.exports = class {
         //Checking to Buy long on Upper Line
         if (signalInUpperLineLong && toRunLong && !onlyRebounce) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'long');
-            await this.indicatorPeriod.safetyBroadCast(recommendedStoploss, 'LONG', 'stoploss')
-            return indicatorPeriod.createSignal('long', {
+            await this.indicatorPeriod.safetyBroadcast(recommendedStoploss, 'LONG', 'stoploss')
+            return this.indicatorPeriod.createSignal('long', {
                 signalInUpperLineLong,
                 stoplossRecommended : recommendedStoploss
             });
@@ -383,8 +385,8 @@ module.exports = class {
         // Checking To buy Short on UpperLine
         if (signalInUpperLineShort && toRunShort && !onlyReversal) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'short');
-            await this.indicatorPeriod.safetyBroadCast(recommendedStoploss, 'SHORT', 'stoploss')
-            return indicatorPeriod.createSignal('short', {
+            await this.indicatorPeriod.safetyBroadcast(recommendedStoploss, 'SHORT', 'stoploss')
+            return this.indicatorPeriod.createSignal('short', {
                 signalInUpperLineShort,
                 stoplossRecommended : recommendedStoploss
             });
@@ -394,8 +396,8 @@ module.exports = class {
         //Checking to Buy long on Lower Line
         if (signalInLowerLineLong  && toRunLong && !onlyReversal) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'long');
-            await this.indicatorPeriod.safetyBroadCast(recommendedStoploss, 'LONG', 'stoploss')
-            return indicatorPeriod.createSignal('long', {
+            await this.indicatorPeriod.safetyBroadcast(recommendedStoploss, 'LONG', 'stoploss')
+            return this.indicatorPeriod.createSignal('long', {
                 signalInLowerLineLong,
                 stoplossRecommended : recommendedStoploss
             });
@@ -404,8 +406,8 @@ module.exports = class {
         // Checking To buy Short on LowerLine
         if (signalInLowerLineShort && toRunShort && !onlyRebounce) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'short');
-            await this.indicatorPeriod.safetyBroadCast(recommendedStoploss, 'SHORT', 'stoploss')
-            return indicatorPeriod.createSignal('short', {
+            await this.indicatorPeriod.safetyBroadcast(recommendedStoploss, 'SHORT', 'stoploss')
+            return this.indicatorPeriod.createSignal('short', {
                 signalInLowerLineShort,
                 stoplossRecommended : recommendedStoploss
             });
@@ -432,7 +434,7 @@ module.exports = class {
         }
 
         // Return Empty, when no Signal Generated
-        return indicatorPeriod.createEmptySignal();
+        return this.indicatorPeriod.createEmptySignal();
 
     }
 

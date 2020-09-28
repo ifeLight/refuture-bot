@@ -27,7 +27,31 @@ exchangePair.init('binance_futures', 'BTC/USDT');
         for (const item of Array.from(Array(10).keys())) {
             const res = await indicatorManager.run('trendline-reversal', exchangePair, {
                 period: '5m',
-                length: 500,
+                length: 100,
+                longRSI: 14,
+                shortRSI: 6,
+                useRSI: true,
+                shortSMA: 9,
+                longSMA: 20,
+                useSMACrossover: false,
+                shortEMA: 5,
+                longEMA: 20,
+                useEMACrossover: false,
+                shortEMA2: 5,
+                longEMA2: 20,
+                useEMACrossover2: false,
+                fastMACD: 12,
+                slowMACD: 26,
+                signalMACD: 9,
+                useMACD: false,
+                ADXPeriod: 14,
+                ADXTrend: 25,
+                useADX: false,
+                useSMAAdvancing: false,
+                useEMAAdvancing: false,
+                useADXAdvancing: false,
+                onlyReversal: false,
+                onlyRebounce: false,
             });
     
     
