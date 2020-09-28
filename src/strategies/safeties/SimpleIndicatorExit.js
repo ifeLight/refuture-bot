@@ -1,6 +1,6 @@
 const technicalindicators = require('technicalindicators')
 
-module.exports = class FixedStopLoss {
+module.exports = class SimpleIndicatorExit {
     getName() {
         return 'simple-indicator-exit';
     }
@@ -18,13 +18,14 @@ module.exports = class FixedStopLoss {
     }
 
     async period(safetyPeriod, options, strat) {
-        const {indicator: indicatorName} = this.options;
+        this.options = options;
         this.safetyPeriod = safetyPeriod;
+        const presentTime = this.safetyPeriod.getTime();
+        const {indicator: indicatorName} = this.options;
         const isFutures = safetyPeriod.isFutures();
         const presentPrice = safetyPeriod.getLastPrice();
         const isBacktest = (safetyPeriod.getEnvironment()).backtest;
-        let signalResult = safetyPeriod.createEmptySignal();
-        const candles = indicatorPeriod.indicatorBuilder.get('candles');
+        const candles = safetyPeriod.indicatorBuilder.get('candles');
         //Remove the last incomplete candle
         let incompleteCandle;
         if (!this.isLastCandleComplete(candles, presentTime)) {
