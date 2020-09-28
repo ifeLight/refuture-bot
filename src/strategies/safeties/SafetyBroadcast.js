@@ -23,7 +23,8 @@ module.exports = class SafetyBroadcast {
     }
 
     async period(safetyPeriod, options, strat) {
-        this.options = options;
+        try {
+            this.options = options;
         const isFutures = safetyPeriod.isFutures();
         this.presentPrice = safetyPeriod.getLastPrice();
         const isBacktest = (safetyPeriod.getEnvironment()).backtest;
@@ -71,6 +72,9 @@ module.exports = class SafetyBroadcast {
 
         }
         return safetyPeriod.createEmptySignal();
+        } catch (error) {
+            console.error(error);
+        }
     }
 
 
@@ -85,9 +89,14 @@ module.exports = class SafetyBroadcast {
             const fetchedSafetyBroadcast = await this.fetchSafetyBroadcast(positionSide, 'stoploss');
             if (fetchedSafetyBroadcast) {
                 if (!retrievedPosition.stoplossPrice) {
+                    // console.log('came here')
                     const withinTimeRange = (presentTime -  fetchedSafetyBroadcast.time) < (this.options.maxTime * 1000 * 60);
                     const allowedPrice = presentPrice < parseFloat(fetchedSafetyBroadcast.price);
+                    // console.log(`//present time: ${presentTime} - broadcast time: ${fetchedSafetyBroadcast.time}`);
+                    // console.log(`Present price: ${presentPrice} - Broadcast Price: ${fetchedSafetyBroadcast.price}`)
+                    // console.log(`Within Range: ${withinTimeRange} - Allowed Price: ${allowedPrice}`)
                     if (withinTimeRange && allowedPrice) {
+                        // console.log('Inner')
                         retrievedPosition.stoplossPrice = fetchedSafetyBroadcast.price;
                     }
                 }
@@ -105,6 +114,7 @@ module.exports = class SafetyBroadcast {
                     }
                 }
             };
+            // console.log(fetchedSafetyBroadcast)
         }
 
         if (this.options.takeProfit === true) {
@@ -136,7 +146,9 @@ module.exports = class SafetyBroadcast {
                 }
             };
         }
-        await this.storePosition(storePosition);
+       
+        // console.log(retrievedPosition);
+        await this.storePosition(retrievedPosition);
         return safetyResult;
     }
 
@@ -201,7 +213,7 @@ module.exports = class SafetyBroadcast {
                 }
             };
         }
-        await this.storePosition(storePosition);
+        await this.storePosition(retrievedPosition);
         return safetyResult;
     }
 
@@ -224,7 +236,7 @@ module.exports = class SafetyBroadcast {
 
     }
 
-    async storePosition() {
+    async storePosition(data) {
         const storageKey = `safety_broadcast_${this.isBacktest ? '_bt': ''}`;
         await this.safetyPeriod.storage.set(storageKey, data);
     }
@@ -238,7 +250,7 @@ module.exports = class SafetyBroadcast {
         return {
             stoploss: true,
             takeProfit: true,
-            maxTime: 1 //In minutes
+            maxTime: 5 //In minutes
         }
     }
 
