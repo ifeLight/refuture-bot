@@ -1,6 +1,6 @@
 const {macd} = require('technicalindicators')
 
-module.exports = class FixedStopLoss {
+module.exports = class MacdExit {
     getName() {
         return 'macd-exit';
     }
@@ -18,10 +18,12 @@ module.exports = class FixedStopLoss {
     }
 
     async period(safetyPeriod, options, strat) {
+        this.options = options;
         this.safetyPeriod = safetyPeriod;
+        const presentTime = this.safetyPeriod.getTime();
         const isFutures = safetyPeriod.isFutures();
         const isBacktest = (safetyPeriod.getEnvironment()).backtest;
-        const candles = indicatorPeriod.indicatorBuilder.get('candles');
+        const candles = safetyPeriod.indicatorBuilder.get('candles');
         //Remove the last incomplete candle
         let incompleteCandle;
         if (!this.isLastCandleComplete(candles, presentTime)) {
