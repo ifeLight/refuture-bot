@@ -25,53 +25,53 @@ module.exports = class SafetyBroadcast {
     async period(safetyPeriod, options, strat) {
         try {
             this.options = options;
-        const isFutures = safetyPeriod.isFutures();
-        this.presentPrice = safetyPeriod.getLastPrice();
-        const isBacktest = (safetyPeriod.getEnvironment()).backtest;
-        this.isBacktest = isBacktest;
-        this.safetyPeriod = safetyPeriod;
-        if (isFutures || isBacktest) {
-            const positions = await safetyPeriod.getPositions();
-            if (positions && Array.isArray(positions) && positions.length > 0) {
-                const position = positions[0];
-                const {positionSide, entryPrice} = position;
-                if (positionSide === 'LONG') {
+            const isFutures = safetyPeriod.isFutures();
+            this.presentPrice = safetyPeriod.getLastPrice();
+            const isBacktest = (safetyPeriod.getEnvironment()).backtest;
+            this.isBacktest = isBacktest;
+            this.safetyPeriod = safetyPeriod;
+            if (isFutures || isBacktest) {
+                const positions = await safetyPeriod.getPositions();
+                if (positions && Array.isArray(positions) && positions.length > 0) {
+                    const position = positions[0];
+                    const {positionSide, entryPrice} = position;
+                    if (positionSide === 'LONG') {
+                        const res = await this.handleLongPosition(entryPrice)
+                        return res;
+                    }
+                    if (positionSide === 'SHORT') {
+                        const res = await this.handleShortPosition(entryPrice)
+                        return res;
+                    }
+                }
+            }
+
+            if (!isFutures && !isBacktest) {
+                const {amount, currency_amount} = strat.trade;
+                let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
+                const baseCurrency = (safetyPeriod.getPairInfo()).base;
+                let baseBalance = await safetyPeriod.getBalance(baseCurrency);
+                const totalBalance = baseBalance.locked + baseBalance.free;
+                const closedOrders = await safetyPeriod.getClosedOrders();
+                const closedOrdersValidityCheck = closedOrders && Array.isArray(closedOrders) && closedOrders.length > 0;
+                const balanceAvailabilityCheck = totalBalance > (tradeAmount - (tradeAmount * 0.9));
+                if (balanceAvailabilityCheck && closedOrdersValidityCheck) {
+                    const filteredOrder = closedOrders.filter((order) => {
+                        return order.side == 'buy';
+                    })
+                    const latestClosedOrder = filteredOrder.reduce((prev, current) => {
+                        if (!prev) return current;
+                        if (parseInt(prev.time) > parseInt(current.time) ) return prev;
+                        return current;
+                    });
+                    const { price: entryPrice  } = latestClosedOrder;
+                    // Same as handle Long Position
                     const res = await this.handleLongPosition(entryPrice)
                     return res;
                 }
-                if (positionSide === 'SHORT') {
-                    const res = await this.handleShortPosition(entryPrice)
-                    return res;
-                }
-            }
-        }
 
-        if (!isFutures && !isBacktest) {
-            const {amount, currency_amount} = strat.trade;
-            let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
-            const baseCurrency = (safetyPeriod.getPairInfo()).base;
-            let baseBalance = await safetyPeriod.getBalance(baseCurrency);
-            const totalBalance = baseBalance.locked + baseBalance.free;
-            const closedOrders = await safetyPeriod.getClosedOrders();
-            const closedOrdersValidityCheck = closedOrders && Array.isArray(closedOrders) && closedOrders.length > 0;
-            const balanceAvailabilityCheck = totalBalance > (tradeAmount - (tradeAmount * 0.9));
-            if (balanceAvailabilityCheck && closedOrdersValidityCheck) {
-                const filteredOrder = closedOrders.filter((order) => {
-                    return order.side == 'buy';
-                })
-                const latestClosedOrder = filteredOrder.reduce((prev, current) => {
-                    if (!prev) return current;
-                    if (parseInt(prev.time) > parseInt(current.time) ) return prev;
-                    return current;
-                });
-                const { price: entryPrice  } = latestClosedOrder;
-                // Same as handle Long Position
-                const res = await this.handleLongPosition(entryPrice)
-                return res;
             }
-
-        }
-        return safetyPeriod.createEmptySignal();
+            return safetyPeriod.createEmptySignal();
         } catch (error) {
             console.error(error);
         }
