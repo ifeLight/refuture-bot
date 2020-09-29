@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index trade -i 'instance-sushi.json'"
   },
   "author": "",
   "license": "ISC",
@@ -28,6 +29,7 @@
     "moment": "^2.26.0",
     "mongodb-keyval-storage": "^1.0.0",
     "mongoose": "^5.9.15",
+    "nested-property": "^3.0.0",
     "node-binance-api": "^0.11.5",
     "p-forever": "^2.1.0",
     "require-all": "^3.0.0",
