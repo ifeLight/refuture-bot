@@ -1,26 +1,26 @@
 const path = require('path');
 const fs = require('fs');
-const hpjs = require('hyperparameters')
+const hpjs = require('hyperparameters');
+const nestedProperty = require('nested-property');
 
 const BactestService = require('../services/Backtest');
 
-module.exports = async function ({
-    configFile,
-    }) {
+module.exports = async function ({configFile}) {
        try {
         const cmdBactestFilePath = configFile ? configFile : 'hyperparameter-config-sample.json';
         const bactestFile = path.join(process.cwd(), cmdBactestFilePath)
         if (!fs.existsSync(bactestFile)) throw new Error(`Instance File: Instance File does not Exist (${bactestFile})`);
-        const backtestConfig = JSON.parse(fs.readFileSync(bactestFile).toString());
+        const backtestConfig = require(bactestFile);
 
         const defaultConfigPath = path.join(process.cwd(), 'hyperparameter-config-sample.json');
-        const defaultConfig = JSON.parse(fs.readFileSync(defaultConfigPath).toString());
+        const defaultConfig = require(defaultConfigPath);
 
         const defaultStartDate = new Date();
         defaultStartDate.setDate(defaultStartDate.getDate() - 1);
 
         const config = {...defaultConfig, ...backtestConfig};
-        const {
+
+        let {
             amount,
             startDate,
             endDate,
@@ -31,14 +31,23 @@ module.exports = async function ({
             orderType,
             fee,
             optimize,
-            maximumIteration = 100
+            maximumIteration = 100,
+            space: spaceObj,
+            safeties,
+            useDefaultSafety,
+            noInterruption,
+            period,
+            takeProfit,
+            stopLoss,
+            toLog
         } = config;
 
-        const space = {
-            period: hpjs.choice(['5m','15m', '30m']),
-            takeProfit: hpjs.quniform(0.5, 10, 0.5),
-            stopLoss: hpjs.quniform(0.5, 10, 0.5)
-        }
+        spaceObj = {...spaceObj}
+        const space = {};
+        Object.keys(spaceObj).forEach((key) => {
+            const h = hpjs; // its for the function in eval
+            space[key] = eval(spaceObj[key]);
+        })
 
         const optimizationParameter = optimize || 'balance';
 
@@ -52,10 +61,13 @@ module.exports = async function ({
             indicator:  indicator || 'trendline-reversal',
             orderType: orderType || 'market',
             fee: fee || 0.01,
-            noInterruption: true,
-            safeties: "",
-            useDefaultSafety: true,
-            toLog: false
+            noInterruption: noInterruption === false ? false: true,
+            safeties: safeties || [],
+            useDefaultSafety: useDefaultSafety === false ? false: true,
+            toLog: toLog === true ? true: false,
+            period: period || '5m',
+            takeProfit: takeProfit || 4,
+            stopLoss: stopLoss || 2
         }
         
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {
@@ -65,9 +77,11 @@ module.exports = async function ({
         const backTestService = new BactestService();
 
         const runBactestSection = async (space, parameters) => {
-            const fullParameters = {...space, ...parameters};
-            const {stopLoss, takeProfit, period} = fullParameters;
-            console.log(`StopLoss: ${stopLoss} - TakeProfit: ${takeProfit} - Period: ${period}`)
+            const fullParameters = { ...parameters};
+            Object.keys(space).forEach(key => {
+                nestedProperty.set(fullParameters, key, space[key]);
+                console.log(`${key}: ${space[key]}`);
+            });
             const res = await backTestService.start(fullParameters);
             return res[optimizationParameter]
         }
@@ -78,7 +92,7 @@ module.exports = async function ({
         }
 
         const trials = await hpjs.fmin( backtestOptimizer, space, hpjs.search.randomSearch, maximumIteration,
-            { rng: new hpjs.RandomState(654321), parameters }
+            { rng: new hpjs.RandomState(Math.ceil(Math.random() * 1000000)), parameters }
           );
         
         const resObj ={
