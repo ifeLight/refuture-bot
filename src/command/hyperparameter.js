@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const hpjs = require('hyperparameters');
 const nestedProperty = require('nested-property');
+const config = require('config');
 
 const telegram = require('../providers/Telegram')
 
@@ -120,7 +121,7 @@ module.exports = async function ({configFile}) {
 
         // TODO - Send a Telegram message
         try {
-            const msg = '';
+            let msg = '';
             const heading = `Hyperparameter Tuning \n ------------------------ \n`;
             msg += heading;
             const argmin = trials.argmin;
@@ -193,9 +194,14 @@ module.exports = async function ({configFile}) {
             Object.keys(argmax).forEach((key) => {
                 msg += `${key}: ${argmax[key]} \n`;
             });
+            const CHAT_ID = config.get('notify.telegram_chat_id');
+            telegram.telegram.sendMessage(CHAT_ID, msg).catch(err => {
+                throw err;
+            });
 
         } catch (error) {
             console.error('Error sending a Telegram Notification');
+            console.error(error)
         }
         process.exit();
        } catch (error) {
