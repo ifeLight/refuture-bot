@@ -22,7 +22,7 @@ module.exports = async function ({configFile}) {
         const defaultStartDate = new Date();
         defaultStartDate.setDate(defaultStartDate.getDate() - 1);
 
-        const config = {...defaultConfig, ...backtestConfig};
+        const totalConfig = {...defaultConfig, ...backtestConfig};
 
         let {
             amount,
@@ -45,7 +45,7 @@ module.exports = async function ({configFile}) {
             stopLoss,
             toLog,
             useMemory
-        } = config;
+        } = totalConfig;
 
         spaceObj = {...spaceObj}
         const space = {};
