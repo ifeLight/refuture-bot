@@ -1,14 +1,11 @@
 const { AsyncNedb } = require('nedb-async')
 const _ = require('lodash');
 const periodToTimeDiff = require('../utils/periodToTimeDiff');
-const util = require('util');
 
 class CandleMem {
 
     constructor () {
         this.db = new AsyncNedb();
-        // this.update = util.promisify(this.db.update);
-        // this.find = util.promisify(this.db.find);
     }
 
     async addCandles (candles) {

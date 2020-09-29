@@ -1,5 +1,6 @@
 const SignalResult = require('../../../classes/SignalResult');
 const Storage = require('../../../classes/Storage');
+const MemStorage = require('../../../classes/MemStorage')
 
 module.exports = class IndicatorPeriod {
     constructor (logger) {
@@ -9,7 +10,9 @@ module.exports = class IndicatorPeriod {
         this.exchangePair = exchangePair;
         this.indicatorBuilder = indicatorBuilder;
         const { exchangeName, symbol } = exchangePair
-        this.storage = new Storage(exchangeName, symbol);
+        const environment = this.getEnvironment();
+        const isBacktest = environment.backtest;
+        this.storage = isBacktest ? new MemStorage(exchangeName, symbol) : new Storage(exchangeName, symbol);
         this.SignalResult = SignalResult;
         try {
             if (!this.indicatorBuilder.isBuilt()) {
