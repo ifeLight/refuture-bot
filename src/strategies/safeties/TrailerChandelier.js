@@ -35,8 +35,8 @@ module.exports = class TrailerChandelier {
             const isBacktest = (safetyPeriod.getEnvironment()).backtest;
             this.isBacktest = isBacktest;
             this.safetyPeriod = safetyPeriod;
-            const candles = indicatorPeriod.indicatorBuilder.get('candles');
-            const presentTime = indicatorPeriod.getTime();
+            const candles = safetyPeriod.indicatorBuilder.get('candles');
+            const presentTime = safetyPeriod.getTime();
             let incompleteCandle;
             if (!this.isLastCandleComplete(candles, presentTime)) {
                 incompleteCandle = candles.pop();
@@ -255,10 +255,10 @@ module.exports = class TrailerChandelier {
             period: '5m',
             length: 100,
             multiplier: 3,
-            chandelier: 22,
-            useStoploss: true,
+            chandelier: 5,
+            useStoploss: false,
             stoplossSteps: 2, //The steps to give away from the chandelier as stoploss for sudden change
-            dynamic: false, //For both movement exit, as chandelier changes
+            dynamic: false, //For both movement exit, as chandelier changes - Very critical to be false
         }
     }
 
