@@ -1,4 +1,4 @@
-const { Telegraf } = require('telegraf')
+const telegram = require('../providers/Telegram')
 const config = require('config');
 
 class TelegramNotifier {
@@ -7,7 +7,7 @@ class TelegramNotifier {
         const BOT_TOKEN = config.get('notify.telegram_key');
         const CHAT_ID = config.get('notify.telegram_chat_id');
         if (BOT_TOKEN && CHAT_ID) {
-            this.telegraf = new Telegraf(BOT_TOKEN);
+            this.telegram = telegram;
             this.chatId = CHAT_ID;
         } else {
             this.logger.warn('Telegram not configured')
@@ -15,7 +15,7 @@ class TelegramNotifier {
     }
 
     send(message) {
-        if (!this.telegraf) return;
+        if (!this.telegram) return;
         let msg;
         if (typeof message === 'string') {
             msg = message;
@@ -30,7 +30,7 @@ class TelegramNotifier {
                 msg += `${key.toUpperCase()}: ${message[key]} \n`;
             }
         }
-        this.telegraf.telegram.sendMessage(this.chatId, msg).catch(err => {
+        this.telegram.telegram.sendMessage(this.chatId, msg).catch(err => {
             console.error(`Telegram Notifier: ${JSON.stringify(err)}`);
           });
     }

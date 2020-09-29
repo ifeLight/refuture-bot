@@ -5,20 +5,21 @@
     "orderType": "market",
     "indicator": "trendline-reversal",
     "leverage": 5,
-    "startDate": "2020-09-17:10:45",
+    "startDate": "2020-09-15:10:45",
     "endDate": "2020-09-17:19:45",
     "toLog": false,
     "fee": 0.06,
     "amount": 1000,
-    "maximumIteration": 50,
+    "maximumIteration": 10,
     "safeties": [],
     "useDefaultSafety": true,
     "noInterruption": true,
     "period": "5m",
-    "takeProfit": 4,
-    "stopLoss": 2,
+    "takeProfit": 1.5,
+    "stopLoss": 0.7,
     "useMemory": true,
     "space": {
-        "period": "h.choice(['5m','15m', '30m'])"
+        "period": "h.choice(['5m','15m', '30m'])",
+        "stopLoss": "h.choice([0.7, 1.2, 2])"
     }
 }

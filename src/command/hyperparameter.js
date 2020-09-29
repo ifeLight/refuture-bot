@@ -3,7 +3,10 @@ const fs = require('fs');
 const hpjs = require('hyperparameters');
 const nestedProperty = require('nested-property');
 
+const telegram = require('../providers/Telegram')
+
 const BactestService = require('../services/Backtest');
+const { type } = require('os');
 
 module.exports = async function ({configFile}) {
        try {
@@ -84,6 +87,7 @@ module.exports = async function ({configFile}) {
                 nestedProperty.set(fullParameters, key, space[key]);
                 console.log(`${key}: ${space[key]}`);
             });
+            console.log('-------------------------')
             const res = await backTestService.start(fullParameters);
             return res[optimizationParameter]
         }
@@ -111,7 +115,87 @@ module.exports = async function ({configFile}) {
 
         if (!fs.existsSync(theStorageDir)) {
             fs.mkdirSync(theStorageDir, 0744);
-            fs.writeFileSync(path.join(theStorageDir, fileToCreate), resultInJson);
+        }
+        fs.writeFileSync(path.join(theStorageDir, fileToCreate), resultInJson);
+
+        // TODO - Send a Telegram message
+        try {
+            const msg = '';
+            const heading = `Hyperparameter Tuning \n ------------------------ \n`;
+            msg += heading;
+            const argmin = trials.argmin;
+            const argmax = trials.argmax;
+            const safeties = parameters.safeties;
+            const indicators = parameters.indicator;
+            delete parameters.indicator;
+            delete parameters.safeties;
+            msg += 'Parameters \n -------------------------- \n';
+            Object.keys(parameters).forEach((key) => {
+                msg += `${key}: ${parameters[key]} \n`;
+            });
+            msg += 'Indicator \n -------------------------- \n';
+            if (typeof indicators === 'string') {
+                msg += indicators.toLowerCase() + " \n";
+            } else if (typeof indicators === 'object' && indicators.name) {
+                msg+ `Indicator Name: ${indicators.name}`;
+                if (indicators.options) {
+                    const optionObject = {...indicators.options};
+                    Object.keys(optionObject).forEach((key) => {
+                        msg += `${key}: ${optionObject[key]} \n`;
+                    })
+                }
+            } else if (Array.isArray(indicators) && typeof indicators[0] === 'string') {
+                for (const indicator of indicators) {
+                    msg += `${Name}: ${indicator} \n`;
+                }
+            } else if (Array.isArray(indicators) && typeof indicators[0] === 'object' && indicators[0].name) {
+                for (const indicator of indicators) {
+                    const {name, options} = indicator;
+                    msg += `${Name}: ${name} \n`;
+                    const optionObject = {...options};
+                    Object.keys(optionObject).forEach((key) => {
+                        msg += `${key}: ${optionObject[key]} \n`;
+                    })
+                    console.log('~~~~~~~~~~~~~~~~~~~')
+                }   
+            }
+            msg += 'Safeties \n -------------------------- \n';
+            if (typeof safeties === 'string') {
+                msg += safeties.toLowerCase() + " \n";
+            } else if (typeof safeties === 'object' && safeties.name) {
+                msg+ `Indicator Name: ${safeties.name}`;
+                if (safeties.options) {
+                    const optionObject = {...safeties.options};
+                    Object.keys(optionObject).forEach((key) => {
+                        msg += `${key}: ${optionObject[key]} \n`;
+                    })
+                }
+            } else if (Array.isArray(safeties) && typeof safeties[0] === 'string') {
+                for (const safety of safeties) {
+                    msg += `${Name}: ${safety} \n`;
+                }
+            } else if (Array.isArray(safeties) && typeof safeties[0] === 'object' && safeties[0].name) {
+                for (const safety of safeties) {
+                    const {name, options} = safety;
+                    msg += `${Name}: ${name} \n`;
+                    const optionObject = {...options};
+                    Object.keys(optionObject).forEach((key) => {
+                        msg += `${key}: ${optionObject[key]} \n`;
+                    })
+                    console.log('~~~~~~~~~~~~~~~~~~~')
+                }   
+            }
+            msg += 'ArgMin \n -------------------------- \n';
+            Object.keys(argmin).forEach((key) => {
+                msg += `${key}: ${argmin[key]} \n`;
+            });
+            msg += 'ArgMax \n -------------------------- \n';
+            Object.keys(argmax).forEach((key) => {
+                msg += `${key}: ${argmax[key]} \n`;
+            });
+
+        } catch (error) {
+            console.error('Error sending a Telegram Notification');
         }
         process.exit();
        } catch (error) {
