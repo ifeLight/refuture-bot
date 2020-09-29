@@ -24,5 +24,6 @@
     "fee": 0.1,
     "noInterruption": false,
     "useDefaultSafety": false,
-    "backfillPeriods": "5m"
+    "backfillPeriods": "5m",
+    "useMemory": false
 }

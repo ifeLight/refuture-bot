@@ -46,6 +46,7 @@ module.exports = async function ({
             safeties: safety || backtestConfig.safeties || [],
             useDefaultSafety: useDefaultSafety ? useDefaultSafety : backtestConfig.hasOwnProperty('useDefaultSafety') && backtestConfig.useDefaultSafety == false ? backtestConfig.useDefaultSafety : true,
             backfillPeriods: backfillPeriods || backtestConfig.backfillPeriods || backtestConfig.period || period|| '15m',
+            useMemory: backtestConfig.useMemory === true ? true: false,
         }
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {
             throw new Error('Start date should be lesser than End Date')

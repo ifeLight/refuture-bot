@@ -39,7 +39,8 @@ module.exports = async function ({configFile}) {
             period,
             takeProfit,
             stopLoss,
-            toLog
+            toLog,
+            useMemory
         } = config;
 
         spaceObj = {...spaceObj}
@@ -67,7 +68,8 @@ module.exports = async function ({configFile}) {
             toLog: toLog === true ? true: false,
             period: period || '5m',
             takeProfit: takeProfit || 4,
-            stopLoss: stopLoss || 2
+            stopLoss: stopLoss || 2,
+            useMemory: useMemory === true ? true: false,
         }
         
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {

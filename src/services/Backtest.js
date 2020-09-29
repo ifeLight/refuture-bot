@@ -60,6 +60,7 @@ class Backtest {
             safeties,
             backfillPeriods,
             toLog = true,
+            useMemory
         } = parameters;
 
         let indicatorName, indicatorOptions;
@@ -79,6 +80,9 @@ class Backtest {
 
         // Let Candles Repository knows its runnind a Backtest
         candlesRepository.setBacktest(false);
+
+        //Set Using of Memory
+        candlesRepository.useMemory(useMemory);
 
         // Checking Indicator
         this.log(clc.white.bgBlack('Checking Indicator.....'))
@@ -182,6 +186,7 @@ class Backtest {
             drawChart(result);
         }
         candlesRepository.setBacktest(false);
+        candlesRepository.useMemory(false);
         return result;
     }
 
@@ -282,8 +287,6 @@ class Backtest {
                 this.openPosition(time, price, positionType);
             } else if (signalResult.getSignal() && signalResult.getSignal() === 'close') {
                 this.closePosition(time, price, safetyName);
-                // console.log('close');
-                // console.log('');
             }
         }
     }

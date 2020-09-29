@@ -17,6 +17,7 @@
     "period": "5m",
     "takeProfit": 4,
     "stopLoss": 2,
+    "useMemory": false,
     "space": {
         "period": "h.choice(['5m','15m', '30m'])"
     }
