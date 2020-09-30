@@ -18,6 +18,7 @@
     "takeProfit": 1.5,
     "stopLoss": 0.7,
     "useMemory": true,
+    "backfillPeriods": "",
     "space": {
         "period": "h.choice(['5m','15m', '30m'])",
         "stopLoss": "h.choice([0.7, 1.2, 2])"
