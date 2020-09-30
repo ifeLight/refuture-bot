@@ -81,7 +81,7 @@ module.exports = class FixedStopLoss {
     
     getOptions() {
         return {
-            percentage: '10'
+            percentage: 10
         }
     }
 
