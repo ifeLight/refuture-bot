@@ -7,7 +7,6 @@ const config = require('config');
 const telegram = require('../providers/Telegram')
 
 const BactestService = require('../services/Backtest');
-const { type } = require('os');
 
 module.exports = async function ({configFile}) {
        try {
@@ -134,6 +133,7 @@ module.exports = async function ({configFile}) {
             Object.keys(parameters).forEach((key) => {
                 msg += `${key}: ${parameters[key]} \n`;
             });
+            msg += '-------------------------- \n';
             msg += 'Indicator \n -------------------------- \n';
             if (typeof indicators === 'string') {
                 msg += indicators.toLowerCase() + " \n";
@@ -157,9 +157,10 @@ module.exports = async function ({configFile}) {
                     Object.keys(optionObject).forEach((key) => {
                         msg += `${key}: ${optionObject[key]} \n`;
                     })
-                    console.log('~~~~~~~~~~~~~~~~~~~')
+                    msg += '~~~~~~~~~~~~~~~~~~~ \n';
                 }   
             }
+            msg += '-------------------------- \n';
             msg += 'Safeties \n -------------------------- \n';
             if (typeof safeties === 'string') {
                 msg += safeties.toLowerCase() + " \n";
@@ -183,21 +184,21 @@ module.exports = async function ({configFile}) {
                     Object.keys(optionObject).forEach((key) => {
                         msg += `${key}: ${optionObject[key]} \n`;
                     })
-                    console.log('~~~~~~~~~~~~~~~~~~~')
+                    msg += '~~~~~~~~~~~~~~~~~~~ \n';
                 }   
             }
+            msg += '-------------------------- \n';
             msg += 'ArgMin \n -------------------------- \n';
             Object.keys(argmin).forEach((key) => {
                 msg += `${key}: ${argmin[key]} \n`;
             });
+            msg += '-------------------------- \n';
             msg += 'ArgMax \n -------------------------- \n';
             Object.keys(argmax).forEach((key) => {
                 msg += `${key}: ${argmax[key]} \n`;
             });
             const CHAT_ID = config.get('notify.telegram_chat_id');
-            telegram.telegram.sendMessage(CHAT_ID, msg).catch(err => {
-                throw err;
-            });
+            await telegram.telegram.sendMessage(CHAT_ID, msg)
 
         } catch (error) {
             console.error('Error sending a Telegram Notification');
