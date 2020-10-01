@@ -83,12 +83,15 @@ module.exports = async function ({configFile}) {
 
         const backTestService = new BactestService();
 
+        console.time('Hyperparameter running')
         const runBactestSection = async (space, parameters) => {
             const fullParameters = { ...parameters};
             Object.keys(space).forEach(key => {
                 nestedProperty.set(fullParameters, key, space[key]);
                 console.log(`${key}: ${space[key]}`);
             });
+            console.count('Hyperparameter Iteration');
+            console.timeLog('Hyperparameter running');
             console.log('-------------------------')
             const res = await backTestService.start(fullParameters);
             return res[optimizationParameter]
@@ -108,7 +111,9 @@ module.exports = async function ({configFile}) {
             argmax: trials.argmax,
             optimizationParameter,
             ...parameters
-        }
+        };
+        
+        console.timeEnd('Hyperparameter running');
 
         let {symbol: symbolP,startDate: startDateP,endDate: endDateP} = parameters;
         const resultInJson = JSON.stringify(resObj);
