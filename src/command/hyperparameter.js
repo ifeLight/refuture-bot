@@ -44,7 +44,8 @@ module.exports = async function ({configFile}) {
             stopLoss,
             toLog,
             useMemory,
-            backfillPeriods
+            backfillPeriods,
+            override,
         } = totalConfig;
 
         spaceObj = {...spaceObj}
@@ -75,6 +76,7 @@ module.exports = async function ({configFile}) {
             stopLoss: stopLoss || 2,
             useMemory: useMemory === true ? true: false,
             backfillPeriods: backfillPeriods || "",
+            override: override || {},
         }
         
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {
@@ -92,6 +94,12 @@ module.exports = async function ({configFile}) {
             });
             console.count('Hyperparameter Iteration');
             console.timeLog('Hyperparameter running');
+            console.log('------Override----------');
+            Object.keys(override).forEach(key => {
+                const fetchedValue = nestedProperty.get(fullParameters, override[key]);
+                nestedProperty.set(fullParameters, key, fetchedValue);
+                console.log(`${key}: ${fetchedValue}`)
+            });
             console.log('-------------------------')
             const res = await backTestService.start(fullParameters);
             return res[optimizationParameter]
