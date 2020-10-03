@@ -2,7 +2,8 @@ const { Command } = require('commander');
 
 const tradeCommand = require('./src/command/trade');
 const backtestCommand = require('./src/command/backtest');
-const hyperCommand = require('./src/command/hyperparameter')
+const hyperCommand = require('./src/command/hyperparameter');
+
 
 const program = new Command();
 program.version('0.0.1');
@@ -62,6 +63,15 @@ program
             ...cmdObj,
             configFile
         });
+    })
+
+    program
+    .command('app')
+    .description('For launching the web server')
+    .option('-c, --config <value>', 'the path to the config file')
+    .action(async (cmdObj) => {
+        require('./src/services/app'); //launch the app server
+        
     })
  
 program.parse(process.argv);

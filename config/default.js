@@ -11,13 +11,17 @@ const {
     OKEX_API_KEY,
     OKEX_API_SECRET,
     TELEGRAM_BOT_TOKEN,
-    TELEGRAM_CHAT_ID
+    TELEGRAM_CHAT_ID,
+    PORT,
 } = process.env;
 
 module.exports = {
     notify: {
         telegram_key: TELEGRAM_BOT_TOKEN,
         telegram_chat_id: TELEGRAM_CHAT_ID
+    },
+    app : {
+        port: PORT || 8100,
     },
     exchange: {
         binance: {
