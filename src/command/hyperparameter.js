@@ -3,10 +3,12 @@ const fs = require('fs');
 const hpjs = require('hyperparameters');
 const nestedProperty = require('nested-property');
 const config = require('config');
+const moment = require('moment')
 
 const telegram = require('../providers/Telegram')
 
 const BactestService = require('../services/Backtest');
+const HyperModel = require('../models/Hyper');
 
 module.exports = async function ({configFile}) {
        try {
@@ -45,7 +47,7 @@ module.exports = async function ({configFile}) {
             toLog,
             useMemory,
             backfillPeriods,
-            override,
+            override = {},
         } = totalConfig;
 
         spaceObj = {...spaceObj}
@@ -76,7 +78,6 @@ module.exports = async function ({configFile}) {
             stopLoss: stopLoss || 2,
             useMemory: useMemory === true ? true: false,
             backfillPeriods: backfillPeriods || "",
-            override: override || {},
         }
         
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {
@@ -86,14 +87,17 @@ module.exports = async function ({configFile}) {
         const backTestService = new BactestService();
 
         console.time('Hyperparameter running')
+        const startTime = new Date();
+        let totalRunTime = 0;
+        let totalRuns = 0
         const runBactestSection = async (space, parameters) => {
+            const runTimeStartTime = Date.now();
+            totalRuns++
             const fullParameters = { ...parameters};
             Object.keys(space).forEach(key => {
                 nestedProperty.set(fullParameters, key, space[key]);
                 console.log(`${key}: ${space[key]}`);
             });
-            console.count('Hyperparameter Iteration');
-            console.timeLog('Hyperparameter running');
             console.log('------Override----------');
             Object.keys(override).forEach(key => {
                 const fetchedValue = nestedProperty.get(fullParameters, override[key]);
@@ -101,7 +105,14 @@ module.exports = async function ({configFile}) {
                 console.log(`${key}: ${fetchedValue}`)
             });
             console.log('-------------------------')
+            console.count('Hyperparameter Iteration');
+            console.timeLog('Hyperparameter running');
+            console.log('-------------------------');
             const res = await backTestService.start(fullParameters);
+            const runTimeEndTime = Date.now()
+            totalRunTime = totalRunTime + (runTimeEndTime - runTimeStartTime);
+            const averageRuntime = (totalRunTime / totalRuns) / (1000 * 60) //In Minutes
+            console.log(`Average Time: ${averageRuntime.toFixed(2)}mins`)
             return res[optimizationParameter]
         }
 
@@ -121,7 +132,11 @@ module.exports = async function ({configFile}) {
             ...parameters
         };
         
-        console.timeEnd('Hyperparameter running');
+        const endTime = new Date();
+        const duration = moment(endTime).diff(moment(startTime), 'hours', true);
+        console.log('---------------------')
+        console.log(`Total Duration: ${duration.toFixed(3)}hours`);
+        console.log('---------------------')
 
         let {symbol: symbolP,startDate: startDateP,endDate: endDateP} = parameters;
         const resultInJson = JSON.stringify(resObj);
@@ -133,7 +148,7 @@ module.exports = async function ({configFile}) {
         }
         fs.writeFileSync(path.join(theStorageDir, fileToCreate), resultInJson);
 
-        // TODO - Send a Telegram message
+        //Send a Telegram message
         try {
             let msg = '';
             const heading = `Hyperparameter Tuning \n ------------------------ \n`;
@@ -217,6 +232,25 @@ module.exports = async function ({configFile}) {
 
         } catch (error) {
             console.error('Error sending a Telegram Notification');
+            console.error(error)
+        }
+
+        // Save the Hyper AutoTuning Result to Database
+        try {
+            const averageRuntime = (totalRunTime / totalRuns) / (1000 * 60) //In Minutes
+            const toSaveData = {
+                argmin: trials.argmin,
+                argmax: trials.argmax,
+                optimizationParameter,
+                parameters,
+                override,
+                space,
+                duration,
+                averageRuntime
+            }
+            await HyperModel.create(toSaveData);
+        } catch (error) {
+            console.error('Error saving Hyper to Database')
             console.error(error)
         }
         process.exit();

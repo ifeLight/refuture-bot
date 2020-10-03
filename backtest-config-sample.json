@@ -1,7 +1,7 @@
 {
     "exchange": "binance",
     "symbol": "BTC/USDT",
-    "safeties": "trailer",
+    "safeties": "trailer-chandelier",
     "indicator": {
         "name": "smaRsi",
         "options": {
@@ -19,7 +19,7 @@
     "leverage": 1,
     "period": "5m",
     "orderType": "market",
-    "startDate": "2020-06-20:19:45",
+    "startDate": "2020-06-26:05:45",
     "endDate": "2020-06-26:22:45",
     "fee": 0.1,
     "noInterruption": false,
