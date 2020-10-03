@@ -24,7 +24,8 @@ class Backtest {
 			exchangeFee: echFee,
 			maximumDrawdown: 0,
 			maximumProfit: 0,
-			maximumLoss: 0
+			maximumLoss: 0,
+			amount,
         };
         this.leverage = lev;
         this.exchangeFee = echFee;
@@ -113,6 +114,7 @@ class Backtest {
     roundupTrade(trade) {
 		trade.entryDate = new Date(trade.entryTime).toString();
 		trade.closeDate = new Date(trade.closeTime).toString();
+		trade.currentBalance = this.state.balance;
         this.state.positionType = positionTypes.NONE;
 		this.state.balance += trade.profit;
 		trade.profitInPercentage = parseFloat(((trade.profit / this.amount) * 100).toFixed(4));

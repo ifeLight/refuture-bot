@@ -187,6 +187,12 @@ class Backtest {
         }
         candlesRepository.setBacktest(false);
         candlesRepository.useMemory(false);
+        
+        result.safeties = safeties;
+        result.indicators = indicator;
+        result.symbol = symbol;
+        result.exchange = exchangeName;
+        result.orderType = orderType;
         return result;
     }
 

@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 
 const BactestService = require('../services/Backtest');
+const BacktestModel = require('../models/Backtest')
 
 module.exports = async function ({
     configFile,
@@ -54,7 +55,8 @@ module.exports = async function ({
         
         try {
             const backTestService = new BactestService();
-            await backTestService.start(parameters);
+            const result = await backTestService.start(parameters);
+            await BacktestModel.create(result);
             process.exit();
         } catch (error) {
             console.error("Backtest Service Failed while running");
