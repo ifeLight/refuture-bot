@@ -43,6 +43,7 @@ const backtestSchema = mongoose.Schema({
     symbol: String,
     exchange: String,
     orderType: String,
+    roi: Number,
     safeties: {
         type: Types.Mixed
     },

@@ -187,8 +187,11 @@ class Backtest {
         }
         candlesRepository.setBacktest(false);
         candlesRepository.useMemory(false);
+
+        const { balance } = result;
         
         result.safeties = safeties;
+        result.roi = ((parseFloat(balance) - parseFloat(amount)) / parseFloat(amount)) * 100;
         result.indicators = indicator;
         result.symbol = symbol;
         result.exchange = exchangeName;
