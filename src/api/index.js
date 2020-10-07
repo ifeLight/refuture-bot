@@ -1,9 +1,12 @@
 const express = require('express');
+var cors = require('cors')
 
 const HyperCtrl = require('./controllers/Hyper');
 const BacktestCtrl = require('./controllers/Backtest')
 
 const api = express();
+
+api.use(cors());
 
 // Hyper Endpoints
 api.get('/hyper', HyperCtrl.getHyperList);

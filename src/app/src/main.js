@@ -22,6 +22,9 @@ Vue.use(Vuesax)
 import axios from "./axios.js"
 Vue.prototype.$http = axios
 
+// Default Base URL
+Vue.prototype.$defaultBaseUrl = 'http://localhost:8100';
+
 // Theme Configurations
 import '../themeConfig.js'
 
