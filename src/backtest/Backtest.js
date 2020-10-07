@@ -114,9 +114,9 @@ class Backtest {
     roundupTrade(trade) {
 		trade.entryDate = new Date(trade.entryTime).toString();
 		trade.closeDate = new Date(trade.closeTime).toString();
+		this.state.balance += trade.profit;
 		trade.currentBalance = this.state.balance;
         this.state.positionType = positionTypes.NONE;
-		this.state.balance += trade.profit;
 		trade.profitInPercentage = parseFloat(((trade.profit / this.amount) * 100).toFixed(4));
 		this.state.trades.push(trade);
 		this.handleMaxLossProfitStat(trade)

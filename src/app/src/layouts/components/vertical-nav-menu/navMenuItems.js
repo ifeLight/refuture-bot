@@ -16,9 +16,15 @@ export default [
     icon: "HomeIcon",
   },
   {
-    url: "/page2",
-    name: "Page 2",
-    slug: "page2",
+    url: "/backtest",
+    name: "Backtest Page",
+    slug: "backtest",
+    icon: "FileIcon",
+  },
+  {
+    url: "/hyper",
+    name: "Hyperameter Page",
+    slug: "hyper",
     icon: "FileIcon",
   },
 ]

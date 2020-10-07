@@ -41,6 +41,28 @@ const router = new Router({
                 name: 'page-2',
                 component: () => import('./views/Page2.vue')
               },
+              // Hyper Route
+              {
+                path: '/hyper',
+                name: 'hyper',
+                component: () => import('./views/hyper/HyperList.vue')
+              },
+              {
+                path: '/hyper/:id',
+                name: 'hyper-s',
+                component: () => import('./views/hyper/HyperSingle.vue')
+              },
+              // Backtest Route
+              {
+                path: '/backtest',
+                name: 'backtest',
+                component: () => import('./views/backtest/BacktestList.vue')
+              },
+              {
+                path: '/backtest/:id',
+                name: 'backtest-s',
+                component: () => import('./views/backtest/BacktestSingle.vue')
+              },
             ],
         },
     // =============================================================================
