@@ -16,7 +16,7 @@ class BacktestCtrl {
                 sort: { createdAt: -1 }
             })
 
-            return res.status(200).json(result.docs);
+            return res.status(200).json(result);
         } catch (error) {
             console.error(error);
             return res.status(500).json({
