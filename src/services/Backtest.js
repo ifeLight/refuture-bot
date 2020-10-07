@@ -196,6 +196,8 @@ class Backtest {
         result.symbol = symbol;
         result.exchange = exchangeName;
         result.orderType = orderType;
+        result.startDate = new Date(startDate);
+        result.endDate = new Date(endDate);
         return result;
     }
 

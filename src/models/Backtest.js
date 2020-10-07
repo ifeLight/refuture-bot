@@ -44,6 +44,8 @@ const backtestSchema = mongoose.Schema({
     exchange: String,
     orderType: String,
     roi: Number,
+    startDate: Date,
+    endDate: Date,
     safeties: {
         type: Types.Mixed
     },

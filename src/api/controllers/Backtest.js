@@ -12,7 +12,7 @@ class BacktestCtrl {
             const result = await BacktestModel.paginate({}, {
                 page,
                 limit,
-                select: '_id symbol exchange createdAt balance',
+                select: '_id symbol exchange roi startDate endDate leverage createdAt balance',
                 sort: { createdAt: -1 }
             })
 
@@ -29,9 +29,7 @@ class BacktestCtrl {
     static async getBacktest(req, res) {
         try {
             const { id } = req.params;
-            console.log(req.params)
             const result = await BacktestModel.findById(id);
-            console.log(result);
             return res.status(200).json(result);
         } catch (error) {
             console.error(error);
