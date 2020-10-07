@@ -18,22 +18,22 @@
 
             <template slot-scope="{data}">
                 <vs-tr :key="indextr" v-for="(tr, indextr) in data">
-                    <vs-td :data="data[indextr].email">
+                    <vs-td :data="data[indextr].symbol">
                         {{data[indextr].symbol}}
                     </vs-td>
-                    <vs-td :data="data[indextr].username">
+                    <vs-td :data="data[indextr].exchange">
                         {{data[indextr].exchange}}
                     </vs-td>
-                    <vs-td :data="data[indextr].id">
+                    <vs-td :data="data[indextr].roi">
                         {{data[indextr].roi}}
                     </vs-td>
-                    <vs-td :data="data[indextr].id">
+                    <vs-td :data="data[indextr]._id">
                         {{data[indextr].startDate}}
                     </vs-td>
-                    <vs-td :data="data[indextr].id">
+                    <vs-td :data="data[indextr]._id">
                         {{data[indextr].endDate}}
                     </vs-td>
-                    <vs-td :data="data[indextr].id">
+                    <vs-td :data="data[indextr].leverage">
                         {{data[indextr].leverage}}
                     </vs-td>
                 </vs-tr>
