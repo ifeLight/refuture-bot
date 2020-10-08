@@ -235,18 +235,32 @@ module.exports = async function ({configFile}) {
             console.error(error)
         }
 
+        // Replace dot in keys to another
+        // Because mongoose keys don't support dot
+        function replaceDotFromKeys (obj, toBeRepacedBy='-') {
+            const newObj = {}
+            Object.keys(obj).forEach(key => {
+                const newKey = key.replace(/\./g,toBeRepacedBy);
+                newObj[newKey] = obj[key]
+            });
+            return newObj;
+        }
+
         // Save the Hyper AutoTuning Result to Database
         try {
             const averageRuntime = (totalRunTime / totalRuns) / (1000 * 60) //In Minutes
             const toSaveData = {
-                argmin: trials.argmin,
-                argmax: trials.argmax,
+                argmin: replaceDotFromKeys(trials.argmin),
+                argmax: replaceDotFromKeys(trials.argmax),
                 optimizationParameter,
                 parameters,
-                override,
-                space,
+                override: replaceDotFromKeys(override),
+                space: replaceDotFromKeys(space),
                 duration,
-                averageRuntime
+                averageRuntime,
+                maximumIteration,
+                indicator,
+                safeties
             }
             await HyperModel.create(toSaveData);
         } catch (error) {

@@ -16,6 +16,9 @@ const hyperSchema = mongoose.Schema({
     override: Types.Mixed,
     duration: Number, // Duration in Hours
     averageRuntime: Number, // In Minutes
+    maximumIteration: Number,
+    indicator: Types.Mixed,
+    safeties: Types.Mixed
 },{ timestamps: { 
     createdAt: 'createdAt', 
     updatedAt : "updatedAt" 
