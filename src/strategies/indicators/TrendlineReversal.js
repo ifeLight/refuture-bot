@@ -196,7 +196,7 @@ module.exports = class {
 
     adxBeyond(candles) {
         const {ADXPeriod, ADXTrend} = this.options;
-        const input = this.generateCandlesticksInputs(candles);
+        let input = this.generateCandlesticksInputs(candles);
         input = {...input, period:ADXPeriod}
         const results = adx(input);
         const lastResult = results[results.length - 1];
