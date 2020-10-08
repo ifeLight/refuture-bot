@@ -56,7 +56,6 @@
   <strategies-list :list="indicators" title="Indicators" type="Indicator"></strategies-list>
   <br>
   <strategies-list :list="safeties" title="Safeties" type="Safeties"></strategies-list>
-  <br>
   </div>
 </template>
 
@@ -88,13 +87,13 @@ export default {
             id :null,
             argmin: null,
             argmax: null,
-            optimizationParameter: null,
+            optimizationParameter: "",
             parameters: null,
             space: null,
-            duration: null,
-            averageRuntime: null,
+            duration: "",
+            averageRuntime: "",
             dateAdded: null,
-            maximumIteration: null,
+            maximumIteration: "",
             override: null,
             indicators: null,
             safeties: null
