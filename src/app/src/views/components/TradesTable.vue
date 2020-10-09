@@ -1,6 +1,6 @@
 <template>
   <vx-card :title="title">
-      <vs-table :data="trades" maxItems="15" pagination="true">
+      <vs-table :data="trades" :maxItems="15" :pagination="true">
 
     <template slot="thead">
       <vs-th>Type</vs-th>

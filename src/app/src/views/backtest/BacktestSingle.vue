@@ -60,10 +60,29 @@
                   statisticTitle="Maximum Drawdown" />
         </div>
   </div>
+  <div class="vx-ro">
+      <div class="vx-col md:w-1/1 w-full mb-base">
+        <trade-candle-chart title="Chart" :options="tradeChartOptions" :trades="trades"></trade-candle-chart>
+      </div>
+  </div>
     <br>
     <object-table title="Basic Info" :data="info"></object-table>
     <br>
     <object-table title="Uncompleted Trade" :data="uncompletedTrade"></object-table>
+    <br>
+    <div class="vx-row">
+          <div class="vx-col md:w-1/1 w-full mb-base">
+            <trades-balances-chart title="Trade Balances" :trades="trades"></trades-balances-chart>
+      </div>
+    </div>
+    <div class="vx-row">
+        <div class="vx-col md:w-1/2 w-full mb-base">
+            <profit-fee-chart title="Profit-Fee" :trades="trades"></profit-fee-chart>
+      </div>
+      <div class="vx-col md:w-1/2 w-full mb-base">
+            <profits-variation-chart title="Profit Variation" :trades="trades"></profits-variation-chart>
+      </div>
+    </div>
     <br>
     <strategies-list :list="indicators" title="Indicators" type="Indicator"></strategies-list>
     <br>
@@ -80,6 +99,10 @@ import dayjs from 'dayjs';
 import StategiesList from '../components/StrategiesList.vue';
 import ObjectTable from '../components/ObjectTable.vue';
 import TradesTable from '../components/TradesTable.vue';
+import TradesBalancesChart from '../components/TradesBalancesChart.vue';
+import ProfitFeeChart from '../components/ProfitFeeChart.vue';
+import ProfitsVariationChart from '../components/ProfitsVariationChart.vue';
+import TradeCandleChart from '../components/TradeCandleChart.vue';
 import StatisticsCardLine from '@/components/statistics-cards/StatisticsCardLine.vue';
 
 export default {
@@ -88,6 +111,10 @@ export default {
         'strategies-list': StategiesList,
         'object-table' : ObjectTable,
         'trades-table': TradesTable,
+        'trades-balances-chart': TradesBalancesChart,
+        'profit-fee-chart': ProfitFeeChart,
+        'profits-variation-chart': ProfitsVariationChart,
+        'trade-candle-chart': TradeCandleChart
     },
     mounted () {
         const id = this.$route.params.id;
@@ -105,8 +132,16 @@ export default {
             indicators: null,
             info : {},
             trades: [],
-            statistics: {},
+            statistics: {
+                roi: 0,
+                winRate: 0,
+                maximumProfit: 0,
+                maximumLoss: 0,
+                maximumDrawdown: 0,
+                trades: 0,
+            },
             uncompletedTrade: {},
+            tradeChartOptions: undefined
         }
     },
     methods: {
@@ -125,7 +160,7 @@ export default {
             .then((response) => {
                 this.closeLoading();
                 const data = response.data;
-                const { trades, indicators, safeties, profitTrades, unprofitTrades } = data;
+                const { trades, indicators, safeties, profitTrades, unprofitTrades, period} = data;
                 this.trades = trades;
                 this.safeties = safeties;
                 this.indicators = indicators;
@@ -162,7 +197,13 @@ export default {
                     positionType: data.positionType,
                     positionPrice: data.positionEntry
                 }
-
+                this.tradeChartOptions = {
+                    exchange: data.exchange,
+                    symbol: data.symbol,
+                    startDate: new Date(data.startDate).getTime(),
+                    endDate: new Date(data.endDate).getTime(),
+                    period: period || '5m',
+                }
 
             })
             .catch((err) => {

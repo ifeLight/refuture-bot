@@ -124,7 +124,7 @@ export default {
                 this.argmax = argmax;
                 this.parameters = parameters;
                 this.optimizationParameter = optimizationParameter;
-                this.duration = Number(duration).toFixed(2);;
+                this.duration = Number(duration).toFixed(2);
                 this.averageRuntime = Number(averageRuntime).toFixed(2);
                 this.maximumIteration = maximumIteration;
                 this.override = override;
