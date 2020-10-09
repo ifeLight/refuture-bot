@@ -38,11 +38,20 @@ module.exports = class CandlesRepository {
             this._eventListenerIds.push(candleEventName);
             this.eventEmitter.on(candleEventName, async (candle) => {
                 try {
-                    await CandleModel.addCandle(candle); //Event addition not Permitted to Mem
+                    await CandleModel.addCandle(candle); //Event Candle addition not Permitted to Mem
                 } catch (error) {
                     self.logger.info(`Candles Repository: Error adding Candle (${error.message})`)
                 }
             })
+        }
+    }
+
+    async storeToDatabase(data) {
+        if (this.CandleModel === CandleModel) {
+            await this.CandleModel.addCandles(data);
+        } else {
+            await this.CandleModel.addCandles(data);
+            await CandleModel.addCandles(data);
         }
     }
 
@@ -57,7 +66,7 @@ module.exports = class CandlesRepository {
             const fromDatabase = await this.CandleModel.fetchCandles({period, number: numberOfCandlesNeeded, exchangeName, symbol, from: startTime, to: endTime});
             if (numberOfCandlesNeeded > fromDatabase.length) {
                 const fromExchange = await exchange.fetchCandles(symbol, period, startTime, endTime);
-                const storeToDatabase = await this.CandleModel.addCandles(fromExchange);
+                await this.storeToDatabase(fromExchange);
             } else {
                 return fromDatabase;
             }
@@ -81,7 +90,7 @@ module.exports = class CandlesRepository {
                 const timeDifference = periodToTimeDiff(period);
                 const startTime = new Date(Date.now() - (timeDifference * length));
                 const fromExchange = await exchange.fetchCandles(symbol, period, startTime);
-                const storeToDatabase = await this.CandleModel.addCandles(fromExchange);
+                await this.storeToDatabase(fromExchange);
             } else {
                 return fromDatabase;
             }

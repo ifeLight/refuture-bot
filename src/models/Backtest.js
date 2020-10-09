@@ -24,6 +24,7 @@ const tradeSchema = mongoose.Schema({
 
 const backtestSchema = mongoose.Schema({
     balance: Number,
+    period: String,
     stopLoss: Number,
     takeProfit: Number,
     positionType: String,
