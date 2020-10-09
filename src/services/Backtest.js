@@ -3,6 +3,7 @@ const clc = require('cli-color');
 const IndicatorManager = require('../modules/managers/IndicatorManager');
 const SafetyManager = require('../modules/managers/SafetyManager');
 const ExchangePair = require('../backtest/ExchangePair');
+const CandlesRepository = require('../modules/repository/CandlesRepository')
 
 const logger = require('../backtest/utils/logger');
 const eventEmitter = require('../backtest/utils/eventEmitter');
@@ -12,7 +13,7 @@ const timeCalc = require('../backtest/utils/timeCalc');
 
 const periodToTimeDiff = require('../utils/periodToTimeDiff');
 
-const { candlesRepository, exchangeManager } = require('./preService')
+const { exchangeManager } = require('./preService')
 
 class Backtest {
     constructor() {
@@ -20,7 +21,7 @@ class Backtest {
         this.eventEmitter = eventEmitter;
         this.exchangeManager = exchangeManager;
         this.exchangePair = new ExchangePair(eventEmitter, logger, exchangeManager);
-        this.candlesRepository = candlesRepository;
+        this.candlesRepository = new CandlesRepository(eventEmitter, logger, true);
         this.indicatorManager = new IndicatorManager({
             candlesRepository,
             logger,
@@ -198,6 +199,7 @@ class Backtest {
         result.orderType = orderType;
         result.startDate = new Date(startDate);
         result.endDate = new Date(endDate);
+        result.period = period;
         return result;
     }
 
