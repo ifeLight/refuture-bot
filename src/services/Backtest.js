@@ -21,7 +21,8 @@ class Backtest {
         this.eventEmitter = eventEmitter;
         this.exchangeManager = exchangeManager;
         this.exchangePair = new ExchangePair(eventEmitter, logger, exchangeManager);
-        this.candlesRepository = new CandlesRepository(eventEmitter, logger, true);
+        const candlesRepository = new CandlesRepository(eventEmitter, logger, true);
+        this.candlesRepository = candlesRepository;
         this.indicatorManager = new IndicatorManager({
             candlesRepository,
             logger,
@@ -80,10 +81,10 @@ class Backtest {
         }
 
         // Let Candles Repository knows its runnind a Backtest
-        candlesRepository.setBacktest(false);
+        this.candlesRepository.setBacktest(false);
 
         //Set Using of Memory
-        candlesRepository.useMemory(useMemory);
+        this.candlesRepository.useMemory(useMemory);
 
         // Checking Indicator
         this.log(clc.white.bgBlack('Checking Indicator.....'))
@@ -186,8 +187,8 @@ class Backtest {
         if (this.toLog) {
             drawChart(result);
         }
-        candlesRepository.setBacktest(false);
-        candlesRepository.useMemory(false);
+        this.candlesRepository.setBacktest(false);
+        this.candlesRepository.useMemory(false);
 
         const { balance } = result;
         
