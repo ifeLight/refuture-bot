@@ -260,7 +260,6 @@ src/app/.rej
 src/app/*.rej
 src/app/*.orig
 src/app/bin/
-src/app/dist/
 src/app/node_modules/
 src/app/vuesax-laravel-starter/node_modules/
 src/app/temp/
