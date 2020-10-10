@@ -2,6 +2,7 @@ const express = require('express'); // call express
 const app = express(); // define our app using express
 const bodyParser = require('body-parser');
 const config = require('config');
+const path = require('path');
 const GracefulShutdownManager = require('@moebius/http-graceful-shutdown').GracefulShutdownManager;
 
 const http = require('http');
@@ -17,8 +18,11 @@ app.use(bodyParser.json());
 
 const port = config.get('app.port') || 8100; // set our port
 
+// Serve the App files
+app.use('/', express.static(path.join(__dirname, '../app/dist')))
+
 // test route to make sure everything is working (accessed at GET http://localhost:8100/api)
-app.get('/', function (req, res) {
+app.get('/api', function (req, res) {
     res.json({
         message: 'hooray! welcome to our api!'
     });

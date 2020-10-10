@@ -17,8 +17,12 @@ program
     .command('trade')
     .description('Run the Live trading Service')
     .option('-i, --instance <value>', 'the instance file')
+    .option('-Z, --app', 'Start along the App Server')
     .action(async (cmdObj) => {
-        const { instance: instanceFilePath } = cmdObj
+        const { instance: instanceFilePath, app } = cmdObj
+        if (app) {
+            require('./src/services/app'); //launch the app server
+        }
         await tradeCommand(instanceFilePath);
     })
 
@@ -41,8 +45,12 @@ program
     .option('-S, --safety <value>', 'select the safety to be used')
     .option('-D, --usedefaultsafety <value>', 'use default safety')
     .option('-B, --backfillperiods <value>', 'set some periods to backfill, should seperated by comma')
+    .option('-Z, --app', 'Start along the App Server')
     .action(async (cmdObj) => {
-        const { config: configFile, profit: takeProfit, loss: stopLoss, end: endDate, start: startDate } = cmdObj;
+        const { config: configFile, profit: takeProfit, loss: stopLoss, end: endDate, start: startDate, app } = cmdObj;
+        if (app) {
+            require('./src/services/app'); //launch the app server
+        }
         await backtestCommand({
             ...cmdObj,
             takeProfit,
