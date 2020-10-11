@@ -8,6 +8,7 @@ const {
     abandonedbaby, eveningdojistar,
 } = require('technicalindicators');
 
+const TI = require('technicalindicators');
 
 const linearRegression = require('../../utils/calculations/linearRegression');
 const getPivots = require('../../utils/calculations/getPivots');
@@ -113,7 +114,6 @@ module.exports = class {
         return false;
     }
 
-    // TODO - Add crossovers check EMA, SMA, ADX 
     emaCrossOverCheck(candles, signal = 'long') {
         const theClosePrices = candles.map((candle) => candle.close);
         const {shortEMA, longEMA} = this.options;
@@ -206,6 +206,26 @@ module.exports = class {
             return false;
         }
     }
+
+    indicatorFilterCheck (candles, signal = 'long') {
+        const {indicatorFilterPeriod, indicatorFilter} = this.options;
+        const lastCandle = candles[candles.length - 1];
+        const theClosePrices = candles.map((candle) => candle.close);
+        const input = {
+            values: theClosePrices,
+            period: number(indicatorFilterPeriod)
+        }
+        const indicator = technicalindicators[indicatorFilter];
+        const result = indicator(input);
+        const lastResult = result[result.length - 1];
+        if (signal == 'long'){
+            return lastCandle.close > lastResult;
+        }
+        if (signal == 'short'){
+            return lastCandle.close < lastResult;
+        }
+        return false;
+    } 
 
     // TODO - EMA, SMA, ADX advancing
     smaAdvancing() {
@@ -442,7 +462,7 @@ module.exports = class {
     }
 
     toRun(candles, signal = 'long') {
-        const {useSMACrossover, useRSI, useEMACrossover, useADX, useMACD, useEMACrossover2} = this.options;
+        const {useSMACrossover, useRSI, useEMACrossover, useIndicatorFilter, useADX, useMACD, useEMACrossover2} = this.options;
         if (useRSI === true) {
             if(!this.rsiCrossoverCheck(candles, signal)) return false;
         }
@@ -454,6 +474,10 @@ module.exports = class {
         }
         if (useADX === true) {
             if(!this.adxBeyond(candles)) return false;
+        }
+
+        if (useIndicatorFilter === true) {
+            if(!this.indicatorFilterCheck(candles, signal)) return false;
         }
 
         if (useMACD === true) {
@@ -536,6 +560,9 @@ module.exports = class {
             onlyReversal: false,
             onlyRebounce: false,
             recommendedStoplossStep: 2,
+            useIndicatorFilter: false, // Use an Indicator like the sma to filter out Some signals
+            indicatorFilterPeriod: 60,
+            indicatorFilter: 'ema',
         }
     }
 
