@@ -23,7 +23,7 @@ module.exports = async function ({configFile}) {
         const defaultConfig = require(defaultConfigPath);
 
         const defaultStartDate = new Date();
-        defaultStartDate.setDate(defaultStartDate.getDate() - 1);
+        defaultStartDate.setDate(defaultStartDate.getDate() - 3);
 
         const totalConfig = {...defaultConfig, ...backtestConfig};
 
