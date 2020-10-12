@@ -67,7 +67,7 @@ module.exports = async function ({configFile}) {
         const parameters = {
             amount: amount ||  1000,
             startDate:  startDate || defaultStartDate,
-            endDate:  endDate || Date.now(),
+            endDate:  endDate || new Date(),
             exchange:  exchange || 'binance',
             symbol: symbol || 'BTC/USDT',
             leverage: leverage || 1,
