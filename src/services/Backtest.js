@@ -61,6 +61,7 @@ class Backtest {
             useDefaultSafety,
             safeties,
             backfillPeriods,
+            backfillSpace = 220,
             toLog = true,
             useMemory
         } = parameters;
@@ -73,6 +74,7 @@ class Backtest {
         this.toLog = toLog === undefined ? true: toLog;
         this.state = {};
         this.safeties = [];
+        this.backfillSpace = backfillSpace;
 
         if (!this.exchangeManager.setupDone) {
             this.log(clc.white.bgBlack('setting up Exchange Manager.....'))
@@ -205,7 +207,7 @@ class Backtest {
     }
 
     async backfill ({period, exchangeName, exchange, symbol, startDate, endDate}) {
-        const startTime = new Date((new Date(startDate)).getTime() - (periodToTimeDiff(period) * 220));
+        const startTime = new Date((new Date(startDate)).getTime() - (periodToTimeDiff(period) * this.backfillSpace));
         const endTime = new Date(endDate);
         const log = this.log;
         this.log(clc.white.bgBlack('Backfiling Candles.....'))

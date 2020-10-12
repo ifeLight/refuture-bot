@@ -47,6 +47,7 @@ module.exports = async function ({configFile}) {
             toLog,
             useMemory,
             backfillPeriods,
+            backfillSpace,
             override = {},
         } = totalConfig;
 
@@ -78,6 +79,7 @@ module.exports = async function ({configFile}) {
             stopLoss: stopLoss || 2,
             useMemory: useMemory === true ? true: false,
             backfillPeriods: backfillPeriods || "",
+            backfillSpace: backfillSpace || 220
         }
         
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {
