@@ -83,7 +83,7 @@ class Backtest {
         }
 
         // Let Candles Repository knows its runnind a Backtest
-        this.candlesRepository.setBacktest(false);
+        this.candlesRepository.setBacktest(true);
 
         //Set Using of Memory
         this.candlesRepository.useMemory(useMemory);
