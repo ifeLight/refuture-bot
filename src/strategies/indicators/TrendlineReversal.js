@@ -39,7 +39,7 @@ module.exports = class {
 
     async period(indicatorPeriod, options) {
         try {
-            const { period: candlePeriod, length, longRSI, shortRSI, useRSI} = options;
+            const { period: candlePeriod, length, longRSI, shortRSI, useRSI, candleDepth} = options;
             this.options = options;
             this.longRSI = longRSI;
             this.shortRSI = shortRSI,
@@ -54,7 +54,7 @@ module.exports = class {
 
             //Lines generator configuration
             this.generateLinesConfig = {
-                candles, candleDepth: 5, 
+                candles, candleDepth, 
                 maxLines: 5, 
                 lineAllowancePercentage: 0.1, 
                 priceLineDiffPercentage: 2
@@ -76,6 +76,7 @@ module.exports = class {
             return this.calculateSignal(candles);
 
         } catch (error) {
+            console.error(error);
              throw error;
         }
     }
@@ -213,9 +214,9 @@ module.exports = class {
         const theClosePrices = candles.map((candle) => candle.close);
         const input = {
             values: theClosePrices,
-            period: number(indicatorFilterPeriod)
+            period: Number(indicatorFilterPeriod)
         }
-        const indicator = technicalindicators[indicatorFilter];
+        const indicator = TI[indicatorFilter];
         const result = indicator(input);
         const lastResult = result[result.length - 1];
         if (signal == 'long'){
@@ -534,6 +535,7 @@ module.exports = class {
     getOptions() {
         return {
             period: '5m',
+            candleDepth: 5,
             length: 100,
             longRSI: 14,
             shortRSI: 6,
