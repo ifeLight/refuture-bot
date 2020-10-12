@@ -8,7 +8,9 @@ const moment = require('moment')
 const telegram = require('../providers/Telegram')
 
 const BactestService = require('../services/Backtest');
+
 const HyperModel = require('../models/Hyper');
+const BacktestModel = require('../models/Backtest')
 
 module.exports = async function ({configFile}) {
        try {
@@ -49,6 +51,8 @@ module.exports = async function ({configFile}) {
             backfillPeriods,
             backfillSpace,
             override = {},
+            backtestArgmin = false,
+            backtestArgmax = true
         } = totalConfig;
 
         spaceObj = {...spaceObj}
@@ -138,7 +142,49 @@ module.exports = async function ({configFile}) {
         const duration = moment(endTime).diff(moment(startTime), 'hours', true);
         console.log('---------------------')
         console.log(`Total Duration: ${duration.toFixed(3)}hours`);
-        console.log('---------------------')
+        console.log('---------------------');
+
+        // Run the Argmax and Argmin Backtest & store
+        try {
+            if (backtestArgmax) {
+                console.log('----Backtesting Argmax----')
+                const fullParameters = { ...parameters};
+                const space = trials.argmax;
+                Object.keys(space).forEach(key => {
+                    nestedProperty.set(fullParameters, key, space[key]);
+                    console.log(`${key}: ${space[key]}`);
+                });
+                console.log('------Override----------');
+                Object.keys(override).forEach(key => {
+                    const fetchedValue = nestedProperty.get(fullParameters, override[key]);
+                    nestedProperty.set(fullParameters, key, fetchedValue);
+                    console.log(`${key}: ${fetchedValue}`)
+                });
+                const res = await backTestService.start(fullParameters);
+                await BacktestModel.create(res);
+            }
+
+            if (backtestArgmin) {
+                console.log('----Backtesting Argmin----')
+                const fullParameters = { ...parameters};
+                const space = trials.argmin;
+                Object.keys(space).forEach(key => {
+                    nestedProperty.set(fullParameters, key, space[key]);
+                    console.log(`${key}: ${space[key]}`);
+                });
+                console.log('------Override----------');
+                Object.keys(override).forEach(key => {
+                    const fetchedValue = nestedProperty.get(fullParameters, override[key]);
+                    nestedProperty.set(fullParameters, key, fetchedValue);
+                    console.log(`${key}: ${fetchedValue}`)
+                });
+                const res = await backTestService.start(fullParameters);
+                await BacktestModel.create(res);
+            }
+
+        } catch (error) {
+            console.error('Error Backtesting Argmax/Argmin')
+        }
 
         let {symbol: symbolP,startDate: startDateP,endDate: endDateP} = parameters;
         const resultInJson = JSON.stringify(resObj);

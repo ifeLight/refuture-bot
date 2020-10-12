@@ -10,7 +10,7 @@
     "toLog": false,
     "fee": 0.06,
     "amount": 1000,
-    "maximumIteration": 10,
+    "maximumIteration": 5,
     "safeties": "",
     "useDefaultSafety": true,
     "noInterruption": true,
@@ -18,7 +18,7 @@
     "takeProfit": 1.5,
     "stopLoss": 0.7,
     "useMemory": true,
-    "backfillPeriods": "",
+    "backfillPeriods": "5m,15m,30m",
     "backFillSpace": 220,
     "space": {
         "period": "h.choice(['5m','15m', '30m'])",
