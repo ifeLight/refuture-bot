@@ -22,8 +22,10 @@ module.exports = async function ({configFile}) {
         const defaultConfigPath = path.join(process.cwd(), 'hyperparameter-config-sample.json');
         const defaultConfig = require(defaultConfigPath);
 
-        const defaultStartDate = new Date();
-        defaultStartDate.setDate(defaultStartDate.getDate() - 3);
+        const d = new Date();
+        d.setDate(d.getDate() - 3);
+
+        const defaultStartDate = d.toISOString();
 
         const totalConfig = {...defaultConfig, ...backtestConfig};
 
@@ -67,7 +69,7 @@ module.exports = async function ({configFile}) {
         const parameters = {
             amount: amount ||  1000,
             startDate:  startDate || defaultStartDate,
-            endDate:  endDate || new Date(),
+            endDate:  endDate || new Date().toISOString(),
             exchange:  exchange || 'binance',
             symbol: symbol || 'BTC/USDT',
             leverage: leverage || 1,
