@@ -25,7 +25,6 @@ class OrderExecutor {
 
     async execute(signalResult, exchangePair, options) {
         try {
-            this.counter(10)
             const tradeOptions = options.trade;
             const lastPrice = exchangePair.getLastPrice();
             let amount;

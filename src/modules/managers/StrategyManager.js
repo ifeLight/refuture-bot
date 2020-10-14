@@ -207,6 +207,20 @@ class StrategyManager {
         await this.orderExecutor.execute(signalResult, exchangePair, strat);
     }
 
+    counter(symbol, exchangeName, interval = 10) {
+        if (!this._counterObj) {
+            this._counterObj = {}
+        }
+        const key = `${symbol}_${exchangeName}`;
+        if (!this._counterObj[key]){
+            this._counterObj[key] = 0;
+        }
+        if (this._counterObj[key] % interval === 0) {
+            console.log(`Strategy Running [${key}]: ${this._counterObj[key]} - Interval (${interval})`)
+        }
+        this._counterObj[key]++;
+    }
+
     runStrategies() {
         const list = this.getList();
         const self = this;
@@ -218,6 +232,7 @@ class StrategyManager {
                 try {
                     await this.runIndicatorStrategyUnit(strat);
                     await this.runSafetiesStrategyUnit(strat);
+                    this.counter(symbol, exchangeName);
                 } catch (error) {
                     self.logger.warn(`Forever Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`)
                 }
