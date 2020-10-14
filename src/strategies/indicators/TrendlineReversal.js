@@ -16,7 +16,6 @@ const generateLines = require('../../utils/generateLines');
 const periodToTimeDiff = require('../../utils/periodToTimeDiff');
 
 module.exports = class {
-    
     constructor(){}
     getName() {
         return 'trendline-reversal';
@@ -295,14 +294,14 @@ module.exports = class {
 
     isBullishPatternFormed(candles) {
         this.calculateCandleStickPattern(candles)
-        const cond1 = this.bullishengulfingpattern || this.threewhitesoldiers || this.tweezerbottom;
+        const cond1 = this.bullishengulfingpattern || this.threewhitesoldiers ;
         const cond2 = this.bullishhammerstick || this.abandonedbaby;
         return cond1 || cond2;
     }
 
     isBearishPatternFormed(candles) {
         this.calculateCandleStickPattern(candles)
-        const cond1 = this.bearishengulfingpattern || this.threeblackcrows || this.tweezertop;
+        const cond1 = this.bearishengulfingpattern || this.threeblackcrows ;
         const cond2 = this.shootingstar || this.eveningdojistar;
         return cond1 || cond2;
     }
