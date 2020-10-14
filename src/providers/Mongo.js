@@ -20,10 +20,9 @@ mongoose.connect(connectionUri, {
     autoIndex: false, 
     useNewUrlParser: true ,
     useFindAndModify: false,
+    useUnifiedTopology: true,
     ...authCollectionName
 });
-
-mongoose.set('useUnifiedTopology', true);
 
 /**
  * To set Debug
