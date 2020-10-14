@@ -13,8 +13,19 @@ class OrderExecutor {
         }
     }
 
+    counter(interval=50) {
+        if (!this._counts) {
+            this._counts = 0
+        }
+        if (this._counts % interval === 0) {
+            console.log(`Order Executing: ${this._counts } - Interval (${interval})`)
+        }
+        this._counts++;
+    }
+
     async execute(signalResult, exchangePair, options) {
         try {
+            this.counter(10)
             const tradeOptions = options.trade;
             const lastPrice = exchangePair.getLastPrice();
             let amount;
