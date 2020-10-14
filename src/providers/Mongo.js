@@ -21,6 +21,7 @@ mongoose.connect(connectionUri, {
     useNewUrlParser: true ,
     useFindAndModify: false,
     useUnifiedTopology: true,
+    poolSize: config.get('db.poolSize'),
     ...authCollectionName
 });
 

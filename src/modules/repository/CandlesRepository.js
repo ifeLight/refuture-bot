@@ -1,6 +1,7 @@
 const CandleModel = require('../../models/Candle');
 const CandleMem = require('../../models/CandleMem')
 const Candle = require('../../classes/Candle');
+const config = require('config');
 
 const periodToTimeDiff = require('../../utils/periodToTimeDiff');
 
@@ -70,10 +71,10 @@ module.exports = class CandlesRepository {
 
     async storeToDatabase(data, quick = false) {
         if (this.CandleModel === CandleModel) {
-            console.log('storage 1')
+            // console.log('storage 1')
             await this.storeMongoDB(data, quick);
         } else {
-            console.log('Storage 2')
+            // console.log('Storage 2')
             await this.CandleModel.addCandles(data);
             await this.storeMongoDB(data, true);
         }
@@ -81,35 +82,35 @@ module.exports = class CandlesRepository {
 
     async fetchCandlesByTimeDifference({exchange, symbol, period, startTime, endTime, quick=false}) {
         try {
-            console.time('CandeFetch')
+            // console.time('CandeFetch')
             const {name: exchangeName} = exchange;
             this.createEvent(exchange, symbol, period);
             const timeDifference = periodToTimeDiff(period);
             const startTimeTimestamp = new Date(startTime).getTime();
             const endTimeTimestamp = new Date(endTime).getTime();
             const numberOfCandlesNeeded = Math.round(Math.abs(endTimeTimestamp - startTimeTimestamp) / timeDifference);
-            console.time('From Database');
+            // console.time('From Database');
             const fromDatabase = await this.CandleModel.fetchCandles({period, number: numberOfCandlesNeeded, exchangeName, symbol, from: startTime, to: endTime});
-            console.log(`From database length: ${fromDatabase.length}`)
-            console.log(`Required Length: ${numberOfCandlesNeeded}`)
-            console.timeEnd('From Database');
+            // console.log(`From database length: ${fromDatabase.length}`)
+            // console.log(`Required Length: ${numberOfCandlesNeeded}`)
+            // console.timeEnd('From Database');
             if (numberOfCandlesNeeded > fromDatabase.length) {
-                console.time('From Exchange');
+                // console.time('From Exchange');
                 const fromExchange = await exchange.fetchCandles(symbol, period, startTime, endTime);
-                console.log(`Gotten from exchange: ${fromExchange.length}`)
-                console.timeEnd('From Exchange');
-                console.time('Store Database');
+                // console.log(`Gotten from exchange: ${fromExchange.length}`)
+                // console.timeEnd('From Exchange');
+                // console.time('Store Database');
                 await this.storeToDatabase(fromExchange, quick);
-                console.timeEnd('Store Database');
+                // console.timeEnd('Store Database');
                 if (quick === true) {
                     return this.fromExchangeResponse(fromExchange);
                 }
             } else {
                 return fromDatabase;
             }
-            console.time('Refetch Database');
+            // console.time('Refetch Database');
             const refetched = this.CandleModel.fetchCandles({period, number: numberOfCandlesNeeded,  exchangeName, symbol, from: startTime, to: endTime});
-            console.timeEnd('Refetch Database');
+            // console.timeEnd('Refetch Database');
             return refetched;
         } catch (error) {
             this.logger.error(`Candles Repository (fetchCandlesByTimeDifference): Error Fetching Candles [${exchange.name}: ${symbol}] (${error.message})`);

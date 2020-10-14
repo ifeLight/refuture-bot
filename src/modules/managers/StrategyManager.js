@@ -1,3 +1,5 @@
+const config = require('config')
+
 const IndicatorManager = require('./IndicatorManager');
 const PolicyManger = require('./PolicyManager');
 const InsuranceManager = require('./InsuranceManager');
@@ -225,6 +227,7 @@ class StrategyManager {
         const list = this.getList();
         const self = this;
         list.forEach(async (strat) => {
+            const counterPeriodLog = config.get('strategy.counterPeriodLog');
             const { symbol, exchange: exchangeName} = strat;
             await this.runIndicatorsInitials(strat);
             await this.runSafetiesInitials(strat);
@@ -232,7 +235,7 @@ class StrategyManager {
                 try {
                     await this.runIndicatorStrategyUnit(strat);
                     await this.runSafetiesStrategyUnit(strat);
-                    this.counter(symbol, exchangeName);
+                    this.counter(symbol, exchangeName, counterPeriodLog);
                 } catch (error) {
                     self.logger.warn(`Forever Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`)
                 }
