@@ -11,16 +11,22 @@ class CandlesCtrl {
                 period = '5m'
             } = req.query;
 
+            console.log('-----API-----')
+            console.log(req.query)
+
             if (!startDate) {
                 let tTime = new Date();
                 tTime.setDate(tTime.getDate() - 1)
                 startDate = tTime.getTime()
             }
 
+            console.log(`Setup Precheck: ${exchangeManager.setupDone}`)
+
             if (!exchangeManager.setupDone) {
                 await exchangeManager.setup();
             }
 
+            console.log(`Setup Postcheck: ${exchangeManager.setupDone}`)
 
             const exchange = exchangeManager.find(exchangeName);
             if (!exchange) {
@@ -40,10 +46,15 @@ class CandlesCtrl {
                 endTime: new Date(endDate).getTime()
             }
 
+            console.log(dateObj)
+            console.log('Query Started');
+
             const response = await candlesRepository.fetchCandlesByTimeDifference({
                 exchange, symbol, period,
                 ...dateObj
             });
+
+            console.log(response && response.length ? 'Response Length: ' + response.length: 'No response')
 
             return res.status(200).json(response);
         } catch (error) {
