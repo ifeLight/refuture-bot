@@ -58,6 +58,15 @@ module.exports = class CandlesRepository {
         }
     }
 
+    fromExchangeResponse(fromExchangeCandles) {
+        const retouchedCandles = [];
+        fromExchangeCandles.forEach((candle) => {
+            const { high, low, close, open, volume, time} = candle;
+            retouchedCandles.push({high, low, close, open, volume, time});
+        })
+        return retouchedCandles;
+    }
+
     async storeToDatabase(data, quick = false) {
         if (this.CandleModel === CandleModel) {
             console.log('storage 1')
@@ -77,7 +86,7 @@ module.exports = class CandlesRepository {
             const timeDifference = periodToTimeDiff(period);
             const startTimeTimestamp = new Date(startTime).getTime();
             const endTimeTimestamp = new Date(endTime).getTime();
-            const numberOfCandlesNeeded = Math.abs(endTimeTimestamp - startTimeTimestamp) / timeDifference;
+            const numberOfCandlesNeeded = Math.round(Math.abs(endTimeTimestamp - startTimeTimestamp) / timeDifference);
             console.time('From Database');
             const fromDatabase = await this.CandleModel.fetchCandles({period, number: numberOfCandlesNeeded, exchangeName, symbol, from: startTime, to: endTime});
             console.log(`From database length: ${fromDatabase.length}`)
@@ -92,7 +101,7 @@ module.exports = class CandlesRepository {
                 await this.storeToDatabase(fromExchange, quick);
                 console.timeEnd('Store Database');
                 if (quick === true) {
-                    return fromExchange;
+                    return this.fromExchangeResponse(fromExchange);
                 }
             } else {
                 return fromDatabase;
