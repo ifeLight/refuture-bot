@@ -74,6 +74,7 @@ module.exports = class CandlesRepository {
             if (numberOfCandlesNeeded > fromDatabase.length) {
                 console.time('From Exchange');
                 const fromExchange = await exchange.fetchCandles(symbol, period, startTime, endTime);
+                console.log(`Gotten from exchange: ${fromExchange.length}`)
                 console.timeEnd('From Exchange');
                 console.time('Store Database');
                 await this.storeToDatabase(fromExchange);
