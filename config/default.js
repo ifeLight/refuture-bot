@@ -23,6 +23,9 @@ module.exports = {
     app : {
         port: PORT || 8100,
     },
+    strategy: {
+        counterPeriodLog: 30,
+    },
     exchange: {
         binance: {
             apiKey: BINANCE_API_KEY,
@@ -38,6 +41,7 @@ module.exports = {
         }
     },
     db: {
+        poolSize: 10,
         host: "localhost",
         port: 27017,
         username: "",
