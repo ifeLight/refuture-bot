@@ -46,18 +46,30 @@ module.exports = class CandlesRepository {
         }
     }
 
-    async storeToDatabase(data) {
-        if (this.CandleModel === CandleModel) {
-            console.log('storage 1')
-            await this.CandleModel.addCandles(data);
-        } else {
-            console.log('Storage 2')
-            await this.CandleModel.addCandles(data);
+    async  storeMongoDB (data, quick = false) {
+        if (!quick){
             await CandleModel.addCandles(data);
+        } else {
+            CandleModel.addCandles(data)
+            .then((value) => {})
+            .catch((error) => {
+                console.error(error)
+            })
         }
     }
 
-    async fetchCandlesByTimeDifference({exchange, symbol, period, startTime, endTime}) {
+    async storeToDatabase(data, quick = false) {
+        if (this.CandleModel === CandleModel) {
+            console.log('storage 1')
+            await this.storeMongoDB(data, quick);
+        } else {
+            console.log('Storage 2')
+            await this.CandleModel.addCandles(data);
+            await this.storeMongoDB(data, true);
+        }
+    }
+
+    async fetchCandlesByTimeDifference({exchange, symbol, period, startTime, endTime, quick=false}) {
         try {
             console.time('CandeFetch')
             const {name: exchangeName} = exchange;
@@ -77,8 +89,11 @@ module.exports = class CandlesRepository {
                 console.log(`Gotten from exchange: ${fromExchange.length}`)
                 console.timeEnd('From Exchange');
                 console.time('Store Database');
-                await this.storeToDatabase(fromExchange);
+                await this.storeToDatabase(fromExchange, quick);
                 console.timeEnd('Store Database');
+                if (quick === true) {
+                    return fromExchange;
+                }
             } else {
                 return fromDatabase;
             }

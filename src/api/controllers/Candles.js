@@ -43,7 +43,8 @@ class CandlesCtrl {
 
             const response = await candlesRepository.fetchCandlesByTimeDifference({
                 exchange, symbol, period,
-                ...dateObj
+                ...dateObj,
+                quick: true
             });
 
             console.log(response && response.length ? 'Response Length: ' + response.length: 'No response')
