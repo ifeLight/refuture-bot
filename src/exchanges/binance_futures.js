@@ -19,6 +19,7 @@ module.exports = class BinanceFuturesExchange {
         this.logger = logger;
         this.name = 'binance_futures';
         this.isFutures = true;
+        this._enabledSocket = false;
     }
 
     async init(config) {
@@ -45,13 +46,18 @@ module.exports = class BinanceFuturesExchange {
             this.logger.warn(`Binance Futures: Unable to load markets: ${error.message}`);
         }
 
+    }
+
+    async enableSocket() {
         try {
-            await this.exchange.checkRequiredCredentials();
-            await this.initUserWebsocket();
+            if (!this._enabledSocket) {
+                await this.exchange.checkRequiredCredentials();
+                await this.initUserWebsocket();
+                this._enabledSocket = true;
+            }
         } catch (error) {
             this.logger.info(`Binance Futures: Incomplete required credentials: ${error.message}`)
         }
-
     }
 
     async fetchPairInfo(symbol) {
@@ -110,12 +116,12 @@ module.exports = class BinanceFuturesExchange {
     addCandleEvent (symbol, period) {
         const self = this;
         const candleEventId = symbol + period; ///To prevent duplicate candle event registration
-        if (!this.candleEventsList) {
-            this.candleEventsList = []
+        if (!this._candleEventsList) {
+            this._candleEventsList = []
         }
         try {
-            if (this.candleEventsList.indexOf(candleEventId) < 0) {
-                this.candleEventsList.push(candleEventId);
+            if (this._candleEventsList.indexOf(candleEventId) < 0) {
+                this._candleEventsList.push(candleEventId);
                 const exchangeName = this.name;
                 const retouchedSymbol = this.retouchSymbol(symbol);
                 const query = retouchedSymbol.toLowerCase() + '@kline_' + period;
@@ -282,7 +288,6 @@ module.exports = class BinanceFuturesExchange {
     async fetchBalance(asset) {
         try {
             if (!this.balances) {
-                await this.initUserWebsocket();
                 const fetchedBalances = (await this.exchange.fetchBalance()).info.assets;
                 this.balances = {}; //To trigger the balance Websocket event
                 fetchedBalances.forEach(bal => {

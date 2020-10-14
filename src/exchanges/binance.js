@@ -17,6 +17,7 @@ module.exports = class BinanceExchange {
         this.logger = logger;
         this.ccxt = ccxt;
         this.name = 'binance';
+        this._enabledSocket = false;
     }
 
     async init(config) {
@@ -38,14 +39,20 @@ module.exports = class BinanceExchange {
             this.logger.warn(`Binance: Unable to load markets: ${error.message}`);
         }
 
+    }
+
+    async enableSocket() {
         try {
-            await this.exchange.checkRequiredCredentials();
-            await this.userWebsocket();
+            if (!this._enabledSocket) {
+                await this.exchange.checkRequiredCredentials();
+                await this.userWebsocket();
+                this._enabledSocket = true;
+            }
         } catch (error) {
             this.logger.info(`Binance: Incomplete required credentials: ${error.message}`);
         }
-
     }
+
 
     async fetchPairInfo(symbol) {
         try {
@@ -101,12 +108,12 @@ module.exports = class BinanceExchange {
 
     addCandleEvent (symbol, period) {
         const candleEventId = symbol + period; ///To prevent duplicate candle event registration
-        if (!this.candleEventsList) {
-            this.candleEventsList = []
+        if (!this._candleEventsList) {
+            this._candleEventsList = []
         }
         try {
-            if (this.candleEventsList.indexOf(candleEventId) < 0) {
-                this.candleEventsList.push(candleEventId);
+            if (this._candleEventsList.indexOf(candleEventId) < 0) {
+                this._candleEventsList.push(candleEventId);
                 const exchangeName = this.name;
                 const retouchedSymbol = this.retouchSymbol(symbol);
                 this.exchange.binanceApiNode.ws.candles(retouchedSymbol, period, (candle) => {

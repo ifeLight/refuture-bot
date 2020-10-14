@@ -19,12 +19,15 @@ module.exports = class ExchangePair {
             if (!this.exchange)  throw new Error(`Unable to find exchange ${this.exchangeName}`);
             const { symbol, exchangeName } = this;
             const self = this;
-            // Add Ticker listener
-            this.exchange.addTickerEvent(this.symbol);
+            
             this.info = await this.exchange.fetchPairInfo(symbol);
             this.ticker = await this.exchange.fetchTicker(symbol);
             this.orderBook = await this.exchange.fetchOrderBook(symbol);
             this.markPrice = undefined;
+            // Add Ticker listener
+            this.exchange.addTickerEvent(this.symbol);
+            //Enable Socket
+            await this.exchange.enableSocket();
             if (this.exchange.isFutures) {
                 this.markPrice = await this.exchange.fetchMarkPrice(symbol);
                 this.eventEmitter.on(`markprice_${exchangeName}_${symbol}`, (markPrice)  => {
