@@ -53,7 +53,7 @@ module.exports = class CandlesRepository {
             CandleModel.addCandles(data)
             .then((value) => {})
             .catch((error) => {
-                console.error(error)
+                this.logger.warn(`Candle Repository [Store MongoDB Error]: ${error.message}`);
             })
         }
     }
@@ -64,6 +64,7 @@ module.exports = class CandlesRepository {
             const { high, low, close, open, volume, time} = candle;
             retouchedCandles.push({high, low, close, open, volume, time});
         })
+        retouchedCandles.sort((a, b) => a.time - b.time);
         return retouchedCandles;
     }
 
