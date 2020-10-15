@@ -24,7 +24,7 @@ module.exports = {
         port: PORT || 8100,
     },
     strategy: {
-        counterPeriodLog: 30,
+        counterPeriodLog: 200,
     },
     exchange: {
         binance: {
