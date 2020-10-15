@@ -25,7 +25,7 @@
             <vs-td :data="data[indextr].roi">
               {{ data[indextr].roi }}
             </vs-td>
-            <vs-td :data="data[indextr]._id">
+            <vs-td :data="data[indextr]._id">`
               {{ data[indextr].startDate }}
             </vs-td>
             <vs-td :data="data[indextr]._id">

@@ -1,7 +1,8 @@
 // axios
 import axios from 'axios'
 
-let domain = "http://192.168.43.227:8100/";
+// let domain = "http://192.168.43.135:8100/";
+let domain = "http://trade9ine.ifelight.com:8100/";
 try {
   const sssss = webpackHotUpdate;
 } catch {

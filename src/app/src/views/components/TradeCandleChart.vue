@@ -1,6 +1,8 @@
 <template>
 <vx-card :title="title">
-    <div :id="chartId"></div>
+    <div>
+        <div :id="chartId"></div>
+    </div>
 </vx-card>  
 </template>
 

@@ -59,13 +59,22 @@ module.exports = class CandlesRepository {
         }
     }
 
-    fromExchangeResponse(fromExchangeCandles) {
+    fromExchangeResponse(fromExchange) {
+        const fromExchangeCandles = [...fromExchange];
+        // Sorting of candles in Ascending Order
+        fromExchangeCandles.sort((a, b) => a.time - b.time);
         const retouchedCandles = [];
-        fromExchangeCandles.forEach((candle) => {
+        fromExchangeCandles.forEach((candle, index) => {
             const { high, low, close, open, volume, time} = candle;
-            retouchedCandles.push({high, low, close, open, volume, time});
+            if (retouchedCandles[retouchedCandles.length - 1]) {
+                // Removing Duplicates and unsorted minorities
+                if (time > retouchedCandles[retouchedCandles.length - 1].time) {
+                    retouchedCandles.push({high, low, close, open, volume, time});
+                }
+            } else {
+                retouchedCandles.push({high, low, close, open, volume, time});
+            }
         })
-        retouchedCandles.sort((a, b) => a.time - b.time);
         return retouchedCandles;
     }
 
