@@ -270,6 +270,17 @@ module.exports = class {
         }
     }
 
+    isCandleDirection(candle, direction = 'long',) {
+        const {open, close} = candle;
+        if (direction == 'long') {
+            return parseFloat(close) >= parseFloat(open);
+        }
+        if (direction == 'short') {
+            return parseFloat(close) <= parseFloat(open);
+        }
+        return false;
+    }
+
     calculateCandleStickPattern(candles) {
         const lastCandle = this.generateCandlesticksInputs(candles, 1)
         const lastTwoCandles = this.generateCandlesticksInputs(candles, 2);
@@ -294,16 +305,20 @@ module.exports = class {
 
     isBullishPatternFormed(candles) {
         this.calculateCandleStickPattern(candles)
+        const lastCandle = candles[candles.length - 1]
+        const isDirectionLong = this.isCandleDirection(lastCandle);
         const cond1 = this.bullishengulfingpattern || this.threewhitesoldiers ;
         const cond2 = this.bullishhammerstick || this.abandonedbaby;
-        return cond1 || cond2;
+        return (cond1 || cond2) && isDirectionLong;
     }
 
     isBearishPatternFormed(candles) {
-        this.calculateCandleStickPattern(candles)
+        this.calculateCandleStickPattern(candles);
+        const lastCandle = candles[candles.length - 1]
+        const isDirectionShort = this.isCandleDirection(lastCandle, 'short');
         const cond1 = this.bearishengulfingpattern || this.threeblackcrows ;
         const cond2 = this.shootingstar || this.eveningdojistar;
-        return cond1 || cond2;
+        return (cond1 || cond2) && isDirectionShort;
     }
     
 
