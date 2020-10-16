@@ -39,7 +39,22 @@ module.exports = class CandlesRepository {
             this._eventListenerIds.push(candleEventName);
             this.eventEmitter.on(candleEventName, async (candle) => {
                 try {
-                    await CandleModel.addCandle(candle); //Event Candle addition not Permitted to Mem
+                    const {time, period} = candle;
+                    const presentTime = Date.now();
+                    const periodicTime = periodToTimeDiff(period);
+                    const fiveSeconds = 5 * 1000;
+                    const candleTimeDiff = presentTime - time;
+                    const periodCandleDiff = periodicTime - candleTimeDiff;
+
+                    const check1 = (periodCandleDiff > -fiveSeconds) && (periodCandleDiff < fiveSeconds);
+                    const check2 = candleTimeDiff >= 0 && candleTimeDiff <= fiveSeconds;
+
+                    if (check1 || check2) {
+                        CandleModel.addCandle(candle) //Event Candle addition not Permitted to Mem
+                        .catch((error) => {
+                            throw error;
+                        });
+                    } 
                 } catch (error) {
                     self.logger.info(`Candles Repository: Error adding Candle (${error.message})`)
                 }
