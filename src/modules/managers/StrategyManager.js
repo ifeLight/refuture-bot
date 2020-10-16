@@ -234,7 +234,7 @@ class StrategyManager {
                 await this.runIndicatorsInitials(strat);
                 await this.runSafetiesInitials(strat);
             } catch (error) {
-                self.logger.erro(`Initial Forever Loop: Error in the loop Initalization [${exchangeName}:${symbol}] (${error.message})`)
+                self.logger.error(`Initial Forever Loop: Error in the loop Initalization [${exchangeName}:${symbol}] (${error.message})`)
             }
         }
 

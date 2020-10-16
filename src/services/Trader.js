@@ -12,23 +12,18 @@ class Trader {
         this.notifier = notifier;
     }
 
-    start(instances) {
+    async start(instances) {
         try {
             const { logger, eventEmitter, notifier } = this;
             const strategyManager = new StrategyManager({ logger, eventEmitter, notifier, candlesRepository, exchangeManager });
-            (async () => {
-                if (!exchangeManager.setupDone) {
-                    await exchangeManager.setup();
-                }
-                await strategyManager.init();
-                instances.forEach(instance => {
-                    strategyManager.add(instance);
-                });
-                await strategyManager.runStrategies();
-            })()
-            .catch((err) => {
-                throw err;
-            })
+            if (!exchangeManager.setupDone) {
+                await exchangeManager.setup();
+            }
+            await strategyManager.init();
+            instances.forEach(instance => {
+                strategyManager.add(instance);
+            });
+            await strategyManager.runStrategies();
         } catch (error) {
             throw error;
         }
