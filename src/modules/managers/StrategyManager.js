@@ -224,23 +224,31 @@ class StrategyManager {
     }
 
     runStrategies() {
+        const counterPeriodLog = config.get('strategy.counterPeriodLog');
         const list = this.getList();
         const self = this;
-        list.forEach(async (strat) => {
-            const counterPeriodLog = config.get('strategy.counterPeriodLog');
+        for (const strat of list) {
             const { symbol, exchange: exchangeName} = strat;
-            await this.runIndicatorsInitials(strat);
-            await this.runSafetiesInitials(strat);
-            while (true) {
+            try {
+                await this.runIndicatorsInitials(strat);
+                await this.runSafetiesInitials(strat);
+            } catch (error) {
+                self.logger.erro(`Initial Forever Loop: { Error in the loop Initalization [${exchangeName}:${symbol}] (${error.message})`)
+            }
+        }
+
+        while (true) {
+            for (const strat of list) {
+                const { symbol, exchange: exchangeName} = strat;
                 try {
                     await this.runIndicatorStrategyUnit(strat);
                     await this.runSafetiesStrategyUnit(strat);
                     this.counter(symbol, exchangeName, counterPeriodLog);
                 } catch (error) {
-                    self.logger.warn(`Forever Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`)
+                    self.logger.warn(`Forever Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`);
                 }
             }
-        });
+        }
     }
 
 }
