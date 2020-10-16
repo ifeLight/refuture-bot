@@ -223,7 +223,7 @@ class StrategyManager {
         this._counterObj[key]++;
     }
 
-    runStrategies() {
+    async runStrategies() {
         const counterPeriodLog = config.get('strategy.counterPeriodLog');
         const list = this.getList();
         const self = this;

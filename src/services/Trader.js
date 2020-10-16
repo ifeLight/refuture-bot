@@ -24,7 +24,7 @@ class Trader {
                 instances.forEach(instance => {
                     strategyManager.add(instance);
                 });
-                strategyManager.runStrategies();
+                await strategyManager.runStrategies();
             })()
             .catch((err) => {
                 throw err;
