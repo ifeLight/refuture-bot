@@ -233,7 +233,7 @@ class StrategyManager {
                 await this.runIndicatorsInitials(strat);
                 await this.runSafetiesInitials(strat);
             } catch (error) {
-                self.logger.erro(`Initial Forever Loop: { Error in the loop Initalization [${exchangeName}:${symbol}] (${error.message})`)
+                self.logger.erro(`Initial Forever Loop: Error in the loop Initalization [${exchangeName}:${symbol}] (${error.message})`)
             }
         }
 
@@ -245,7 +245,7 @@ class StrategyManager {
                     await this.runSafetiesStrategyUnit(strat);
                     this.counter(symbol, exchangeName, counterPeriodLog);
                 } catch (error) {
-                    self.logger.warn(`Forever Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`);
+                    self.logger.warn(`Forever Loop: Error in the loop [${exchangeName}:${symbol}] (${error.message})`);
                 }
             }
         }

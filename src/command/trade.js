@@ -20,6 +20,7 @@ module.exports = async function (instanceFilePath) {
     try {
         await runTradeServices(instances);
     } catch (error) {
-        console.error("Trade Service Failed while running")
+        console.error("Trade Service Failed while running");
+        process.exit();
     }
 }
