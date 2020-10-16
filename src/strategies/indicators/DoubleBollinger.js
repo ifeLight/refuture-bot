@@ -36,7 +36,7 @@ module.exports = class {
 
     async period(indicatorPeriod, options) {
         try {
-            const { period, largePeriod, smallLength, largeLength, smallDeviation, largeDeviation} = options;
+            const { period, largePeriod, } = options;
             this.options = options;
             this.indicatorPeriod = indicatorPeriod;
             this.SignalResult = indicatorPeriod.SignalResult;
@@ -45,6 +45,7 @@ module.exports = class {
 
             const lastPrice = indicatorPeriod.getLastPrice();
             const lastSignal = indicatorPeriod.getLastSignal();
+            const presentTime = indicatorPeriod.getTime();
 
             // Only allow this indicator to run 
             // At the early stage of the candle
@@ -64,7 +65,7 @@ module.exports = class {
                 largeIncompleteCandle = largeCandles.pop();
             }
 
-            return calculateSignal(smallCandles, largeCandles);
+            return this.calculateSignal(smallCandles, largeCandles);
 
           
         } catch (error) {
@@ -75,13 +76,80 @@ module.exports = class {
     calculateSignal(smallCandles, largeCandles) {
         const { period, largePeriod} = this.options;
         this.createBands(smallCandles, largeCandles);
+        const isLargeLong = this.isLargeCandlesLongFormed(largeCandles);
+        const isLargeShort = this.isLargeCandlesShortFormed(largeCandles)
+        const isSmallLong = this.isSmallCandlesLongFormed(smallCandles);
+        const isSmallShort = this.isSmallCandlesShortFormed(smallCandles);
+        console.log('---------------------')
+        console.log(`isLargeLong - ${isLargeLong}`)
+        console.log(`isLargeShort - ${isLargeShort}`)
+        console.log(`isSmallLong - ${isSmallLong}`)
+        console.log(`isSmallShort - ${isSmallShort}`)
+        console.log('---------------------')
 
+        if (isLargeLong && isSmallLong) {
+            return this.SignalResult.createSignal('long')
+        }
+
+        if (isLargeShort && isSmallShort) {
+            return this.SignalResult.createSignal('short')
+        }
+        return this.SignalResult.createEmptySignal();
+    }
+
+    isLargeCandlesLongFormed(largeCandles) {
+        const candlesBullished = this.isBullishPatternFormed(largeCandles);
+        const lastCandle = largeCandles[largeCandles.length - 1];
+        const lowerOpenCheck = lastCandle.open < this.largeBBandsMinor.lower;
+        const lowerCloseCheck = lastCandle.close < this.largeBBandsMain.middle;
+        const upperOpenCheck = lastCandle.open > this.largeBBandsMain.middle;
+        const upperCloseCheck = lastCandle.close > this.largeBBandsMinor.upper;
+        const lowerBullish = lowerOpenCheck && lowerCloseCheck;
+        const upperBullish = upperOpenCheck && upperCloseCheck;
+        return lowerBullish;
+    }
+
+    isLargeCandlesShortFormed (largeCandles) {
+        const candlesBullished = this.isBearishPatternFormed(largeCandles);
+        const lastCandle = largeCandles[largeCandles.length - 1];
+        const lowerOpenCheck = lastCandle.open < this.largeBBandsMain.middle;
+        const lowerCloseCheck = lastCandle.close < this.largeBBandsMinor.lower;
+        const upperOpenCheck = lastCandle.open > this.largeBBandsMinor.upper;
+        const upperCloseCheck = lastCandle.close > this.largeBBandsMain.middle;
+        const lowerBullish = lowerOpenCheck && lowerCloseCheck;
+        const upperBullish = upperOpenCheck && upperCloseCheck;
+        return lowerBullish;
+    }
+
+    isSmallCandlesLongFormed(smallCandles) {
+        const candlesBullished = this.isBullishPatternFormed(smallCandles);
+        const lastCandle = smallCandles[smallCandles.length - 1];
+        const lowerOpenCheck = lastCandle.open < this.smallBBandsMinor.lower;
+        const lowerCloseCheck = lastCandle.close < this.smallBBandsMain.middle;
+        const upperOpenCheck = lastCandle.open > this.smallBBandsMain.middle;
+        const upperCloseCheck = lastCandle.close > this.smallBBandsMinor.upper;
+        const lowerBullish = lowerOpenCheck && lowerCloseCheck;
+        const upperBullish = upperOpenCheck && upperCloseCheck;
+        return lowerBullish;
+    }
+
+    isSmallCandlesShortFormed (smallCandles) {
+        const candlesBullished = this.isBearishPatternFormed(smallCandles);
+        const lastCandle = smallCandles[smallCandles.length - 1];
+        const lowerOpenCheck = lastCandle.open < this.smallBBandsMain.middle;
+        const lowerCloseCheck = lastCandle.close < this.smallBBandsMinor.lower;
+        const upperOpenCheck = lastCandle.open > this.smallBBandsMinor.upper;
+        const upperCloseCheck = lastCandle.close > this.smallBBandsMain.middle;
+        const lowerBullish = lowerOpenCheck && lowerCloseCheck;
+        const upperBullish = upperOpenCheck && upperCloseCheck;
+        return lowerBullish;
     }
 
     createBands (smallCandles, largeCandles) {
         const { period, largePeriod, smallLength, largeLength, smallDeviation, largeDeviation} = this.options;
         const smallClosePrices = smallCandles.map((candle) => candle.close);
         const largeClosePrices = largeCandles.map((candle) => candle.close);
+
         let smallBBandsMainInput = {
             period: smallLength,
             values: smallClosePrices,
@@ -161,6 +229,7 @@ module.exports = class {
         const isDirectionLong = this.isCandleDirection(lastCandle);
         const cond1 = res.bullishengulfingpattern || res.threewhitesoldiers ;
         const cond2 = res.bullishhammerstick || res.abandonedbaby;
+        // console.log(`Bullish - ${(cond1 || cond2) && isDirectionLong}`);
         return (cond1 || cond2) && isDirectionLong;
     }
 
@@ -170,6 +239,7 @@ module.exports = class {
         const isDirectionShort = this.isCandleDirection(lastCandle, 'short');
         const cond1 = res.bearishengulfingpattern || res.threeblackcrows ;
         const cond2 = res.shootingstar || res.eveningdojistar;
+        // console.log(`Bearish - ${(cond1 || cond2) && isDirectionShort}`);
         return (cond1 || cond2) && isDirectionShort;
     }
     
