@@ -51,14 +51,6 @@ module.exports = class {
             const presentTime = indicatorPeriod.getTime();
             const candles = indicatorPeriod.indicatorBuilder.get('candles');
 
-            //Lines generator configuration
-            this.generateLinesConfig = {
-                candles, candleDepth, 
-                maxLines: 5, 
-                lineAllowancePercentage: 0.1, 
-                priceLineDiffPercentage: 2
-            }
-
             // Only allow this indicator to run 
             // At the early stage of the candle
             const lastCandle = candles[candles.length - 1]
@@ -72,6 +64,15 @@ module.exports = class {
             if (!this.isLastCandleComplete(candles, presentTime)) {
                 incompleteCandle = candles.pop();
             }
+
+            //Lines generator configuration
+            this.generateLinesConfig = {
+                candles, candleDepth, 
+                maxLines: 5, 
+                lineAllowancePercentage: 0.1, 
+                priceLineDiffPercentage: 2
+            }
+            
             return this.calculateSignal(candles);
 
         } catch (error) {
@@ -385,8 +386,12 @@ module.exports = class {
 
         if (!fetchedUpperLine || !fetchedLowerLine) {
             generatedLines = generateLines(generateLinesConfig);
-            lowerLine = fetchedLowerLine ? fetchedLowerLine : generatedLines.lowerLines[0];
-            upperLine = fetchedUpperLine ? fetchedUpperLine : generatedLines.upperLines[0]
+            if (!fetchedUpperLine) {
+                upperLine = fetchedUpperLine ? fetchedUpperLine : generatedLines.upperLines[0]
+            }
+            if (!fetchedLowerLine) {
+                lowerLine = fetchedLowerLine ? fetchedLowerLine : generatedLines.lowerLines[0];
+            }
             // Store Lines if available
             if (lowerLine) {
                 await this.storeLine(lowerLine, 'lower')
@@ -454,10 +459,12 @@ module.exports = class {
         if (!signalInLowerLineLong && !signalInLowerLineShort) {
             // Check the Validity of the lowerLine
             const stillValid = this.lineValidityCheck(lowerLine, lastFiveCandles);
-            if (!stillValid && !lowerLine) {
+            if (!stillValid || !lowerLine) {
                 generatedLines = generateLines(generateLinesConfig);
-                lowerLine = generatedLines.lowerLines[0];
-                await this.storeLine(lowerLine, 'lower')
+                if (generatedLines.lowerLines[0]) {
+                    lowerLine = generatedLines.lowerLines[0];
+                    await this.storeLine(lowerLine, 'lower')
+                }
             }
         }
 
@@ -466,8 +473,10 @@ module.exports = class {
             const stillValid = this.lineValidityCheck(upperLine, lastFiveCandles);
             if (!stillValid || !upperLine) {
                 generatedLines = generateLines(generateLinesConfig);
-                upperLine = generatedLines.upperLines[0];
-                await this.storeLine(upperLine, 'upper');
+                if (generatedLines.upperLines[0]) {
+                    upperLine = generatedLines.upperLines[0];
+                    await this.storeLine(upperLine, 'upper');
+                }
             }
         }
 
