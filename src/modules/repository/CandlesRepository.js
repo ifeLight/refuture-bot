@@ -103,6 +103,12 @@ module.exports = class CandlesRepository {
             await this.storeMongoDB(data, true);
         }
     }
+    /**
+     * It can be dicovered that some cases
+     * The candles may not be complete
+     * and might also be duplicated
+     * And an adjustment is been made from that
+     */
 
     async fetchCandlesByTimeDifference({exchange, symbol, period, startTime, endTime, quick=false}) {
         try {
@@ -159,7 +165,10 @@ module.exports = class CandlesRepository {
                 const startTime = new Date(Date.now() - (timeDifference * length));
                 const fromExchange = await exchange.fetchCandles(symbol, period, startTime);
                 console.log(`From Exchange: ${fromExchange.length}`);
-                await this.storeToDatabase(fromExchange);
+                this.storeToDatabase(fromExchange); // it shouldnt be waited for
+                const exchangeResp = this.fromExchangeResponse(fromExchange);
+                console.log(`Exchange Response: ${exchangeResp.length}`);
+                return exchangeResp;
             } else {
                 return fromDatabase;
             }
