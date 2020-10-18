@@ -220,12 +220,13 @@ class StrategyManager {
         if (this._counterObj[key] % interval === 0) {
             console.log(`Strategy Running [${key}]: ${this._counterObj[key]} - Interval (${interval})`)
         }
-        console.log(`Strategy Running [${key}]: ${this._counterObj[key]} - Interval (${interval})`)
+        // console.log(`Strategy Running [${key}]: ${this._counterObj[key]} - Interval (${interval})`)
         this._counterObj[key]++;
     }
 
     async runStrategies() {
         const counterPeriodLog = config.get('strategy.counterPeriodLog');
+        const executionType = config.get('strategy.executionType')
         const list = this.getList();
         const self = this;
         for (const strat of list) {
@@ -238,17 +239,43 @@ class StrategyManager {
             }
         }
 
-        while (true) {
-            for (const strat of list) {
-                const { symbol, exchange: exchangeName} = strat;
+        async function runStrat(strat)  {
+            const { symbol, exchange: exchangeName} = strat;
+            try {
+                await self.runIndicatorStrategyUnit(strat);
+                await self.runSafetiesStrategyUnit(strat);
+                self.counter(symbol, exchangeName, counterPeriodLog);
+            } catch (error) {
+                self.logger.warn(`Forever Loop: Error in the loop [${exchangeName}:${symbol}] (${error.message})`);
+            }
+        }
+
+        function parallelExec ()  {
+            return new Promise((resolve, reject) => {
                 try {
-                    await this.runIndicatorStrategyUnit(strat);
-                    await this.runSafetiesStrategyUnit(strat);
-                    this.counter(symbol, exchangeName, counterPeriodLog);
+                    list.forEach(async (strat) => {
+                       while (true) {
+                        await runStrat(strat);
+                       }
+                    })
                 } catch (error) {
-                    self.logger.warn(`Forever Loop: Error in the loop [${exchangeName}:${symbol}] (${error.message})`);
+                    reject(error.message);
+                }
+            });
+        }
+
+        async function seriesExec() {
+            while (true) {
+                for (const strat of list) {
+                    await runStrat(strat);
                 }
             }
+        }
+
+        if (executionType == 'parallel') {
+            await parallelExec();
+        } else {
+            await seriesExec();
         }
     }
 

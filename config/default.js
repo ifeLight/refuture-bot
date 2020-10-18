@@ -13,6 +13,7 @@ const {
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID,
     PORT,
+    EXECUTION_TYPE
 } = process.env;
 
 module.exports = {
@@ -25,6 +26,7 @@ module.exports = {
     },
     strategy: {
         counterPeriodLog: 200,
+        executionType: EXECUTION_TYPE || 'parallel' // Could be 'parallel' || 'series'
     },
     exchange: {
         binance: {
