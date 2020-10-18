@@ -166,25 +166,25 @@ module.exports = class CandlesRepository {
             const currentApprovedSize = this._approvedSize[approvedSizekey];
 
 
-            console.log(`Required Length: ${length}`)
+            // console.log(`Required Length: ${length}`)
             this.createEvent(exchange, symbol, period);
             const fromDatabase = await this.CandleModel.fetchCandles({period, exchangeName, symbol, number: length, ...autoConfig});
-            console.log(`From database: ${fromDatabase.length}`);
+            // console.log(`From database: ${fromDatabase.length}`);
             if ((fromDatabase.length >= length) || (currentApprovedSize && (fromDatabase.length >= currentApprovedSize))) {
                 return fromDatabase;
             } else {
                 const timeDifference = periodToTimeDiff(period);
                 const startTime = new Date(Date.now() - (timeDifference * length));
                 const fromExchange = await exchange.fetchCandles(symbol, period, startTime);
-                console.log(`From Exchange: ${fromExchange.length}`);
+                // console.log(`From Exchange: ${fromExchange.length}`);
                 await this.storeToDatabase(fromExchange);
-                const exchangeResp = this.fromExchangeResponse(fromExchange);
-                console.log(`Exchange Response: ${exchangeResp.length}`);
+                // const exchangeResp = this.fromExchangeResponse(fromExchange);
+                // console.log(`Exchange Response: ${exchangeResp.length}`);
                 // return exchangeResp;
             }
             const refetched = await this.CandleModel.fetchCandles({period, exchangeName, symbol, number: length});
             this._approvedSize[approvedSizekey] = refetched.length;
-            console.log(`Refetched: ${refetched.length}`);
+            // console.log(`Refetched: ${refetched.length}`);
             return refetched;
         } catch (error) {
             this.logger.error(`Candles Repository (fetchCandlesByNumberFromNow): Error Fetching Candles [${exchange.name}: ${symbol}] (${error.message})`);
