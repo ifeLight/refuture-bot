@@ -220,6 +220,7 @@ class StrategyManager {
         if (this._counterObj[key] % interval === 0) {
             console.log(`Strategy Running [${key}]: ${this._counterObj[key]} - Interval (${interval})`)
         }
+        console.log(`Strategy Running [${key}]: ${this._counterObj[key]} - Interval (${interval})`)
         this._counterObj[key]++;
     }
 

@@ -80,12 +80,12 @@ module.exports = class {
         const isLargeShort = this.isLargeCandlesShortFormed(largeCandles)
         const isSmallLong = this.isSmallCandlesLongFormed(smallCandles);
         const isSmallShort = this.isSmallCandlesShortFormed(smallCandles);
-        console.log('---------------------')
-        console.log(`isLargeLong - ${isLargeLong}`)
-        console.log(`isLargeShort - ${isLargeShort}`)
-        console.log(`isSmallLong - ${isSmallLong}`)
-        console.log(`isSmallShort - ${isSmallShort}`)
-        console.log('---------------------')
+        // console.log('---------------------')
+        // console.log(`isLargeLong - ${isLargeLong}`)
+        // console.log(`isLargeShort - ${isLargeShort}`)
+        // console.log(`isSmallLong - ${isSmallLong}`)
+        // console.log(`isSmallShort - ${isSmallShort}`)
+        // console.log('---------------------')
 
         if (isLargeLong && isSmallLong) {
             return this.SignalResult.createSignal('long')
@@ -100,49 +100,61 @@ module.exports = class {
     isLargeCandlesLongFormed(largeCandles) {
         const candlesBullished = this.isBullishPatternFormed(largeCandles);
         const lastCandle = largeCandles[largeCandles.length - 1];
-        const lowerOpenCheck = lastCandle.open < this.largeBBandsMinor.lower;
-        const lowerCloseCheck = lastCandle.close < this.largeBBandsMain.middle;
-        const upperOpenCheck = lastCandle.open > this.largeBBandsMain.middle;
-        const upperCloseCheck = lastCandle.close > this.largeBBandsMinor.upper;
+        const lastLargeBBandsMainMiddle = this.largeBBandsMain[this.largeBBandsMain.length - 1].middle;
+        const lastLargeBBandsMinorLower = this.largeBBandsMinor[this.largeBBandsMinor.length -1].lower;
+        const lastLargeBBandsMinorUpper = this.largeBBandsMinor[this.largeBBandsMinor.length -1].upper;
+        const lowerOpenCheck = lastCandle.open < lastLargeBBandsMinorLower;
+        const lowerCloseCheck = lastCandle.close < lastLargeBBandsMainMiddle;
+        const upperOpenCheck = lastCandle.open > lastLargeBBandsMainMiddle;
+        const upperCloseCheck = lastCandle.close > lastLargeBBandsMinorUpper;
         const lowerBullish = lowerOpenCheck && lowerCloseCheck;
         const upperBullish = upperOpenCheck && upperCloseCheck;
-        return lowerBullish;
+        return (lowerBullish || upperBullish) && candlesBullished;
     }
 
     isLargeCandlesShortFormed (largeCandles) {
-        const candlesBullished = this.isBearishPatternFormed(largeCandles);
+        const candlesBearished = this.isBearishPatternFormed(largeCandles);
         const lastCandle = largeCandles[largeCandles.length - 1];
-        const lowerOpenCheck = lastCandle.open < this.largeBBandsMain.middle;
-        const lowerCloseCheck = lastCandle.close < this.largeBBandsMinor.lower;
-        const upperOpenCheck = lastCandle.open > this.largeBBandsMinor.upper;
-        const upperCloseCheck = lastCandle.close > this.largeBBandsMain.middle;
+        const lastLargeBBandsMainMiddle = this.largeBBandsMain[this.largeBBandsMain.length - 1].middle;
+        const lastLargeBBandsMinorLower = this.largeBBandsMinor[this.largeBBandsMinor.length -1].lower;
+        const lastLargeBBandsMinorUpper = this.largeBBandsMinor[this.largeBBandsMinor.length -1].upper;
+        const lowerOpenCheck = lastCandle.open < lastLargeBBandsMainMiddle;
+        const lowerCloseCheck = lastCandle.close < lastLargeBBandsMinorLower;
+        const upperOpenCheck = lastCandle.open > lastLargeBBandsMinorUpper;
+        const upperCloseCheck = lastCandle.close > lastLargeBBandsMainMiddle;
         const lowerBullish = lowerOpenCheck && lowerCloseCheck;
         const upperBullish = upperOpenCheck && upperCloseCheck;
-        return lowerBullish;
+        return (lowerBullish || upperBullish) && candlesBearished;
     }
 
     isSmallCandlesLongFormed(smallCandles) {
         const candlesBullished = this.isBullishPatternFormed(smallCandles);
         const lastCandle = smallCandles[smallCandles.length - 1];
-        const lowerOpenCheck = lastCandle.open < this.smallBBandsMinor.lower;
-        const lowerCloseCheck = lastCandle.close < this.smallBBandsMain.middle;
-        const upperOpenCheck = lastCandle.open > this.smallBBandsMain.middle;
-        const upperCloseCheck = lastCandle.close > this.smallBBandsMinor.upper;
+        const lastSmallBBandsMainMiddle = this.smallBBandsMain[this.smallBBandsMain.length - 1].middle;
+        const lastSmallBBandsMinorLower = this.smallBBandsMinor[this.smallBBandsMinor.length -1].lower;
+        const lastSmallBBandsMinorUpper = this.smallBBandsMinor[this.smallBBandsMinor.length -1].upper;
+        const lowerOpenCheck = lastCandle.open < lastSmallBBandsMinorLower;
+        const lowerCloseCheck = lastCandle.close < lastSmallBBandsMainMiddle;
+        const upperOpenCheck = lastCandle.open > lastSmallBBandsMainMiddle;
+        const upperCloseCheck = lastCandle.close > lastSmallBBandsMinorUpper;
         const lowerBullish = lowerOpenCheck && lowerCloseCheck;
         const upperBullish = upperOpenCheck && upperCloseCheck;
-        return lowerBullish;
+        return (lowerBullish || upperBullish) && candlesBullished;
     }
 
     isSmallCandlesShortFormed (smallCandles) {
-        const candlesBullished = this.isBearishPatternFormed(smallCandles);
+        const candlesBearished = this.isBearishPatternFormed(smallCandles);
         const lastCandle = smallCandles[smallCandles.length - 1];
-        const lowerOpenCheck = lastCandle.open < this.smallBBandsMain.middle;
-        const lowerCloseCheck = lastCandle.close < this.smallBBandsMinor.lower;
-        const upperOpenCheck = lastCandle.open > this.smallBBandsMinor.upper;
-        const upperCloseCheck = lastCandle.close > this.smallBBandsMain.middle;
+        const lastSmallBBandsMainMiddle = this.smallBBandsMain[this.smallBBandsMain.length - 1].middle;
+        const lastSmallBBandsMinorLower = this.smallBBandsMinor[this.smallBBandsMinor.length -1].lower;
+        const lastSmallBBandsMinorUpper = this.smallBBandsMinor[this.smallBBandsMinor.length -1].upper;
+        const lowerOpenCheck = lastCandle.open < lastSmallBBandsMainMiddle;
+        const lowerCloseCheck = lastCandle.close < lastSmallBBandsMinorLower;
+        const upperOpenCheck = lastCandle.open > lastSmallBBandsMinorUpper;
+        const upperCloseCheck = lastCandle.close > lastSmallBBandsMainMiddle;
         const lowerBullish = lowerOpenCheck && lowerCloseCheck;
         const upperBullish = upperOpenCheck && upperCloseCheck;
-        return lowerBullish;
+        return (lowerBullish || upperBullish) && candlesBearished;
     }
 
     createBands (smallCandles, largeCandles) {

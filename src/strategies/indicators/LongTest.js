@@ -31,7 +31,7 @@ module.exports = class {
             const lastPrice = indicatorPeriod.getLastPrice();
             const lastSignal = indicatorPeriod.getLastSignal();
             const candles = indicatorPeriod.indicatorBuilder.get('candles');
-            return indicatorPeriod.createSignal('short');
+            return indicatorPeriod.createSignal('long');
 
         } catch (error) {
              console.error(error);
