@@ -153,7 +153,7 @@ module.exports = class CandlesRepository {
     async fetchCandlesByNumberFromNow({exchange, symbol, period, length}) {
         try {
             const {name: exchangeName} = exchange;
-            const autoConfig = {};
+            const autoConfig = {to: Date.now()};
             if (this._defaultToDate) {
                 autoConfig.to = this._defaultToDate; 
             }
@@ -182,7 +182,8 @@ module.exports = class CandlesRepository {
                 // console.log(`Exchange Response: ${exchangeResp.length}`);
                 // return exchangeResp;
             }
-            const refetched = await this.CandleModel.fetchCandles({period, exchangeName, symbol, number: length});
+            // Had to add autoConfig because of backtest
+            const refetched = await this.CandleModel.fetchCandles({period, exchangeName, symbol, number: length, ...autoConfig});
             this._approvedSize[approvedSizekey] = refetched.length;
             // console.log(`Refetched: ${refetched.length}`);
             return refetched;
