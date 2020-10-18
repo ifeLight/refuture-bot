@@ -165,7 +165,7 @@ module.exports = class CandlesRepository {
                 const startTime = new Date(Date.now() - (timeDifference * length));
                 const fromExchange = await exchange.fetchCandles(symbol, period, startTime);
                 console.log(`From Exchange: ${fromExchange.length}`);
-                this.storeToDatabase(fromExchange); // it shouldnt be waited for
+                this.storeToDatabase(fromExchange, true); // it shouldnt be waited for
                 const exchangeResp = this.fromExchangeResponse(fromExchange);
                 console.log(`Exchange Response: ${exchangeResp.length}`);
                 return exchangeResp;
