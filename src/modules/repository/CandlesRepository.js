@@ -149,17 +149,23 @@ module.exports = class CandlesRepository {
             if (this._defaultToDate) {
                 autoConfig.to = this._defaultToDate; 
             }
+
+            console.log(`Required Length: ${length}`)
             this.createEvent(exchange, symbol, period);
             const fromDatabase = await this.CandleModel.fetchCandles({period, exchangeName, symbol, number: length, ...autoConfig});
+            console.log(`From database: ${fromDatabase.length}`)
             if (fromDatabase.length < length) {
                 const timeDifference = periodToTimeDiff(period);
                 const startTime = new Date(Date.now() - (timeDifference * length));
                 const fromExchange = await exchange.fetchCandles(symbol, period, startTime);
+                console.log(`From Exchange: ${fromExchange.length}`);
                 await this.storeToDatabase(fromExchange);
             } else {
                 return fromDatabase;
             }
-            return this.CandleModel.fetchCandles({period, exchangeName, symbol, number: length});
+            const refetched = this.CandleModel.fetchCandles({period, exchangeName, symbol, number: length});
+            console.log(`Refetched: ${refetched.length}`);
+            return refetched;
         } catch (error) {
             this.logger.error(`Candles Repository (fetchCandlesByNumberFromNow): Error Fetching Candles [${exchange.name}: ${symbol}] (${error.message})`);
         }
