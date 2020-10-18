@@ -8,6 +8,8 @@ const {
     abandonedbaby, eveningdojistar,
 } = require('technicalindicators');
 
+const TI = require('technicalindicators');
+
 const periodToTimeDiff = require('../../utils/periodToTimeDiff');
 
 module.exports = class {
@@ -87,19 +89,77 @@ module.exports = class {
         // console.log(`isSmallShort - ${isSmallShort}`)
         // console.log('---------------------')
 
-        if (isLargeLong && isSmallLong) {
+        const toRunLong = this.toRun(smallCandles, 'long');
+        const toRunShort = this.toRun(smallCandles, 'short');
+
+        if (isLargeLong && isSmallLong && toRunLong) {
             return this.SignalResult.createSignal('long')
         }
 
-        if (isLargeShort && isSmallShort) {
-            return this.SignalResult.createSignal('short')
+        if (isLargeShort && isSmallShort && toRunShort) {
+            return this.SignalResult.createSignal('short');
         }
         return this.SignalResult.createEmptySignal();
     }
 
+    toRun(candles, signal = 'long') {
+        const { useRSI, useIndicatorFilter} = this.options;
+        if (useRSI === true) {
+            if(!this.rsiCrossoverCheck(candles, signal)) return false;
+        }
+
+        if (useIndicatorFilter === true) {
+            if(!this.indicatorFilterCheck(candles, signal)) return false;
+        }
+        return true;
+    }
+
+    indicatorFilterCheck (candles, signal = 'long') {
+        const {indicatorFilterPeriod, indicatorFilter} = this.options;
+        const lastCandle = candles[candles.length - 1];
+        const theClosePrices = candles.map((candle) => candle.close);
+        const input = {
+            values: theClosePrices,
+            period: Number(indicatorFilterPeriod)
+        }
+        const indicator = TI[indicatorFilter.toLowerCase()];
+        const result = indicator(input);
+        const lastResult = result[result.length - 1];
+        if (signal == 'long'){
+            return lastCandle.close > lastResult;
+        }
+        if (signal == 'short'){
+            return lastCandle.close < lastResult;
+        }
+        return false;
+    } 
+
+    rsiCrossoverCheck(candles, signal = 'long') {
+        // signal can be long or short
+        // The RSI will check for a last value bullish sign
+        const {shortRSI, longRSI} = this.options;
+        const theClosePrices = candles.map((candle) => candle.close);
+        const longInput = {
+            values: theClosePrices,
+            period: longRSI
+        }
+        const shortInput = {
+            values: theClosePrices,
+            period: shortRSI
+        }
+        const longResult = rsi(longInput);
+        const shortResult = rsi(shortInput);
+        const longLastValue = longResult[longResult.length - 1]
+        const shortLastValue = shortResult[shortResult.length - 1]
+        if (signal === 'long') return shortLastValue > longLastValue;
+        if (signal === 'short') return shortLastValue < longLastValue;
+        return false;
+    }
+
     isLargeCandlesLongFormed(largeCandles) {
+        const lastCandle = largeCandles[largeCandles.length - 1]
+        const isDirectionLong = this.isCandleDirection(lastCandle);
         const candlesBullished = this.isBullishPatternFormed(largeCandles);
-        const lastCandle = largeCandles[largeCandles.length - 1];
         const lastLargeBBandsMainMiddle = this.largeBBandsMain[this.largeBBandsMain.length - 1].middle;
         const lastLargeBBandsMinorLower = this.largeBBandsMinor[this.largeBBandsMinor.length -1].lower;
         const lastLargeBBandsMinorUpper = this.largeBBandsMinor[this.largeBBandsMinor.length -1].upper;
@@ -113,8 +173,9 @@ module.exports = class {
     }
 
     isLargeCandlesShortFormed (largeCandles) {
+        const lastCandle = largeCandles[largeCandles.length - 1]
+        const isDirectionShort = this.isCandleDirection(lastCandle, 'short');
         const candlesBearished = this.isBearishPatternFormed(largeCandles);
-        const lastCandle = largeCandles[largeCandles.length - 1];
         const lastLargeBBandsMainMiddle = this.largeBBandsMain[this.largeBBandsMain.length - 1].middle;
         const lastLargeBBandsMinorLower = this.largeBBandsMinor[this.largeBBandsMinor.length -1].lower;
         const lastLargeBBandsMinorUpper = this.largeBBandsMinor[this.largeBBandsMinor.length -1].upper;
@@ -128,8 +189,9 @@ module.exports = class {
     }
 
     isSmallCandlesLongFormed(smallCandles) {
+        const lastCandle = smallCandles[smallCandles.length - 1]
+        const isDirectionLong = this.isCandleDirection(lastCandle);
         const candlesBullished = this.isBullishPatternFormed(smallCandles);
-        const lastCandle = smallCandles[smallCandles.length - 1];
         const lastSmallBBandsMainMiddle = this.smallBBandsMain[this.smallBBandsMain.length - 1].middle;
         const lastSmallBBandsMinorLower = this.smallBBandsMinor[this.smallBBandsMinor.length -1].lower;
         const lastSmallBBandsMinorUpper = this.smallBBandsMinor[this.smallBBandsMinor.length -1].upper;
@@ -143,8 +205,9 @@ module.exports = class {
     }
 
     isSmallCandlesShortFormed (smallCandles) {
+        const lastCandle = smallCandles[smallCandles.length - 1]
+        const isDirectionShort = this.isCandleDirection(lastCandle, 'short');
         const candlesBearished = this.isBearishPatternFormed(smallCandles);
-        const lastCandle = smallCandles[smallCandles.length - 1];
         const lastSmallBBandsMainMiddle = this.smallBBandsMain[this.smallBBandsMain.length - 1].middle;
         const lastSmallBBandsMinorLower = this.smallBBandsMinor[this.smallBBandsMinor.length -1].lower;
         const lastSmallBBandsMinorUpper = this.smallBBandsMinor[this.smallBBandsMinor.length -1].upper;
@@ -280,6 +343,12 @@ module.exports = class {
             largeDeviation: 2,
             smallIndicator: 'sma', // Yet to b implemented
             largeIndicator: 'sma',  // Yet to b implemented
+            longRSI: 14,
+            shortRSI: 6,
+            useRSI: true,
+            useIndicatorFilter: false, // Use an Indicator like the sma to filter out Some signals
+            indicatorFilterPeriod: 60,
+            indicatorFilter: 'ema',
         }
     }
 
