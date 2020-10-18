@@ -95,6 +95,8 @@ module.exports = class CandlesRepository {
 
     async storeToDatabase(data, quick = false) {
         if (this.CandleModel === CandleModel) {
+            // reverse the order
+            data.sort((a, b) => b.time - a.time);
             // console.log('storage 1')
             await this.storeMongoDB(data, quick);
         } else {
@@ -156,23 +158,32 @@ module.exports = class CandlesRepository {
                 autoConfig.to = this._defaultToDate; 
             }
 
+            // Meant to solve the probelm of Incomplete candles
+            if (!this._approvedSize) {
+                this._approvedSize = {};
+            }
+            const approvedSizekey = `${exchangeName}_${symbol}_${period}_${length}`;
+            const currentApprovedSize = this._approvedSize[approvedSizekey];
+
+
             console.log(`Required Length: ${length}`)
             this.createEvent(exchange, symbol, period);
             const fromDatabase = await this.CandleModel.fetchCandles({period, exchangeName, symbol, number: length, ...autoConfig});
-            console.log(`From database: ${fromDatabase.length}`)
-            if (fromDatabase.length < length) {
+            console.log(`From database: ${fromDatabase.length}`);
+            if ((fromDatabase.length >= length) || (currentApprovedSize && (fromDatabase.length >= currentApprovedSize))) {
+                return fromDatabase;
+            } else {
                 const timeDifference = periodToTimeDiff(period);
                 const startTime = new Date(Date.now() - (timeDifference * length));
                 const fromExchange = await exchange.fetchCandles(symbol, period, startTime);
                 console.log(`From Exchange: ${fromExchange.length}`);
-                this.storeToDatabase(fromExchange, true); // it shouldnt be waited for
+                await this.storeToDatabase(fromExchange);
                 const exchangeResp = this.fromExchangeResponse(fromExchange);
                 console.log(`Exchange Response: ${exchangeResp.length}`);
-                return exchangeResp;
-            } else {
-                return fromDatabase;
+                // return exchangeResp;
             }
             const refetched = await this.CandleModel.fetchCandles({period, exchangeName, symbol, number: length});
+            this._approvedSize[approvedSizekey] = refetched.length;
             console.log(`Refetched: ${refetched.length}`);
             return refetched;
         } catch (error) {
