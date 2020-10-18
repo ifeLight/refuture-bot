@@ -133,7 +133,7 @@ module.exports = class CandlesRepository {
                 return fromDatabase;
             }
             // console.time('Refetch Database');
-            const refetched = this.CandleModel.fetchCandles({period, number: numberOfCandlesNeeded,  exchangeName, symbol, from: startTime, to: endTime});
+            const refetched = await this.CandleModel.fetchCandles({period, number: numberOfCandlesNeeded,  exchangeName, symbol, from: startTime, to: endTime});
             // console.timeEnd('Refetch Database');
             return refetched;
         } catch (error) {
@@ -163,7 +163,7 @@ module.exports = class CandlesRepository {
             } else {
                 return fromDatabase;
             }
-            const refetched = this.CandleModel.fetchCandles({period, exchangeName, symbol, number: length});
+            const refetched = await this.CandleModel.fetchCandles({period, exchangeName, symbol, number: length});
             console.log(`Refetched: ${refetched.length}`);
             return refetched;
         } catch (error) {
