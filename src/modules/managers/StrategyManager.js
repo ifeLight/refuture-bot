@@ -266,8 +266,9 @@ class StrategyManager {
         const indicatorJobs = [];
 
         list.forEach((strat) => {
+            const id = indicatorJobs.length;
             const { symbol, exchange: exchangeName, tick = 5} = strat;
-            const crontTime = `1 */${tick} * * * *`;
+            const crontTime = `${id} */${tick} * * * *`;
             indicatorJobs[indicatorJobs.length] = schedule.scheduleJob(crontTime, async function () {
                 queueLock.close(symbol, exchangeName);
                 self.runIndicatorStrategyUnit(strat)
