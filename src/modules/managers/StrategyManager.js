@@ -1,6 +1,6 @@
 const config = require('config')
 // const cron = require('node-cron');
-// var CronJob = require('cron').CronJob;
+const CronJob = require('cron').CronJob;
 
 const schedule = require('node-schedule');
 
@@ -269,7 +269,7 @@ class StrategyManager {
             const id = indicatorJobs.length;
             const { symbol, exchange: exchangeName, tick = 5} = strat;
             const crontTime = `${id} */${tick} * * * *`;
-            indicatorJobs[indicatorJobs.length] = schedule.scheduleJob(crontTime, async function () {
+            indicatorJobs[indicatorJobs.length] = new CronJob(crontTime, async function () {
                 queueLock.close(symbol, exchangeName);
                 self.runIndicatorStrategyUnit(strat)
                 .then(() => {
@@ -280,7 +280,7 @@ class StrategyManager {
                     queueLock.open(symbol, exchangeName);
                     self.logger.error(`Indicator Forever Interval: Error in Running this Interval [${exchangeName}:${symbol}] (${error.message})`);
                 })
-            });
+            }, null, true);
         })
 
         const delay = (time) => {
@@ -303,7 +303,7 @@ class StrategyManager {
                     self.logger.warn(`Forever  safety Loop: Error in the loop [${exchangeName}:${symbol}] (${error.message})`);
                 }
             }
-        }``
+        }
 
         function parallelExec ()  {
             return new Promise((resolve, reject) => {
