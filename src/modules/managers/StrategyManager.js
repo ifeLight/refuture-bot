@@ -274,6 +274,7 @@ class StrategyManager {
                     self.indicatorCounter(symbol, exchangeName);
                 })
                 .catch((error) => {
+                    queueLock.open(symbol, exchangeName);
                     self.logger.error(`Indicator Forever Interval: Error in Running this Interval [${exchangeName}:${symbol}] (${error.message})`);
                 })
             });
