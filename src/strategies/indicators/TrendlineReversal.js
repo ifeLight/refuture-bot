@@ -27,7 +27,6 @@ module.exports = class {
             period,
             length
         });
-
     }
 
     async init(indicatorPeriod, options) {

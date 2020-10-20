@@ -25,7 +25,7 @@ module.exports = {
         port: PORT || 8100,
     },
     strategy: {
-        counterPeriodLog: 200,
+        counterPeriodLog: 500,
         executionType: EXECUTION_TYPE || 'parallel' // Could be 'parallel' || 'series'
     },
     exchange: {

@@ -1,4 +1,8 @@
 const config = require('config')
+// const cron = require('node-cron');
+// var CronJob = require('cron').CronJob;
+
+const schedule = require('node-schedule');
 
 const IndicatorManager = require('./IndicatorManager');
 const PolicyManger = require('./PolicyManager');
@@ -10,6 +14,7 @@ const OrderExecutor = require('./manager-helpers/OrderExecutor')
 const ExchangePair = require('../pair/ExchangePair');
 
 const SignalResult = require('../../classes/SignalResult');
+const QueueLock = require("../../classes/QueueLock")
 
 class StrategyManager {
     constructor ({eventEmitter, logger, notifier, exchangeManager, candlesRepository }) {
@@ -220,15 +225,29 @@ class StrategyManager {
         if (this._counterObj[key] % interval === 0) {
             console.log(`Strategy Running [${key}]: ${this._counterObj[key]} - Interval (${interval})`)
         }
-        // console.log(`Strategy Running [${key}]: ${this._counterObj[key]} - Interval (${interval})`)
         this._counterObj[key]++;
+    }
+
+    indicatorCounter(symbol, exchangeName) {
+        if (!this._indCounterObj) {
+            this._indCounterObj = {}
+        }
+        const key = `${symbol}_${exchangeName}`;
+        if (!this._indCounterObj[key]){
+            this._indCounterObj[key] = 0;
+        }
+        console.log(`Indicator Running [${key}]: ${this._indCounterObj[key]} - ${new Date().toLocaleString()}` )
+        this._indCounterObj[key]++;
     }
 
     async runStrategies() {
         const counterPeriodLog = config.get('strategy.counterPeriodLog');
-        const executionType = config.get('strategy.executionType')
+        const executionType = config.get('strategy.executionType');
+        const queueLock = new QueueLock();
         const list = this.getList();
         const self = this;
+
+        // Run Initials
         for (const strat of list) {
             const { symbol, exchange: exchangeName} = strat;
             try {
@@ -239,16 +258,48 @@ class StrategyManager {
             }
         }
 
+        // Run Indicator Loop In Intervals
+        for (const strat of list) {
+            
+        }
+
+        list.forEach((strat) => {
+            const { symbol, exchange: exchangeName, tick = 5} = strat;
+            const crontTime = `*/${tick} * * * *`;
+            let j = schedule.scheduleJob(crontTime, function () {
+                queueLock.close(symbol, exchangeName);
+                self.runIndicatorStrategyUnit(strat)
+                .then(() => {
+                    queueLock.open(symbol, exchangeName);
+                    self.indicatorCounter(symbol, exchangeName);
+                })
+                .catch((error) => {
+                    self.logger.error(`Indicator Forever Interval: Error in Running this Interval [${exchangeName}:${symbol}] (${error.message})`);
+                })
+            });
+        })
+
+        const delay = (time) => {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve()
+                }, time);
+            });
+        };
+
+
         async function runStrat(strat)  {
             const { symbol, exchange: exchangeName} = strat;
-            try {
-                await self.runIndicatorStrategyUnit(strat);
-                await self.runSafetiesStrategyUnit(strat);
-                self.counter(symbol, exchangeName, counterPeriodLog);
-            } catch (error) {
-                self.logger.warn(`Forever Loop: Error in the loop [${exchangeName}:${symbol}] (${error.message})`);
+            if (queueLock.isOpen(symbol, exchangeName)) {
+                try {
+                    await delay(3000)
+                    await self.runSafetiesStrategyUnit(strat);
+                    self.counter(symbol, exchangeName, counterPeriodLog);
+                } catch (error) {
+                    self.logger.warn(`Forever  safety Loop: Error in the loop [${exchangeName}:${symbol}] (${error.message})`);
+                }
             }
-        }
+        }``
 
         function parallelExec ()  {
             return new Promise((resolve, reject) => {
@@ -277,6 +328,7 @@ class StrategyManager {
         } else {
             await seriesExec();
         }
+        console.log('DONE...')
     }
 
 }

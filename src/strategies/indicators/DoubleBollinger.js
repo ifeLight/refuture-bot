@@ -19,14 +19,14 @@ module.exports = class {
     }
 
     buildIndicators(indicatorBuilder, options) {
-        const {period, largePeriod, smallLength, largeLength} = options;
+        const {period, largePeriod, smallLength, largeLength, indicatorFilterPeriod} = options;
         indicatorBuilder.add('small_candles', 'candles', {
             period: period,
-            length : smallLength + 20
+            length : smallLength + parseInt(indicatorFilterPeriod)
         })
         indicatorBuilder.add('large_candles', 'candles', {
             period: largePeriod,
-            length : largeLength + 20
+            length : largeLength + parseInt(indicatorFilterPeriod)
         })
     }
 
@@ -76,12 +76,18 @@ module.exports = class {
     }
 
     calculateSignal(smallCandles, largeCandles) {
-        const { period, largePeriod} = this.options;
+        const { period, largePeriod, type, safeEntry} = this.options;
         this.createBands(smallCandles, largeCandles);
-        const isLargeLong = this.isLargeCandlesLongFormed(largeCandles);
-        const isLargeShort = this.isLargeCandlesShortFormed(largeCandles)
-        const isSmallLong = this.isSmallCandlesLongFormed(smallCandles);
-        const isSmallShort = this.isSmallCandlesShortFormed(smallCandles);
+        let isLargeLong = true, isLargeShort = true; 
+        let isSmallLong, isSmallShort;
+        if (type === 'double') {
+            isLargeLong = this.isLargeCandlesLongFormed(largeCandles);
+            isLargeShort = this.isLargeCandlesShortFormed(largeCandles)
+        }
+        isSmallLong = this.isSmallCandlesLongFormed(smallCandles, safeEntry);
+        isSmallShort = this.isSmallCandlesShortFormed(smallCandles, safeEntry);
+
+
         // console.log('---------------------')
         // console.log(`isLargeLong - ${isLargeLong}`)
         // console.log(`isLargeShort - ${isLargeShort}`)
@@ -188,7 +194,7 @@ module.exports = class {
         return (lowerBullish || upperBullish) && candlesBearished;
     }
 
-    isSmallCandlesLongFormed(smallCandles) {
+    isSmallCandlesLongFormed(smallCandles, safe = false) {
         const lastCandle = smallCandles[smallCandles.length - 1]
         const isDirectionLong = this.isCandleDirection(lastCandle);
         const candlesBullished = this.isBullishPatternFormed(smallCandles);
@@ -201,10 +207,10 @@ module.exports = class {
         const upperCloseCheck = lastCandle.close > lastSmallBBandsMinorUpper;
         const lowerBullish = lowerOpenCheck && lowerCloseCheck;
         const upperBullish = upperOpenCheck && upperCloseCheck;
-        return (lowerBullish || upperBullish) && candlesBullished;
+        return (lowerBullish || (upperBullish && !safe)) && candlesBullished;
     }
 
-    isSmallCandlesShortFormed (smallCandles) {
+    isSmallCandlesShortFormed (smallCandles, safe = false) {
         const lastCandle = smallCandles[smallCandles.length - 1]
         const isDirectionShort = this.isCandleDirection(lastCandle, 'short');
         const candlesBearished = this.isBearishPatternFormed(smallCandles);
@@ -217,7 +223,7 @@ module.exports = class {
         const upperCloseCheck = lastCandle.close > lastSmallBBandsMainMiddle;
         const lowerBullish = lowerOpenCheck && lowerCloseCheck;
         const upperBullish = upperOpenCheck && upperCloseCheck;
-        return (lowerBullish || upperBullish) && candlesBearished;
+        return ((lowerBullish && !safe) || upperBullish) && candlesBearished;
     }
 
     createBands (smallCandles, largeCandles) {
@@ -254,6 +260,7 @@ module.exports = class {
     }
 
     isLastCandleComplete(candles, presentTime) {
+        // console.log(candles.length)
         const candle1Time = candles[candles.length - 2].time;
         const candle2Time = candles[candles.length - 3].time
         const normalPeriodTimeDiff = Math.abs(candle1Time - candle2Time);
@@ -349,6 +356,8 @@ module.exports = class {
             useIndicatorFilter: false, // Use an Indicator like the sma to filter out Some signals
             indicatorFilterPeriod: 60,
             indicatorFilter: 'ema',
+            type: 'double', // It can be 'single' or 'double'
+            safeEntry: false
         }
     }
 
