@@ -280,7 +280,8 @@ class StrategyManager {
                     queueLock.open(symbol, exchangeName);
                     self.logger.error(`Indicator Forever Interval: Error in Running this Interval [${exchangeName}:${symbol}] (${error.message})`);
                 })
-            }, null, true);
+            });
+            indicatorJobs[id].start();
         })
 
         const delay = (time) => {
