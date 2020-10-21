@@ -26,6 +26,7 @@
     "config": "^3.3.1",
     "cors": "^2.8.5",
     "cron": "^1.8.2",
+    "cron-emitter": "^1.2.2",
     "dotenv": "^8.2.0",
     "hyperparameters": "^0.25.6",
     "lodash": "^4.17.19",

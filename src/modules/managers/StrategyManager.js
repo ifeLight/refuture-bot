@@ -1,8 +1,8 @@
 const config = require('config')
 // const cron = require('node-cron');
-// const CronJob = require('cron').CronJob;
+// // const CronJob = require('cron').CronJob;
 
-const schedule = require('node-schedule');
+// // const schedule = require('node-schedule');
 
 const IndicatorManager = require('./IndicatorManager');
 const PolicyManger = require('./PolicyManager');
@@ -15,6 +15,7 @@ const ExchangePair = require('../pair/ExchangePair');
 
 const SignalResult = require('../../classes/SignalResult');
 const QueueLock = require("../../classes/QueueLock")
+const IntervalEvent = require('../../classes/IntervalEvent')
 
 class StrategyManager {
     constructor ({eventEmitter, logger, notifier, exchangeManager, candlesRepository }) {
@@ -27,6 +28,7 @@ class StrategyManager {
         this.candlesRepository = candlesRepository;
         this.indicatorJobs = [];
         this.queueLock = new QueueLock();
+        this.intervalEvent = new IntervalEvent(this.eventEmitter);
     }
 
     async init() {
@@ -242,11 +244,26 @@ class StrategyManager {
         this._indCounterObj[key]++;
     }
 
+    runIndicatorFromeEvent(strat) {
+        const { symbol, exchange: exchangeName} = strat;
+        this.queueLock.close(symbol, exchangeName);
+        this.runIndicatorStrategyUnit(strat)
+        .then(() => {
+            this.queueLock.open(symbol, exchangeName);
+            this.indicatorCounter(symbol, exchangeName);
+        })
+        .catch((error) => {
+            this.queueLock.open(symbol, exchangeName);
+            this.logger.error(`Indicator Forever Interval: Error in Running this Interval [${exchangeName}:${symbol}] (${error.message})`);
+        })
+    }
+
     async runStrategies() {
         const counterPeriodLog = config.get('strategy.counterPeriodLog');
         const executionType = config.get('strategy.executionType');
         const list = this.getList();
         const self = this;
+        const lastRunNumbers = {}
 
         const delay = (time) => {
             return new Promise((resolve, reject) => {
@@ -267,41 +284,61 @@ class StrategyManager {
             }
         }
 
-        list.forEach((strat) => {
-            const id = self.indicatorJobs.length;
-            const { symbol, exchange: exchangeName, tick = 5} = strat;
-            const key = `${symbol}_${exchangeName}_` + Math.floor(Math.random() * 100).toString();
-            // The Event Listener for Indicators
-            this.eventEmitter.on(key, () => {
-                self.queueLock.close(symbol, exchangeName);
-                self.runIndicatorStrategyUnit(strat)
-                .then(() => {
-                    self.queueLock.open(symbol, exchangeName);
-                    self.indicatorCounter(symbol, exchangeName);
-                })
-                .catch((error) => {
-                    self.queueLock.open(symbol, exchangeName);
-                    self.logger.error(`Indicator Forever Interval: Error in Running this Interval [${exchangeName}:${symbol}] (${error.message})`);
-                })
-            });
-            // Add Cron Job
-            const crontTime = `0 */${tick} * * * *`;
-            self.indicatorJobs[self.indicatorJobs.length] = schedule.scheduleJob(crontTime, function () {
-                // Emit the event
-                self.eventEmitter.emit(key);
-            });
-        });
+        // list.forEach((strat) => {
+        //     const id = this.indicatorJobs.length;
+        //     const { symbol, exchange: exchangeName, tick = 1} = strat;
+        //     const key = `${symbol}_${exchangeName}_` + Math.floor(Math.random() * 100).toString();
+        //     // Add Cron Job
+        //     // const crontTime = `0 */${tick} * * * *`;
+        //     this.intervalEvent.add(key, tick);
+        //     // The Event Listener for Indicators
+        //     this.eventEmitter.on(key, () => {
+        //         this.queueLock.close(symbol, exchangeName);
+        //         this.runIndicatorStrategyUnit(strat)
+        //         .then(() => {
+        //             this.queueLock.open(symbol, exchangeName);
+        //             this.indicatorCounter(symbol, exchangeName);
+        //         })
+        //         .catch((error) => {
+        //             this.queueLock.open(symbol, exchangeName);
+        //             this.logger.error(`Indicator Forever Interval: Error in Running this Interval [${exchangeName}:${symbol}] (${error.message})`);
+        //         })
+        //     });
+            
+        // });
 
         async function runStrat(strat)  {
-            const { symbol, exchange: exchangeName} = strat;
-            if (self.queueLock.isOpen(symbol, exchangeName)) {
-                try {
-                    await delay(3000)
-                    await self.runSafetiesStrategyUnit(strat);
-                    self.counter(symbol, exchangeName, counterPeriodLog);
-                } catch (error) {
-                    self.logger.warn(`Forever  safety Loop: Error in the loop [${exchangeName}:${symbol}] (${error.message})`);
+            const { symbol, exchange: exchangeName, tick = 5} = strat;
+            const key = `${symbol}_${exchangeName}_${tick}`;
+            try {
+                const date = new Date();
+                // const seconds = date.getSeconds();
+                const minutes = date.getMinutes();
+                let presentRunNumber; 
+                for (let i = minutes ; i >= -60; i--) {
+                    if ( Math.abs(i % tick) === 0) {
+                        presentRunNumber = Math.abs(i);
+                        break;
+                    }  
                 }
+                let probableNextNumber = presentRunNumber + tick;
+                let nextRunNumber = probableNextNumber < 60 ? probableNextNumber : probableNextNumber - 60;
+                let lastRunNumber = lastRunNumbers[key];
+                if (lastRunNumber === undefined || lastRunNumber === null) {
+                    lastRunNumbers[key] = presentRunNumber;
+                    lastRunNumber = presentRunNumber;
+                }
+                if (presentRunNumber !== lastRunNumber) {
+                    await self.runIndicatorStrategyUnit(strat);
+                    lastRunNumbers[key] = presentRunNumber;
+                    self.indicatorCounter(symbol, exchangeName);
+                } else {
+                    await delay(2000);
+                }
+                await self.runSafetiesStrategyUnit(strat);
+                self.counter(symbol, exchangeName, counterPeriodLog);
+            } catch (error) {
+                self.logger.warn(`Forever  safety Loop: Error in the loop [${exchangeName}:${symbol}] (${error.message})`);
             }
         }
 
