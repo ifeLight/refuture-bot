@@ -1,6 +1,6 @@
 const config = require('config')
 // const cron = require('node-cron');
-const CronJob = require('cron').CronJob;
+// const CronJob = require('cron').CronJob;
 
 const schedule = require('node-schedule');
 
@@ -24,7 +24,9 @@ class StrategyManager {
         this._list = [];
         this._exchangePairs = [];
         this.exchangeManager = exchangeManager;
-        this.candlesRepository = candlesRepository
+        this.candlesRepository = candlesRepository;
+        this.indicatorJobs = [];
+        this.queueLock = new QueueLock();
     }
 
     async init() {
@@ -243,9 +245,16 @@ class StrategyManager {
     async runStrategies() {
         const counterPeriodLog = config.get('strategy.counterPeriodLog');
         const executionType = config.get('strategy.executionType');
-        const queueLock = new QueueLock();
         const list = this.getList();
         const self = this;
+
+        const delay = (time) => {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve()
+                }, time);
+            });
+        };
 
         // Run Initials
         for (const strat of list) {
@@ -258,43 +267,34 @@ class StrategyManager {
             }
         }
 
-        // Run Indicator Loop In Intervals
-        for (const strat of list) {
-            
-        }
-
-        const indicatorJobs = [];
-
         list.forEach((strat) => {
-            const id = indicatorJobs.length;
+            const id = self.indicatorJobs.length;
             const { symbol, exchange: exchangeName, tick = 5} = strat;
-            const crontTime = `${id} */${tick} * * * *`;
-            indicatorJobs[indicatorJobs.length] = new CronJob(crontTime, async function () {
-                queueLock.close(symbol, exchangeName);
+            const key = `${symbol}_${exchangeName}_` + Math.floor(Math.random() * 100).toString();
+            // The Event Listener for Indicators
+            this.eventEmitter.on(key, () => {
+                self.queueLock.close(symbol, exchangeName);
                 self.runIndicatorStrategyUnit(strat)
                 .then(() => {
-                    queueLock.open(symbol, exchangeName);
+                    self.queueLock.open(symbol, exchangeName);
                     self.indicatorCounter(symbol, exchangeName);
                 })
                 .catch((error) => {
-                    queueLock.open(symbol, exchangeName);
+                    self.queueLock.open(symbol, exchangeName);
                     self.logger.error(`Indicator Forever Interval: Error in Running this Interval [${exchangeName}:${symbol}] (${error.message})`);
                 })
-            }, null, true);
-        })
-
-        const delay = (time) => {
-            return new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    resolve()
-                }, time);
             });
-        };
-
+            // Add Cron Job
+            const crontTime = `0 */${tick} * * * *`;
+            self.indicatorJobs[self.indicatorJobs.length] = schedule.scheduleJob(crontTime, function () {
+                // Emit the event
+                self.eventEmitter.emit(key);
+            });
+        });
 
         async function runStrat(strat)  {
             const { symbol, exchange: exchangeName} = strat;
-            if (queueLock.isOpen(symbol, exchangeName)) {
+            if (self.queueLock.isOpen(symbol, exchangeName)) {
                 try {
                     await delay(3000)
                     await self.runSafetiesStrategyUnit(strat);
