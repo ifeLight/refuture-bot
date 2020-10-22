@@ -30,9 +30,9 @@ const strat = {
     symbol : "BTC/USDT",
     exchange: "binance_futures",
     trade: {
-        currency_amount: 5,
+        currency_amount: 2,
         order_type: "limit",
-        leverage: 5
+        leverage: 10
     },
     strategies: {
         indicators: [
@@ -79,7 +79,7 @@ const strat = {
         // console.log(res);
 
 
-        const signalResult = SignalResult.createSignal('short');
+        const signalResult = SignalResult.createSignal('long');
         // console.log(signalResult.getOrderAdvice())
         console.info(await orderExecutor.execute(signalResult, exchangePair, strat));
 

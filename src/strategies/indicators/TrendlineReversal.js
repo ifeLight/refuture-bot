@@ -58,6 +58,10 @@ module.exports = class {
             const onRightTime = timeDiff >= 0 && timeDiff < 0.35; //at most quarter time of the candle
             if (!onRightTime) return indicatorPeriod.createEmptySignal();
 
+            // console.log(lastCandle)
+            // console.log(presentTime)
+            // console.log('------------------')
+
             //Remove the last incomplete candle
             let incompleteCandle;
             if (!this.isLastCandleComplete(candles, presentTime)) {

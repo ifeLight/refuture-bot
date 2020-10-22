@@ -25,6 +25,7 @@ class Trader {
             });
             await strategyManager.runStrategies();
         } catch (error) {
+            console.error(error)
             throw error;
         }
     }

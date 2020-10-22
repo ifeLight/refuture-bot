@@ -671,6 +671,7 @@ class OrderExecutor {
 
     async futuresCreateOrder(exchangePair, amount, side, options) { //side: 'sell' or 'buy'
         const orderType = options.trade["order_type"];
+        console.log(orderType);
         if (orderType == 'market') {
             const sellDetails = await exchangePair.createMarketOrder(side, amount);
             await this.delay();
@@ -682,13 +683,16 @@ class OrderExecutor {
         if (orderType == 'limit') {
             const ticker = exchangePair.getTicker()
             const { bidPrice, askPrice, lastPrice} = ticker;
+            console.log(ticker)
             const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision
+            console.log(pricePrecision)
             let price;
             if (side == 'buy') {
                 price = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : bidPrice).toFixed(pricePrecision))
             } else {
                 price = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : askPrice).toFixed(pricePrecision))
             }
+            console.log(price)
             const orderDetails = await exchangePair.createLimitOrder(side, amount, price);
             await this.delay();
             if (orderDetails) {
@@ -795,7 +799,7 @@ class OrderExecutor {
             }
 
             if (orderType == 'limit') {
-                const ticker = exchangePair.getTicker()
+                const ticker = exchangePair.getTicker();
                 const { bidPrice, askPrice, lastPrice} = ticker;
                 const sellingPrice = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : askPrice).toFixed(pricePrecision))
                 const sellDetails = await exchangePair.createLimitOrder('sell', sellingAmount, sellingPrice);
