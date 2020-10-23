@@ -45,7 +45,7 @@ module.exports = class {
             const smallCandles = indicatorPeriod.indicatorBuilder.get('small_candles');
             const largeCandles = indicatorPeriod.indicatorBuilder.get('large_candles');
 
-            const lastPrice = indicatorPeriod.getLastPrice();
+            const lastPrice = await indicatorPeriod.getLastPrice();
             const lastSignal = indicatorPeriod.getLastSignal();
             const presentTime = indicatorPeriod.getTime();
 

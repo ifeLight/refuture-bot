@@ -32,24 +32,24 @@ module.exports = class IndicatorPeriod {
         return this.indicatorBuilder.get(name);
     }
 
-    getLastPrice() {
-        return this.exchangePair.getLastPrice();
+    async getLastPrice() {
+        return (await this.exchangePair.getLastPrice());
     } 
 
     getLastSignal() {
         return this.exchangePair.getlastSignal()
     } 
 
-    getTicker() {
-        return this.exchangePair.getTicker();
+    async getTicker() {
+        return (await this.exchangePair.getTicker());
     }
 
-    getOrderBook () {
-        return this.exchangePair.getOrderBook();
+    async getOrderBook () {
+        return (await this.exchangePair.getOrderBook());
     }
 
-    getMarkPrice() {
-        return this.exchangePair.getMarkPrice();
+    async getMarkPrice() {
+        return (await this.exchangePair.getMarkPrice());
     }
 
     createSignal(signal, debug = {}) {

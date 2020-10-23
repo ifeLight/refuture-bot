@@ -26,44 +26,41 @@ module.exports = class ExchangePair {
             this.markPrice = undefined;
             // Add Ticker listener
             this.exchange.addTickerEvent(this.symbol);
+            // Add OrderBook event
+            this.exchange.addOrderBookEvent(this.symbol);
             //Enable Socket
             await this.exchange.enableSocket();
             if (this.exchange.isFutures) {
                 this.markPrice = await this.exchange.fetchMarkPrice(symbol);
-                this.eventEmitter.on(`markprice_${exchangeName}_${symbol}`, (markPrice)  => {
-                    this.markPrice = markPrice;
-                })
             }
-            
             this.lastPrice = this.ticker.lastPrice;
-            this.eventEmitter.on(`ticker_${exchangeName}_${symbol}`, (ticker) => {
-                this.ticker = ticker;
-                this.lastPrice = ticker.lastPrice;
-            })
-            this.eventEmitter.on(`orderbook_${exchangeName}_${symbol}`, (orderBook) => {
-                this.orderBook = orderBook;
-            })
-
             this.setupDone = true;
         } catch (error) {
             this.logger.error(`Exchange Pair [${this.symbol}:${this.exchangeName}]: Unable to setup the Pair (${error.message})`);
         }
     }
 
-    getTicker() {
-        return this.ticker;
+    async getTicker() {
+        const res = await this.exchange.fetchTicker(this.symbol);
+        return res;
     }
 
-    getLastPrice () {
-        return this.lastPrice
+    async getLastPrice () {
+        const res = await this.exchange.fetchTicker(this.symbol);
+        return res.lastPrice;
     }
 
-    getOrderBook () {
-        return this.orderBook;
+    async getOrderBook () {
+        const res = await this.exchange.fetchOrderBook(this.symbol)
+        return res;
     }
 
-    getMarkPrice() {
-        return this.markPrice;
+    async getMarkPrice() {
+        if (this.exchange.isFutures) {
+            const res = await this.exchange.fetchMarkPrice(this.symbol)
+            return res;
+        }
+        return undefined;
     }
 
     getlastSignal() {
@@ -105,7 +102,8 @@ module.exports = class ExchangePair {
      */
     async getBalance (asset) {
         try {
-            return await this.exchange.fetchBalance(asset);
+            const balance = await this.exchange.fetchBalance(asset);
+            return balance;
         } catch (error) {
             this.logger(`Pair(${this.symbol}): Unable to fetch balance for ${this.asset}`);
             return undefined;

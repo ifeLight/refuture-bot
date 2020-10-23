@@ -157,7 +157,7 @@ module.exports = class BinanceExchange {
             throw error;
         }
     }
-
+    // TODO - Remove event emitter and find an alternative
     addTickerEvent(symbol) {
         try {
             const exchangeName = this.name;

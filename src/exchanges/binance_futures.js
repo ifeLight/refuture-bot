@@ -20,6 +20,9 @@ module.exports = class BinanceFuturesExchange {
         this.name = 'binance_futures';
         this.isFutures = true;
         this._enabledSocket = false;
+        this.tickers = {};
+        this.orderBooks = {};
+        this.markPrices = {};
     }
 
     async init(config) {
@@ -148,21 +151,26 @@ module.exports = class BinanceFuturesExchange {
 
     async fetchTicker (symbol) {
         try {
-            const tickerFromExchange = await this.exchange.fetchTicker(symbol);
-            const {
-                bid: bidPrice,
-                ask: askPrice,
-                bidVolume: bidQty,
-                askVolume: askQty,
-                last: lastPrice
-            } = tickerFromExchange;
-            return new Ticker({
-                bidPrice,
-                askPrice,
-                bidQty,
-                askQty,
-                lastPrice
-            }) 
+            if (!this.tickers[symbol]) {
+                const tickerFromExchange = await this.exchange.fetchTicker(symbol);
+                let {
+                    bid: bidPrice,
+                    ask: askPrice,
+                    bidVolume: bidQty,
+                    askVolume: askQty,
+                    last: lastPrice
+                } = tickerFromExchange;
+
+                const ticker = new Ticker({
+                    bidPrice: bidPrice ? bidPrice: lastPrice,
+                    askPrice: askPrice ? askPrice: lastPrice,
+                    bidQty,
+                    askQty,
+                    lastPrice
+                });
+                this.tickers[symbol] = ticker;
+            }
+            return this.tickers[symbol];
         } catch (error) {
             this.logger.warn(`Binance Futures: Unable to fetch Ticker [${symbol}] (${error.message})`);
             return undefined;
@@ -191,7 +199,7 @@ module.exports = class BinanceFuturesExchange {
                     askQty,
                     lastPrice: Number(((Number(bidPrice) + Number(askPrice)) / 2).toFixed(priceDecimalPlaces))
                 }) 
-                self.eventEmitter.emit(`ticker_${exchangeName}_${symbol}`, newTicker);
+                self.tickers[symbol] = newTicker;
             })
         } catch (error) {
             this.logger.warn(`Binance Futures: Unable to add Ticker Event [${symbol}] (${error.message})`);
@@ -200,10 +208,13 @@ module.exports = class BinanceFuturesExchange {
 
     async fetchMarkPrice(symbol) {
         try {
-            const retouchedSymbol = this.retouchSymbol(symbol);
-            this.addMarkPriceEvent(symbol);
-            const {markPrice} = await this.exchange.nodeBinanceApi.futuresMarkPrice( retouchedSymbol )
-            return markPrice
+            if (!this.markPrices[symbol]) {
+                const retouchedSymbol = this.retouchSymbol(symbol);
+                const {markPrice} = await this.exchange.nodeBinanceApi.futuresMarkPrice( retouchedSymbol );
+                this.addMarkPriceEvent(symbol);
+                this.markPrices[symbol] = markPrice
+            }
+            return this.markPrices[symbol];
         } catch (error) {
             this.logger.warn(`Binance Futures: Unable to fetch Mark Price [${symbol}] (${error.message})`);
         }
@@ -214,10 +225,10 @@ module.exports = class BinanceFuturesExchange {
             const self = this;
             const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
-            this.exchange.nodeBinanceApi.futuresMarkPriceStream(retouchedSymbol, function (stream) {
+            this.exchange.nodeBinanceApi.futuresMarkPriceStream(retouchedSymbol, (stream) => {
                 const {markPrice} = stream;
-                self.eventEmitter.emit(`markprice_${exchangeName}_${symbol}`, markPrice);
-            })
+                this.markPrices[symbol] = markPrice;
+            });
         } catch (error) {
             this.logger.warn(`Binance Futures: Unable to add Mark Price Event [${symbol}] (${error.message})`);
         }
@@ -225,25 +236,28 @@ module.exports = class BinanceFuturesExchange {
 
     async fetchOrderBook (symbol) {
         try {
-            const orderBookFromExchange = await this.exchange.fetchOrderBook(symbol);
-            let {
-                bids, asks
-            } = orderBookFromExchange;
+           if (!this.orderBooks[symbol]) {
+                const orderBookFromExchange = await this.exchange.fetchOrderBook(symbol);
+                let {
+                    bids, asks
+                } = orderBookFromExchange;
 
-            bids = bids.map((bid) => {
-                return {
-                    price: Number(bid[0]),
-                    quantity: Number(bid[1])
-                }
-            })
+                bids = bids.map((bid) => {
+                    return {
+                        price: Number(bid[0]),
+                        quantity: Number(bid[1])
+                    }
+                })
 
-            asks = asks.map((ask) => {
-                return {
-                    price: Number(ask[0]),
-                    quantity: Number(ask[1])
-                }
-            })
-            return new OrderBook(bids, asks) 
+                asks = asks.map((ask) => {
+                    return {
+                        price: Number(ask[0]),
+                        quantity: Number(ask[1])
+                    }
+                })
+                this.orderBooks[symbol] = new OrderBook(bids, asks);
+           }
+           return this.orderBooks[symbol];
         } catch (error) {
             this.logger.warn(`Binance Futures: Unable to fetch order book [${symbol}] (${error.message})`);
             return undefined
@@ -278,7 +292,7 @@ module.exports = class BinanceFuturesExchange {
                 })
 
                 const newOrderBook = new OrderBook(bids, asks);
-                self.eventEmitter.emit(`orderbook_${exchangeName}_${symbol}`, newOrderBook);
+                this.orderBooks[symbol] = newOrderBook;
             })
         } catch (error) {
             this.logger.error(`Binance Futures: Unable to add order book event [${symbol}] (${error.message})`);
@@ -531,11 +545,11 @@ module.exports = class BinanceFuturesExchange {
         bals.forEach((bal) => {
             const { a: asset, cw: free, wb: total} = bal;
             const locked = Number(total) - Number(free);
-            if (!self.balances) {
-                self.balances = {};
+            if (!this.balances) {
+                this.balances = {};
             }
-            self.balances[asset] = new Balance(asset, free, locked);
-        })
+            this.balances[asset] = new Balance(asset, free, locked);
+        });
       }
 
       async syncWebsocketOrders (order) {

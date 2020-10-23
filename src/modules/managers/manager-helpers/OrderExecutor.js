@@ -26,7 +26,7 @@ class OrderExecutor {
     async execute(signalResult, exchangePair, options) {
         try {
             const tradeOptions = options.trade;
-            const lastPrice = exchangePair.getLastPrice();
+            const lastPrice = await exchangePair.getLastPrice();
             let amount;
     
             if (tradeOptions.amount) {
@@ -130,7 +130,7 @@ class OrderExecutor {
             }
 
             const leverage = parseInt(await exchangePair.getLeverage());
-            const ticker = exchangePair.getTicker()
+            const ticker = await exchangePair.getTicker()
             const { bidPrice, askPrice, lastPrice} = ticker;
             let amount, amountToTrade;
             if (tradeOptions.amount) {
@@ -291,7 +291,7 @@ class OrderExecutor {
             openSellOrders = openOrders.filter((order) => order.side == 'sell');
         }
 
-        const ticker = exchangePair.getTicker();
+        const ticker = await exchangePair.getTicker();
         const { bidPrice, askPrice, lastPrice} = ticker;
         const tradingAmount = parseFloat((amount).toFixed(amountPrecision));
         const tradingPrice = parseFloat((advicePrice).toFixed(pricePrecision));
@@ -414,7 +414,7 @@ class OrderExecutor {
         const openOrders = await exchangePair.getActiveOrders();
         const openBuyOrders = openOrders.filter((order) => order.side == 'buy');
         const openSellOrders = openOrders.filter((order) => order.side == 'sell');
-        const ticker = exchangePair.getTicker()
+        const ticker = await exchangePair.getTicker()
         const { bidPrice, askPrice, lastPrice} = ticker;
         if (!position || (position && position.positionAmount == 0)) {
             if (openOrders.length > 1 || (openBuyOrders.length === 0 && openOrders.length == 1)) {
@@ -425,10 +425,10 @@ class OrderExecutor {
 
             if (openBuyOrders.length === 1 && openOrders.length == 1) {
                 const order = openOrders[0];
+                const orderPrice = parseFloat(order.price)
                 //{checkSomeStopBuyLimitConfluence}
                 // it helped to fix when an already stop buy limit order is placed
                 const checkSomeStopBuyLimitConfluence = orderPrice > askPrice && (order.type == 'stop'|| order.type == 'stop_market');
-                const orderPrice = parseFloat(order.price)
                 if (orderPrice < bidPrice || checkSomeStopBuyLimitConfluence) {
                     await exchangePair.cancelActiveOrders();
                     await this.futuresCreateOrder(exchangePair, amount, 'buy', options);
@@ -671,7 +671,6 @@ class OrderExecutor {
 
     async futuresCreateOrder(exchangePair, amount, side, options) { //side: 'sell' or 'buy'
         const orderType = options.trade["order_type"];
-        console.log(orderType);
         if (orderType == 'market') {
             const sellDetails = await exchangePair.createMarketOrder(side, amount);
             await this.delay();
@@ -681,18 +680,15 @@ class OrderExecutor {
         }
 
         if (orderType == 'limit') {
-            const ticker = exchangePair.getTicker()
+            const ticker = await exchangePair.getTicker()
             const { bidPrice, askPrice, lastPrice} = ticker;
-            console.log(ticker)
             const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision
-            console.log(pricePrecision)
             let price;
             if (side == 'buy') {
                 price = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : bidPrice).toFixed(pricePrecision))
             } else {
                 price = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : askPrice).toFixed(pricePrecision))
             }
-            console.log(price)
             const orderDetails = await exchangePair.createLimitOrder(side, amount, price);
             await this.delay();
             if (orderDetails) {
@@ -708,7 +704,7 @@ class OrderExecutor {
         if (!['long', 'short', 'close', 'stoploss', 'take_profit'].includes(signal)) {
             throw `Invalid signal:${signal}`;
         }
-        const ticker = exchangePair.getTicker()
+        const ticker = await exchangePair.getTicker()
         const { bidPrice, askPrice, lastPrice} = ticker;
         const { base, quote} = exchangePair.info;
         const { min: minimumAmountLimit, max: maximumAmountLimit } = exchangePair.info.limits.amount;
@@ -799,7 +795,7 @@ class OrderExecutor {
             }
 
             if (orderType == 'limit') {
-                const ticker = exchangePair.getTicker();
+                const ticker = await exchangePair.getTicker();
                 const { bidPrice, askPrice, lastPrice} = ticker;
                 const sellingPrice = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : askPrice).toFixed(pricePrecision))
                 const sellDetails = await exchangePair.createLimitOrder('sell', sellingAmount, sellingPrice);
@@ -856,7 +852,7 @@ class OrderExecutor {
         if (!openOrders) throw new Error('Error fetching open orders');
         const openBuyOrders = openOrders.filter((order) => order.side == 'buy')
 
-        const ticker = exchangePair.getTicker()
+        const ticker = await exchangePair.getTicker()
         const { bidPrice, askPrice, lastPrice} = ticker;
 
         async function cancelAllBuyOrders() {
@@ -879,7 +875,7 @@ class OrderExecutor {
             }
 
             if (orderType == 'limit') {
-                const ticker = exchangePair.getTicker()
+                const ticker = await exchangePair.getTicker()
                 const { bidPrice, askPrice, lastPrice} = ticker;
                 const buyingPrice = parseFloat((lastPrice < askPrice && lastPrice > bidPrice ? lastPrice : bidPrice).toFixed(pricePrecision))
                 const buyDetails = await exchangePair.createLimitOrder('buy', buyingAmount, buyingPrice);

@@ -38,7 +38,7 @@ module.exports = class {
             }
             const res = BB.calculate(input)
             const resMiddle = res[res.length - 1]['middle'];
-            const lastPrice = indicatorPeriod.getLastPrice();
+            const lastPrice = await indicatorPeriod.getLastPrice();
 
             const lastSignal = indicatorPeriod.getLastSignal();
 

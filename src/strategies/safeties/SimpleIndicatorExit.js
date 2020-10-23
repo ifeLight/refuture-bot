@@ -23,7 +23,7 @@ module.exports = class SimpleIndicatorExit {
         const presentTime = this.safetyPeriod.getTime();
         const {indicator: indicatorName} = this.options;
         const isFutures = safetyPeriod.isFutures();
-        const presentPrice = safetyPeriod.getLastPrice();
+        const presentPrice = await safetyPeriod.getLastPrice();
         const isBacktest = (safetyPeriod.getEnvironment()).backtest;
         const candles = safetyPeriod.indicatorBuilder.get('candles');
         //Remove the last incomplete candle
@@ -42,7 +42,7 @@ module.exports = class SimpleIndicatorExit {
 
         if (!isFutures && !isBacktest) {
             const {amount, currency_amount} = strat.trade;
-            let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
+            let tradeAmount = amount ? Number(amount) : Number(presentPrice) / Number(currency_amount);
             const baseCurrency = (safetyPeriod.getPairInfo()).base;
             let baseBalance = await safetyPeriod.getBalance(baseCurrency);
             const totalBalance = baseBalance.locked + baseBalance.free;

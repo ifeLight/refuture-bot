@@ -28,7 +28,7 @@ module.exports = class {
 
     async period(indicatorPeriod, options) {
         try {
-            const lastPrice = indicatorPeriod.getLastPrice();
+            const lastPrice = await indicatorPeriod.getLastPrice();
             const lastSignal = indicatorPeriod.getLastSignal();
             const candles = indicatorPeriod.indicatorBuilder.get('candles');
             return indicatorPeriod.createSignal('long');

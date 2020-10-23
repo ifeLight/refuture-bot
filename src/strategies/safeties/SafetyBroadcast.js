@@ -26,7 +26,7 @@ module.exports = class SafetyBroadcast {
         try {
             this.options = options;
             const isFutures = safetyPeriod.isFutures();
-            this.presentPrice = safetyPeriod.getLastPrice();
+            this.presentPrice = await safetyPeriod.getLastPrice();
             const isBacktest = (safetyPeriod.getEnvironment()).backtest;
             this.isBacktest = isBacktest;
             this.safetyPeriod = safetyPeriod;
@@ -48,7 +48,7 @@ module.exports = class SafetyBroadcast {
 
             if (!isFutures && !isBacktest) {
                 const {amount, currency_amount} = strat.trade;
-                let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
+                let tradeAmount = amount ? Number(amount) : Number(this.presentPrice) / Number(currency_amount);
                 const baseCurrency = (safetyPeriod.getPairInfo()).base;
                 let baseBalance = await safetyPeriod.getBalance(baseCurrency);
                 const totalBalance = baseBalance.locked + baseBalance.free;

@@ -332,38 +332,8 @@ class StrategyManager {
                     await self.runIndicatorStrategyUnit(strat);
                     lastRunNumbers[key] = presentRunNumber;
                     self.indicatorCounter(symbol, exchangeName);
-<<<<<<< HEAD
-                })
-                .catch((error) => {
-                    queueLock.open(symbol, exchangeName);
-                    self.logger.error(`Indicator Forever Interval: Error in Running this Interval [${exchangeName}:${symbol}] (${error.message})`);
-                })
-            });
-            indicatorJobs[id].start();
-        })
-
-        const delay = (time) => {
-            return new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    resolve()
-                }, time);
-            });
-        };
-
-
-        async function runStrat(strat)  {
-            const { symbol, exchange: exchangeName} = strat;
-            if (queueLock.isOpen(symbol, exchangeName)) {
-                try {
-                    await delay(3000)
-                    await self.runSafetiesStrategyUnit(strat);
-                    self.counter(symbol, exchangeName, counterPeriodLog);
-                } catch (error) {
-                    self.logger.warn(`Forever  safety Loop: Error in the loop [${exchangeName}:${symbol}] (${error.message})`);
-=======
                 } else {
                     await delay(2000);
->>>>>>> 04716cbe53865e75e834ba5f6e480868accb5a32
                 }
                 await self.runSafetiesStrategyUnit(strat);
                 self.counter(symbol, exchangeName, counterPeriodLog);

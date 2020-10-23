@@ -16,7 +16,7 @@ module.exports = class FixedStopLoss {
     async period(safetyPeriod, options, strat) {
         const percentage = options.percentage;
         const isFutures = safetyPeriod.isFutures();
-        const presentPrice = safetyPeriod.getLastPrice();
+        const presentPrice = await safetyPeriod.getLastPrice();
         const isBacktest = (safetyPeriod.getEnvironment()).backtest;
         let signalResult = safetyPeriod.createEmptySignal();
         if (isFutures || isBacktest) {
@@ -55,7 +55,7 @@ module.exports = class FixedStopLoss {
 
         if (!isFutures && !isBacktest) {
             const {amount, currency_amount} = strat.trade;
-            let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
+            let tradeAmount = amount ? Number(amount) : Number(presentPrice) / Number(currency_amount);
             const baseCurrency = (safetyPeriod.getPairInfo()).base;
             let baseBalance = await safetyPeriod.getBalance(baseCurrency);
             const totalBalance = baseBalance.locked + baseBalance.free;

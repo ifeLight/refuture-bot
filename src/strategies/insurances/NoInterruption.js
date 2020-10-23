@@ -14,6 +14,7 @@ module.exports = class NoInterruption {
 
     async period(safetyPeriod, signalResult,  options, strat) {
         const isFutures = safetyPeriod.isFutures();
+        const lastPrice = await safetyPeriod.getLastPrice();
         if (isFutures) {
             const positions = await safetyPeriod.getPositions();
             if (positions && Array.isArray(positions) && positions.length > 0) {
@@ -22,7 +23,7 @@ module.exports = class NoInterruption {
             return signalResult;
         } else {
             const {amount, currency_amount} = strat.trade;
-            let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
+            let tradeAmount = amount ? Number(amount) : Number(lastPrice) / Number(currency_amount);
             const baseCurrency = (safetyPeriod.getPairInfo()).base;
             let baseBalance = await safetyPeriod.getBalance(baseCurrency);
             const totalBalance = baseBalance.locked + baseBalance.free;

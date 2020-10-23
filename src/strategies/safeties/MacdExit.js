@@ -40,7 +40,8 @@ module.exports = class MacdExit {
 
         if (!isFutures && !isBacktest) {
             const {amount, currency_amount} = strat.trade;
-            let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
+            const lastPrice = await safetyPeriod.getLastPrice();
+            let tradeAmount = amount ? Number(amount) : Number(lastPrice) / Number(currency_amount);
             const baseCurrency = (safetyPeriod.getPairInfo()).base;
             let baseBalance = await safetyPeriod.getBalance(baseCurrency);
             const totalBalance = baseBalance.locked + baseBalance.free;
