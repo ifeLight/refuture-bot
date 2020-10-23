@@ -329,6 +329,7 @@ class StrategyManager {
                     lastRunNumber = presentRunNumber;
                 }
                 if (presentRunNumber !== lastRunNumber) {
+                    await delay(600);
                     await self.runIndicatorStrategyUnit(strat);
                     lastRunNumbers[key] = presentRunNumber;
                     self.indicatorCounter(symbol, exchangeName);
