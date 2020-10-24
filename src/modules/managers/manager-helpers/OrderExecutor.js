@@ -351,6 +351,20 @@ class OrderExecutor {
                     orderType, orderList
                     );
             }
+
+            // Prevent Any Action to Stop an Ongoing Unfilled Limit Order
+            if (openOrders && openOrders[0]) {
+                const order = openOrders[0];
+                const orderType = order.type
+                const orderSide = order.side;
+                const cond1 = orderType == 'limit';
+                const cond2 = orderSide == 'buy' && positionSide == 'LONG';
+                const cond3 = orderSide == 'sell' && positionSide == 'SHORT';
+                if (cond1 && (cond2 || cond3)) {
+                    return;
+                }
+            }
+
             // Stoploss advice
             if (signal === 'stoploss') {
                await handleStoploss();
