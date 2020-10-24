@@ -329,7 +329,7 @@ class StrategyManager {
                     lastRunNumber = presentRunNumber;
                 }
                 if (presentRunNumber !== lastRunNumber) {
-                    await delay(600);
+                    await delay(600); // Added delay so that the Latest candle Could be added
                     await self.runIndicatorStrategyUnit(strat);
                     lastRunNumbers[key] = presentRunNumber;
                     self.indicatorCounter(symbol, exchangeName);

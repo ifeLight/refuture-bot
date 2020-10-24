@@ -54,8 +54,11 @@ module.exports = class {
             // At the early stage of the candle
             const lastCandle = candles[candles.length - 1]
             const timeLength = periodToTimeDiff(candlePeriod);
-            const timeDiff = (indicatorPeriod.getTime() - lastCandle.time) / timeLength;
-            const onRightTime = timeDiff >= 0 && timeDiff < 0.35; //at most quarter time of the candle
+            const timeDiff = (presentTime - lastCandle.time) / timeLength;
+            const inExtraTime = (presentTime - lastCandle.time) >= timeLength;
+            const extraTimeInSecs = (presentTime - (lastCandle.time + timeLength)) / 1000;
+            // Run at Early Time - and for some lapses at next time
+            const onRightTime = (timeDiff >= 0 && timeDiff < 0.35) || (inExtraTime && (extraTimeInSecs >= 0 && extraTimeInSecs <= 3)); //at most quarter time of the candle
             if (!onRightTime) return indicatorPeriod.createEmptySignal();
             console.log('------Present Time----------');
             console.log(presentTime);
