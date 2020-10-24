@@ -284,29 +284,6 @@ class StrategyManager {
             }
         }
 
-        // list.forEach((strat) => {
-        //     const id = this.indicatorJobs.length;
-        //     const { symbol, exchange: exchangeName, tick = 1} = strat;
-        //     const key = `${symbol}_${exchangeName}_` + Math.floor(Math.random() * 100).toString();
-        //     // Add Cron Job
-        //     // const crontTime = `0 */${tick} * * * *`;
-        //     this.intervalEvent.add(key, tick);
-        //     // The Event Listener for Indicators
-        //     this.eventEmitter.on(key, () => {
-        //         this.queueLock.close(symbol, exchangeName);
-        //         this.runIndicatorStrategyUnit(strat)
-        //         .then(() => {
-        //             this.queueLock.open(symbol, exchangeName);
-        //             this.indicatorCounter(symbol, exchangeName);
-        //         })
-        //         .catch((error) => {
-        //             this.queueLock.open(symbol, exchangeName);
-        //             this.logger.error(`Indicator Forever Interval: Error in Running this Interval [${exchangeName}:${symbol}] (${error.message})`);
-        //         })
-        //     });
-            
-        // });
-
         async function runStrat(strat)  {
             const { symbol, exchange: exchangeName, tick = 5} = strat;
             const key = `${symbol}_${exchangeName}_${tick}`;

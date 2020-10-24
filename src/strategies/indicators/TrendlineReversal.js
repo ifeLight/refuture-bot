@@ -50,6 +50,9 @@ module.exports = class {
             const presentTime = indicatorPeriod.getTime();
             const candles = indicatorPeriod.indicatorBuilder.get('candles');
 
+            console.log('-----Candles Length-----');
+            console.log(candles.length)
+
             // Only allow this indicator to run 
             // At the early stage of the candle
             const lastCandle = candles[candles.length - 1]
@@ -57,8 +60,8 @@ module.exports = class {
             const timeDiff = (presentTime - lastCandle.time) / timeLength;
             const inExtraTime = (presentTime - lastCandle.time) >= timeLength;
             const extraTimeInSecs = (presentTime - (lastCandle.time + timeLength)) / 1000;
-            // Run at Early Time - and for some lapses at next time
-            const onRightTime = (timeDiff >= 0 && timeDiff < 0.35) || (inExtraTime && (extraTimeInSecs >= 0 && extraTimeInSecs <= 3)); //at most quarter time of the candle
+            // Run at Early Time - and for some lapses at next time due to unavailable present candle
+            const onRightTime = (timeDiff >= 0 && timeDiff < 0.35) || (timeDiff >= 1 && timeDiff <= 1.35); //at most quarter time of the candle
             if (!onRightTime) return indicatorPeriod.createEmptySignal();
             console.log('------Present Time----------');
             console.log(presentTime);
