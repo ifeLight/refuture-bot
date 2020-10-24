@@ -77,8 +77,16 @@ class SafetyManager {
 
             await safetyPeriod.setup(exchangePair, indicatorBuilder)
             
-            let safetyResult = await theSafety.period(safetyPeriod, safetyOptions, strat);
+            if (init) {
+                try {
+                    let safetyInitResult = await theSafety.init(safetyPeriod, safetyOptions, strat);
+                } catch (error) {
+                    throw error;
+                }
+            }
+            
             if (!init) {
+                let safetyResult = await theSafety.period(safetyPeriod, safetyOptions, strat);
                 if (!safetyResult) {
                     let safetyResult = SignalResult.createEmptySignal();
                     safetyResult.setTag(safetyName);

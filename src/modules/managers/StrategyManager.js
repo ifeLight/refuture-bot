@@ -5,7 +5,7 @@ const config = require('config')
 // // const schedule = require('node-schedule');
 
 const IndicatorManager = require('./IndicatorManager');
-const PolicyManger = require('./PolicyManager');
+const PolicyManager = require('./PolicyManager');
 const InsuranceManager = require('./InsuranceManager');
 const SafetyManager = require('./SafetyManager');
 const WatchdogManager = require('./WatchdogManager');

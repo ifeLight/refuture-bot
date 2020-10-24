@@ -74,9 +74,17 @@ class IndicatorManager {
 
             const indicatorPeriod = new IndicatorPeriod(this.logger);
             await indicatorPeriod.setup(exchangePair, indicatorBuilder);
-            let indicatorResult = await theIndicator.period(indicatorPeriod, indicatorOptions);
+
+            if (init) {
+                try {
+                    let indicatorInitResult = await theIndicator.init(indicatorPeriod, indicatorOptions);
+                } catch (error) {
+                    throw error;
+                }
+            }
 
             if (!init) {
+                let indicatorResult = await theIndicator.period(indicatorPeriod, indicatorOptions);
                 if (!indicatorResult) {
                     let indicatorResult = SignalResult.createEmptySignal();
                     indicatorResult.setTag(indicatorName);
