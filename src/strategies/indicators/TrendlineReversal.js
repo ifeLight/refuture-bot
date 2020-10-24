@@ -57,12 +57,22 @@ module.exports = class {
             const timeDiff = (indicatorPeriod.getTime() - lastCandle.time) / timeLength;
             const onRightTime = timeDiff >= 0 && timeDiff < 0.35; //at most quarter time of the candle
             if (!onRightTime) return indicatorPeriod.createEmptySignal();
+            console.log('------Present Time----------');
+            console.log(presentTime);
+            console.log('------Last Candle----------');
+            console.log(lastCandle);
+            console.log('------Previous Candle----------');
+            console.log(candles[candles.length - 2]);
+
 
             //Remove the last incomplete candle
             let incompleteCandle;
             if (!this.isLastCandleComplete(candles, presentTime)) {
                 incompleteCandle = candles.pop();
             }
+            console.log('----imcomplete candle----')
+            console.log(incompleteCandle)
+            console.log('---------------')
 
             //Lines generator configuration
             this.generateLinesConfig = {
