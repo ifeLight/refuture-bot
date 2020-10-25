@@ -152,6 +152,8 @@ module.exports = class CandlesRepository {
 
     async fetchCandlesByNumberFromNow({exchange, symbol, period, length}) {
         try {
+            // TODO - Need to optimise the speed
+            // Due to slow update speed to database
             const {name: exchangeName} = exchange;
             const autoConfig = {to: Date.now()};
             if (this._defaultToDate) {

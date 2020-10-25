@@ -117,7 +117,7 @@ class OrderExecutor {
                 const mostProfitablePosition = await this.resetPositionsToOne(positions, exchangePair);
                 position = mostProfitablePosition;
             } else if (positions.length == 1) {
-                position = positions[0]
+                position = positions[0];
             }
 
              // Leverage set check
@@ -282,6 +282,7 @@ class OrderExecutor {
         const orderType = options.trade["order_type"] || 'market';
         
         // Cancel all active orders if greater than 2
+        // TODO - Need to work on handling multiple Orders
         if (openOrders.length > 1) {
             await exchangePair.cancelActiveOrders();
             await this.delay();
@@ -353,6 +354,7 @@ class OrderExecutor {
             }
 
             // Prevent Any Action to Stop an Ongoing Unfilled Limit Order
+            // TODO - Fix when the orders wasnt filled completely but need to take profit
             if (openOrders && openOrders[0]) {
                 const order = openOrders[0];
                 const orderType = order.type
