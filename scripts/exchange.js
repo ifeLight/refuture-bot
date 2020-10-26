@@ -10,14 +10,12 @@ const exchangeManager = new ExchangeManager(eventEmitter, logger);
 
 const exchangePair = new ExchangePair(eventEmitter, logger, exchangeManager);
 
-exchangePair.init('binance_futures', 'BTC/USDT');
+exchangePair.init('binance_futures', 'YFI/USDT');
 
 (async ()=> {
     try {
         await exchangePair.setup();
-        console.log(await exchangePair.createOrder('STOP', 'sell', 0.003, 9500, {
-            'stopPrice': 9600
-        }))
+        console.log(await exchangePair.getActiveOrders())
  
     } catch (error) {
         console.error(error);
