@@ -4,11 +4,11 @@ class OrderExecutor {
         this.eventEmitter = eventEmitter;
         this.notifier = notifier;
         let delayTimeInMs = delayTime * 1000; // This is orders delay Time
-        this.delay = async () => {
+        this.delay = async (time = delayTimeInMs) => {
             return new Promise((resolve, reject) => {
                 setTimeout(() => {
                     resolve();
-                }, delayTimeInMs);
+                }, time);
             });
         }
     }
@@ -175,11 +175,25 @@ class OrderExecutor {
     
 
     async futuresStoplossAdviceHandler(exchangePair, positionSide, tradingPrice, tradingAmount, ticker, orderType, orderList) {
-        const {openOrders, openBuyOrders, openSellOrders} = orderList;
+        let {openOrders} = orderList;
         const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision;
         const { bidPrice, askPrice, lastPrice} = ticker;
         const stoplossOrderType =  orderType == 'market' ? 'STOP_MARKET': 'STOP';
         const self = this;
+
+        // Prevent Any Action to Stop an Ongoing Unfilled Limit Order
+        if (openOrders && openOrders[0]) {
+            for (const order of openOrders) {
+                const orderType = order.type
+                const orderSide = order.side;
+                const cond1 = orderType == 'limit';
+                const cond2 = orderSide == 'buy' && positionSide == 'LONG';
+                const cond3 = orderSide == 'sell' && positionSide == 'SHORT';
+                if (cond1 && (cond2 || cond3)) {
+                    return;
+                }
+            }
+        }
 
         const stopPrice = tradingPrice;
         const futuresCreateStopLossOrder = async (side) => {
@@ -190,37 +204,36 @@ class OrderExecutor {
             await self.delay();
         }
 
+        let openStopOrders = openOrders.filter((order) => order.type == stoplossOrderType.toLocaleLowerCase() )
+        if (openStopOrders.length > 1) {
+            for (const order of openStopOrders)  {
+                await exchangePair.cancelActiveOrders(order.id);
+            }
+            await self.delay();
+            openStopOrders = [];
+        }
+
         if (positionSide == 'LONG') {
             if (tradingPrice > bidPrice) return;
-            if (openOrders.length === 1 && (openBuyOrders.length === 1 || openSellOrders.length === 1)) {
-                const order = openOrders[0];
-                if (openSellOrders.length === 1) {
-                    if (tradingPrice == parseFloat(order.price)) return;
-                    // TODO - To fix no price in stop Market
-                    // To know wether its repetitive
-                    if (order.type == 'stop_market' ) return; //Stop market Bug!!
-                } 
+            if (openStopOrders.length === 1 ) {
+                const order = openStopOrders[0];
+                if (tradingPrice == parseFloat(order.stopPrice)) return;
                 await exchangePair.cancelActiveOrders(order.id);
                 await futuresCreateStopLossOrder('sell');
             } 
-            if (openOrders.length === 0) {
+            if (openStopOrders.length === 0) {
                 await futuresCreateStopLossOrder('sell');
             }
         }
         if (positionSide == 'SHORT') {
             if (tradingPrice < askPrice) return;
-            if (openOrders.length === 1 && (openBuyOrders.length === 1 || openSellOrders.length === 1)) {
-                const order = openOrders[0];
-                if (openBuyOrders.length === 1) {
-                    if (tradingPrice == parseFloat(order.price)) return;
-                    // TODO - To fix no price in stop Market
-                    // To know wether its repetitive
-                    if (order.type == 'stop_market' ) return; //Stop market Bug!!
-                } 
+            if (openStopOrders.length === 1 ) {
+                const order = openStopOrders[0];
+                if (tradingPrice == parseFloat(order.price)) return;
                 await exchangePair.cancelActiveOrders(order.id);
                 await futuresCreateStopLossOrder('buy');
             } 
-            if (openOrders.length === 0) {
+            if (openStopOrders.length === 0) {
                 await futuresCreateStopLossOrder('buy');
             }
         }
@@ -281,23 +294,21 @@ class OrderExecutor {
         let openSellOrders = openOrders.filter((order) => order.side == 'sell');
         const orderType = options.trade["order_type"] || 'market';
         
-        // Cancel all active orders if greater than 2
-        // TODO - Need to work on handling multiple Orders
-        if (openOrders.length > 1) {
-            await exchangePair.cancelActiveOrders();
-            await this.delay();
-            const refetchedOrders = await exchangePair.getActiveOrders();
-            openOrders = refetchedOrders
-            openBuyOrders = openOrders.filter((order) => order.side == 'buy');
-            openSellOrders = openOrders.filter((order) => order.side == 'sell');
-        }
-
         const ticker = await exchangePair.getTicker();
         const { bidPrice, askPrice, lastPrice} = ticker;
         const tradingAmount = parseFloat((amount).toFixed(amountPrecision));
         const tradingPrice = parseFloat((advicePrice).toFixed(pricePrecision));
         
         if (!position) {
+            // Cancel all active orders if greater than 1
+            if (openOrders.length > 1) {
+                await exchangePair.cancelActiveOrders();
+                await this.delay();
+                const refetchedOrders = await exchangePair.getActiveOrders();
+                openOrders = refetchedOrders
+                openBuyOrders = openOrders.filter((order) => order.side == 'buy');
+                openSellOrders = openOrders.filter((order) => order.side == 'sell');
+            }
             if (openOrders.length > 1) return;
             if (signal === 'close') return;
             if (signal === 'long') {
@@ -336,6 +347,15 @@ class OrderExecutor {
         }
 
         if (position) {
+            // Cancel all active orders if greater than 2
+            if (openOrders.length > 2) {
+                await exchangePair.cancelActiveOrders();
+                await this.delay();
+                const refetchedOrders = await exchangePair.getActiveOrders();
+                openOrders = refetchedOrders
+                openBuyOrders = openOrders.filter((order) => order.side == 'buy');
+                openSellOrders = openOrders.filter((order) => order.side == 'sell');
+            }
             const { positionSide, positionAmount, leverage } = position;
             const orderList = {
                 openOrders, openBuyOrders, openSellOrders
@@ -351,20 +371,6 @@ class OrderExecutor {
                     positionSide, tradingPrice, tradingAmount, ticker, 
                     orderType, orderList
                     );
-            }
-
-            // Prevent Any Action to Stop an Ongoing Unfilled Limit Order
-            // TODO - Fix when the orders wasnt filled completely but need to take profit
-            if (openOrders && openOrders[0]) {
-                const order = openOrders[0];
-                const orderType = order.type
-                const orderSide = order.side;
-                const cond1 = orderType == 'limit';
-                const cond2 = orderSide == 'buy' && positionSide == 'LONG';
-                const cond3 = orderSide == 'sell' && positionSide == 'SHORT';
-                if (cond1 && (cond2 || cond3)) {
-                    return;
-                }
             }
 
             // Stoploss advice
@@ -657,15 +663,15 @@ class OrderExecutor {
 
     async futuresForceClose(position, exchangePair) {
         await exchangePair.cancelActiveOrders();
+        await this.delay(2500);
         const { positionAmount, positionSide } = position;
         if (positionAmount == 0) return;
         const amount = Math.abs(positionAmount);
         if (positionSide == 'LONG') {
             await exchangePair.createMarketOrder('sell', amount);
-            await this.delay();
-            return;
+        } else {
+            await exchangePair.createMarketOrder('buy', amount);
         }
-        await exchangePair.createMarketOrder('buy', amount);
         await this.delay();
         return;
     }
@@ -673,16 +679,22 @@ class OrderExecutor {
     async futuresClose(position, exchangePair, options) {
         if (!position || (position && position.positionAmount == 0)) return;
         await exchangePair.cancelActiveOrders();
-        const { positionAmount, positionSide } = position;
-        const amount = Math.abs(positionAmount);
-        if (positionSide == 'LONG') {
-            await this.futuresCreateOrder(exchangePair, amount, 'sell', options);
+        await this.delay(3000);
+        // Refetching Positions to Check for Already Filled Orders
+        // To prevent creating a new Position --Fixing that bug
+        const refetchedPositions = await exchangePair.getPositions();
+        let newRefetchedPosition = refetchedPositions[0];
+        if (newRefetchedPosition) {
+            const { positionAmount, positionSide } = newRefetchedPosition;
+            const amount = Math.abs(positionAmount);
+            if (positionSide == 'LONG') {
+                await this.futuresCreateOrder(exchangePair, amount, 'sell', options);
+            } else {
+                await this.futuresCreateOrder(exchangePair, amount, 'buy', options);
+            }
             await this.delay();
             return;
         }
-        await this.futuresCreateOrder(exchangePair, amount, 'buy', options);
-        await this.delay();
-        return;
     }
 
     async futuresCreateOrder(exchangePair, amount, side, options) { //side: 'sell' or 'buy'
