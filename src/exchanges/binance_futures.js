@@ -380,9 +380,12 @@ module.exports = class BinanceFuturesExchange {
             if (!this.openOrders || (this.openOrders && !this.openOrders[symbol])) {
                 this.openOrders = {};
                 const fetchedOrders = await this.exchange.fetchOpenOrders(symbol);
+                console.log(fetchedOrders)
                 const symbolOrders = fetchedOrders.map((order) => {
+                    const stopPrice = order.info.stopPrice;
                     return new Order({
                         ...order,
+                        stopPrice,
                         time: order.timestamp
                     })
                 })
@@ -566,14 +569,18 @@ module.exports = class BinanceFuturesExchange {
             const fetchedOpenOrders = await this.exchange.fetchOpenOrders(symbol);
             const fetchedClosedOrders = await this.exchange.fetchClosedOrders(symbol);
             const symbolOpenOrders = fetchedOpenOrders.map((order) => {
+                const stopPrice = order.info.stopPrice;
                 return new Order({
                     ...order,
+                    stopPrice,
                     time: order.timestamp
                 })
             });
             const symbolClosedOrders = fetchedClosedOrders.map((order) => {
+                const stopPrice = order.info.stopPrice;
                 return new Order({
                     ...order,
+                    stopPrice,
                     time: order.timestamp
                 })
             });
@@ -660,6 +667,7 @@ module.exports = class BinanceFuturesExchange {
             const remaining = amount - filled;
             const asset = exchangeSymbol.split('USDT')[0];
             const symbol = asset + '/' + 'USDT';
+            const stopPrice = Number(order.sp);
 
             if (!this.openOrders) {
                 this.openOrders = {};
@@ -670,7 +678,7 @@ module.exports = class BinanceFuturesExchange {
             }
 
             const updatedOrder = new Order({
-                side, time, id, type, price, status, symbol, amount, filled, remaining
+                side, time, id, type, price, status, symbol, amount, filled, remaining, stopPrice
             });
 
             //Remove a open order by id
