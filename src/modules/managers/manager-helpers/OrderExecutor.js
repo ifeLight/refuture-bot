@@ -243,42 +243,49 @@ class OrderExecutor {
         const {openOrders, openBuyOrders, openSellOrders} = orderList;
         const { amount: amountPrecision, price: pricePrecision } = exchangePair.info.precision;
         const { bidPrice, askPrice, lastPrice} = ticker;
-        const stoplossOrderType =  orderType == 'market' ? 'STOP_MARKET': 'STOP';
+        const takeProfitOrderType =  orderType == 'market' ? 'TAKE_PROFIT_MARKET': 'TAKE_PROFIT';
         const self = this;
+
+        const stopPrice = tradingPrice;
+        const futuresCreateTakeProfitOrder = async (side) => {
+            await exchangePair.createOrder(takeProfitOrderType, side, tradingAmount, tradingPrice, {
+                'stopPrice': stopPrice
+            });
+            await self.delay();
+        }
+
+        let openTakeProfitOrders = openOrders.filter((order) => order.type == takeProfitOrderType.toLocaleLowerCase() )
+        if (openTakeProfitOrders.length > 1) {
+            for (const order of takeProfitOrders)  {
+                await exchangePair.cancelActiveOrders(order.id);
+            }
+            await self.delay();
+            takeProfitOrders = [];
+        }
 
         if (positionSide == 'LONG') {
             if (tradingPrice < askPrice) return;
-            if (openOrders.length === 1 && (openBuyOrders.length === 1 || openSellOrders.length === 1)) {
-                const order = openOrders[0];
-                if (openSellOrders.length === 1) {
-                    if (tradingPrice == parseFloat(order.price)) return;
-                    if (parseFloat(order.price) < bidPrice || order.type === 'stop_market') return; //Stoploss is of higher preference to Take Profit
-                } 
+            if (openTakeProfitOrders.length === 1 ) {
+                const order = openTakeProfitOrders[0];
+                if (tradingPrice == parseFloat(order.stopPrice)) return;
                 await exchangePair.cancelActiveOrders(order.id);
-                await exchangePair.createLimitOrder('sell', tradingAmount, tradingPrice);
-                await self.delay();
+                await futuresCreateTakeProfitOrder('sell');
             } 
-            if (openOrders.length === 0) {
-                await exchangePair.createLimitOrder('sell', tradingAmount, tradingPrice);
-                await self.delay();
+            if (openTakeProfitOrders.length === 0) {
+                await futuresCreateTakeProfitOrder('sell');
             }
         }
 
         if (positionSide == 'SHORT') {
             if (tradingPrice > bidPrice) return;
-            if (openOrders.length === 1 && (openBuyOrders.length === 1 || openSellOrders.length === 1)) {
-                const order = openOrders[0];
-                if (openBuyOrders.length === 1) {
-                    if (tradingPrice == parseFloat(order.price)) return;
-                    if (parseFloat(order.price) > askPrice || order.type === 'stop_market') return; //Stoploss is of higher preference to Take Profit
-                } 
+            if (openTakeProfitOrders.length === 1 ) {
+                const order = openTakeProfitOrders[0];
+                if (tradingPrice == parseFloat(order.stopPrice)) return;
                 await exchangePair.cancelActiveOrders(order.id);
-                await exchangePair.createLimitOrder('buy', tradingAmount, tradingPrice);
-                await self.delay();
+                await futuresCreateTakeProfitOrder('buy');
             } 
             if (openOrders.length === 0) {
-                await exchangePair.createLimitOrder('buy', tradingAmount, tradingPrice);
-                await self.delay();
+                await futuresCreateTakeProfitOrder('buy');
             }
         }
     }

@@ -1,5 +1,5 @@
 module.exports = class Order {
-    constructor({type, time, id, symbol, price, side, amount, filled, remaining, status}) {
+    constructor({type, time, id, symbol, stopPrice, price, side, amount, filled, remaining, status}) {
         this.time = time;
         this.id = id;
         this.symbol = symbol;
@@ -10,5 +10,6 @@ module.exports = class Order {
         this.amount = amount;
         this.filled = filled;
         this.remaining = remaining;
+        this.stopPrice = Number(stopPrice);
     }
 }
