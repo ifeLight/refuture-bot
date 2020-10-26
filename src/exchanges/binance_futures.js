@@ -380,7 +380,6 @@ module.exports = class BinanceFuturesExchange {
             if (!this.openOrders || (this.openOrders && !this.openOrders[symbol])) {
                 this.openOrders = {};
                 const fetchedOrders = await this.exchange.fetchOpenOrders(symbol);
-                console.log(fetchedOrders)
                 const symbolOrders = fetchedOrders.map((order) => {
                     const stopPrice = order.info.stopPrice;
                     return new Order({
