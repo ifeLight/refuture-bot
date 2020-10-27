@@ -144,8 +144,22 @@ class OrderExecutor {
                 throw new Error('Amount not configured');
             }
 
+            // Clear up Stop Loss & Take Profit When No Trade (position) is Going On
+            if (!position) {
+                const orderTypesToClose = ['stop', 'stop_market', 'take_profit', 'take_profit_market'];
+                let openOrders = await exchangePair.getActiveOrders();
+                if (openOrders && Array.isArray(openOrders) && openOrders.length > 0) {
+                    for (const order of openOrders) {
+                        const {id, type} = order;
+                        if (orderTypesToClose.includes(type)) {
+                            await exchangePair.cancelActiveOrders(id);
+                        }
+                    }
+                }
+            }
+
             // Check if there is available money to trade
-            // TODO - Stop new trade unless there is available money to trade
+            // Stop new trade unless there is available money to trade --Fixed
             const quoteCurrency = exchangePair.info.quote;
             const quoteAvailableBalance = (await exchangePair.getBalance(quoteCurrency)).free;
             const isThereAvailbleFunds = quoteAvailableBalance >= amountToTrade;
