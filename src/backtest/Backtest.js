@@ -327,8 +327,8 @@ class Backtest {
 				const { time, price } = candlePoint;
                 if (this.state.positionType !== positionTypes.NONE && this.useDefaultSafety) {
 					this.checkStopLossAndTakeProfit(time, price);
-					this.checkSafetyIsHit(time, price);
 				}
+				this.checkSafetyIsHit(time, price);
 				await this.safety(time, price, this.parentObject);
 				await this.strategy(time, price, this.parentObject);
 

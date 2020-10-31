@@ -297,7 +297,7 @@ class Backtest {
             if (!signalResult || (signalResult && !signalResult.getSignal())) {
                 const advices = signalResult.getOrderAdvices();
                 if (advices) {
-                    for (const advice of object) {
+                    for (const advice of advices) {
                         this.setSafetyAdvice(advice, price);
                     }
                 }
