@@ -252,7 +252,12 @@ class Backtest {
         self.candlesRepository.setDefaultToDate(time);
         const signalResult = await self.indicatorManager.run(self.indicatorName, self.exchangePair, self.indicatorOptions);
         if (!signalResult || (signalResult && !signalResult.getSignal())) {
-            // Do nothing
+            const advices = signalResult.getOrderAdvices();
+            if (advices) {
+                for (const advice of advices) {
+                    this.setSafetyAdvice(advice, price);
+                }
+            }
         } else if (signalResult.getSignal() && signalResult.getSignal() === 'long') {
             this.openPosition(time, price, 'long');
             self.state.lastSignal = 'long';
