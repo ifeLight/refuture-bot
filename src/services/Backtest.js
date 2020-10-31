@@ -295,7 +295,12 @@ class Backtest {
        
             const signalResult = await self.safetymanager.run(safetyName, self.exchangePair, safetyOptions);
             if (!signalResult || (signalResult && !signalResult.getSignal())) {
-                // Do nothing
+                const advices = signalResult.getOrderAdvices();
+                if (advices) {
+                    for (const advice of object) {
+                        this.setSafetyAdvice(advice, price);
+                    }
+                }
             } else if (signalResult.getSignal() && signalResult.getSignal() === 'long') {
                 this.openPosition(time, price, 'long');
             } else if (signalResult.getSignal() && signalResult.getSignal() === 'short') {

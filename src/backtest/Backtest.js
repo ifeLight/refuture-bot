@@ -6,7 +6,7 @@ const {
 } = require('./backtestConfig');
 
 class Backtest {
-    constructor({exchangeFee, candles, amount, leverage, useDefaultSafety =true,  stopLoss, takeProfit, safety, strategy, timeMetrics,  parentObject, noInterruption = false}) {
+    constructor({exchangeFee, candles, amount, leverage, useDefaultSafety = true,  stopLoss, takeProfit, safety, strategy, timeMetrics,  parentObject, noInterruption = false}) {
 		const balance = amount || defaultBalance;
 		const lev = parseInt(leverage) || defaultLeverage;
 		const echFee = exchangeFee || defaultExchangeFee;
@@ -16,6 +16,8 @@ class Backtest {
 			stopLoss: stopLoss || defaultStopLoss,
 			takeProfit: takeProfit || defaultTakeProfit,
 			positionType: positionTypes.NONE,
+			safetyStoploss: null,
+			safetyTakeProfit: null,
 			trades: [],
 			maximumBalance: balance,
             minimumBalance: balance,
@@ -116,7 +118,9 @@ class Backtest {
 		trade.closeDate = new Date(trade.closeTime).toString();
 		this.state.balance += trade.profit;
 		trade.currentBalance = this.state.balance;
-        this.state.positionType = positionTypes.NONE;
+		this.state.positionType = positionTypes.NONE;
+		this.state.safetyStoploss =  null;
+		this.state.safetyTakeProfit =  null;
 		trade.profitInPercentage = parseFloat(((trade.profit / this.amount) * 100).toFixed(4));
 		this.state.trades.push(trade);
 		this.handleMaxLossProfitStat(trade)
@@ -157,7 +161,73 @@ class Backtest {
 		trade.closedBy = reason;
         trade.profit = this.calcProfit(trade.amount, trade.entry, difference, trade.fee);
         this.roundupTrade(trade)
-    }
+	}
+
+	setSafetyAdvice(advice, thisPrice) {
+		// Can only work when there is a position going on for now
+		if (this.state.positionType !== positionTypes.NONE) {
+			let {signal, price} = advice;
+			price = parseFloat(price);
+			if (this.state.positionType === positionTypes.LONG) {
+				if (price > thisPrice && [ 'close', 'take_profit'].includes(signal)){
+					this.state.safetyTakeProfit = price;
+				}
+
+				if (price < thisPrice && ['close', 'stoploss'].includes(signal)){
+					this.state.safetyStoploss = price;
+				}
+			}
+
+			if (this.state.positionType === positionTypes.SHORT) {
+				if (price < thisPrice && [ 'close', 'take_profit'].includes(signal)){
+					this.state.safetyTakeProfit = price;
+				}
+
+				if (price > thisPrice && ['close', 'stoploss'].includes(signal)){
+					this.state.safetyStoploss = price;
+				}
+			}
+		}
+	}
+
+	checkSafetyIsHit(time, price) {
+		let entryPrice = this.state.positionEntry;
+		let isTakeProfitHit, isStoplossHit;
+		let difference;
+		if (this.state.positionType === positionTypes.LONG) {
+			 if (this.state.safetyTakeProfit && (price >= this.state.safetyTakeProfit)) {
+				isTakeProfitHit = true;
+				difference = this.state.safetyTakeProfit -  entryPrice;
+			 }
+			 if (this.state.safetyStoploss && (price <= this.state.safetyStoploss)) {
+				isStoplossHit = true;
+				difference = -(entryPrice - this.state.safetyStoploss);
+			}
+		}
+
+		if (this.state.positionType === positionTypes.SHORT) {
+			if (this.state.safetyTakeProfit && (price <= this.state.safetyTakeProfit)) {
+			   isTakeProfitHit = true;
+			   difference = (entryPrice -  this.state.safetyTakeProfit);
+			}
+			if (this.state.safetyStoploss && (price >= this.state.safetyStoploss)) {
+			   isStoplossHit = true;
+			   difference = -(this.state.safetyStoploss - entryPrice);
+		   }
+	   }
+
+		if ((isTakeProfitHit || isStoplossHit) && difference) {
+			const trade = this.createNewEmptyTrade();
+			const isLongPosition = trade.type === positionTypes.LONG;
+			trade.closeTime = time;
+			trade.closedBy = isStoplossHit ? 'safety-stoploss' : isTakeProfitHit ? 'safety-take-profit': 'unknown';
+			trade.close = isLongPosition ? trade.entry + difference : trade.entry - difference;
+			trade.fee = this.calcFee(trade.amount, trade.entry, trade.close); 
+			trade.profit = this.calcProfit(trade.amount, trade.entry, difference, trade.fee);
+			this.roundupTrade(trade)
+		}
+
+	}
 
     countTrades() {
 		const totalTrades = this.state.trades.length;
@@ -256,7 +326,8 @@ class Backtest {
 				let periodStartTime = Date.now();
 				const { time, price } = candlePoint;
                 if (this.state.positionType !== positionTypes.NONE && this.useDefaultSafety) {
-                    this.checkStopLossAndTakeProfit(time, price);
+					this.checkStopLossAndTakeProfit(time, price);
+					this.checkSafetyIsHit(time, price);
 				}
 				await this.safety(time, price, this.parentObject);
 				await this.strategy(time, price, this.parentObject);
