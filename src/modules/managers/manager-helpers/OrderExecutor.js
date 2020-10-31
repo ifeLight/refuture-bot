@@ -83,8 +83,11 @@ class OrderExecutor {
                 if (signal == 'close' || signal == 'short') {
                     await this.runShort(exchangePair, options);
                 }
-            } else if (signalResult.getOrderAdvice()) {
-                await this.runAdvice(signalResult.getOrderAdvice(), exchangePair, amount, options);
+            } else if (signalResult.getOrderAdvices()) {
+                const advices = signalResult.getOrderAdvices();
+                for (const advice of advices) {
+                    await this.runAdvice(advice, exchangePair, amount, options);
+                }
             }
         } catch (error) {
             console.error(error);
@@ -177,8 +180,11 @@ class OrderExecutor {
                 if (signal == 'close' ) {
                     await this.futuresClose(position, exchangePair, options);
                 }
-            } else if (signalResult.getOrderAdvice()) {
-                await this.runFuturesAdvice(signalResult.getOrderAdvice(), position, exchangePair, amount, options);
+            } else if (signalResult.getOrderAdvices()) {
+                const advices = signalResult.getOrderAdvices();
+                for (const advice of advices) {
+                    await this.runFuturesAdvice(advice, position, exchangePair, amount, options);
+                }
             }
             
         } catch (error) {
