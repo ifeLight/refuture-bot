@@ -85,6 +85,35 @@ module.exports = class SafetyBroadcast {
         const retrievedPosition = await this.retrievePosition(entryPrice, positionSide);
         const presentTime = this.safetyPeriod.getTime();
         const presentPrice = this.presentPrice;
+
+        // Take Profit Check
+        if (this.options.takeProfit === true) {
+            const fetchedSafetyBroadcast = await this.fetchSafetyBroadcast(positionSide, 'take_profit');
+            if (fetchedSafetyBroadcast) {
+                if (!retrievedPosition.takeProfitPrice) {
+                    const withinTimeRange = (presentTime -  fetchedSafetyBroadcast.time) < (this.options.maxTime * 1000 * 60);
+                    const allowedPrice = presentPrice > parseFloat(fetchedSafetyBroadcast.price);
+                    if (withinTimeRange && allowedPrice) {
+                        retrievedPosition.takeProfitPrice = fetchedSafetyBroadcast.price;
+                    }
+                }
+                if (retrievedPosition.takeProfitPrice) {
+                    if (presentPrice < retrievedPosition.takeProfitPrice) {
+                        safetyResult.setSignal('close');
+                        safetyResult.mergeDebug({
+                            closingBy: 'Take Profit Hit',
+                            currentPrice:  presentPrice,
+                            takeProfitPrice: retrievedPosition.takeProfitPrice,
+                            positionSide
+                        })
+                    } else {
+                        safetyResult.setOrderAdvice('take_profit', retrievedPosition.takeProfitPrice);
+                    }
+                }
+            };
+        }
+
+        // Stoploss Check
         if (this.options.stoploss === true) {
             const fetchedSafetyBroadcast = await this.fetchSafetyBroadcast(positionSide, 'stoploss');
             if (fetchedSafetyBroadcast) {
@@ -116,36 +145,6 @@ module.exports = class SafetyBroadcast {
             };
             // console.log(fetchedSafetyBroadcast)
         }
-
-        if (this.options.takeProfit === true) {
-            const fetchedSafetyBroadcast = await this.fetchSafetyBroadcast(positionSide, 'take_profit');
-            if (fetchedSafetyBroadcast) {
-                if (!retrievedPosition.takeProfitPrice) {
-                    const withinTimeRange = (presentTime -  fetchedSafetyBroadcast.time) < (this.options.maxTime * 1000 * 60);
-                    const allowedPrice = presentPrice > parseFloat(fetchedSafetyBroadcast.price);
-                    if (withinTimeRange && allowedPrice) {
-                        retrievedPosition.takeProfitPrice = fetchedSafetyBroadcast.price;
-                    }
-                }
-                if (retrievedPosition.takeProfitPrice) {
-                    if (presentPrice < retrievedPosition.takeProfitPrice) {
-                        safetyResult.setSignal('close');
-                        safetyResult.mergeDebug({
-                            closingBy: 'Take Profit Hit',
-                            currentPrice:  presentPrice,
-                            takeProfitPrice: retrievedPosition.takeProfitPrice,
-                            positionSide
-                        })
-                    } else {
-                        if (safetyResult.getSignal() && safetyResult.getSignal() !== 'take_profit')  {
-                            // Stoploss is taken of higher preference to Take Profit
-                        } else {
-                            safetyResult.setOrderAdvice('take_profit', retrievedPosition.takeProfitPrice);
-                        }
-                    }
-                }
-            };
-        }
        
         // console.log(retrievedPosition);
         await this.storePosition(retrievedPosition);
@@ -158,6 +157,35 @@ module.exports = class SafetyBroadcast {
         const retrievedPosition = await this.retrievePosition(entryPrice, positionSide);
         const presentTime = this.safetyPeriod.getTime();
         const presentPrice = this.presentPrice;
+
+        // Take Profit Check
+        if (this.options.takeProfit === true) {
+            const fetchedSafetyBroadcast = await this.fetchSafetyBroadcast(positionSide, 'take_profit');
+            if (fetchedSafetyBroadcast) {
+                if (!retrievedPosition.takeProfitPrice) {
+                    const withinTimeRange = (presentTime -  fetchedSafetyBroadcast.time) < (this.options.maxTime * 1000 * 60);
+                    const allowedPrice = presentPrice < parseFloat(fetchedSafetyBroadcast.price);
+                    if (withinTimeRange && allowedPrice) {
+                        retrievedPosition.takeProfitPrice = fetchedSafetyBroadcast.price;
+                    }
+                }
+                if (retrievedPosition.takeProfitPrice) {
+                    if (presentPrice > retrievedPosition.takeProfitPrice) {
+                        safetyResult.setSignal('close');
+                        safetyResult.mergeDebug({
+                            closingBy: 'Take Profit Hit',
+                            currentPrice:  presentPrice,
+                            takeProfitPrice: retrievedPosition.takeProfitPrice,
+                            positionSide
+                        })
+                    } else {
+                        safetyResult.setOrderAdvice('take_profit', retrievedPosition.takeProfitPrice)
+                    }
+                }
+            };
+        }
+        
+        // Stoploss Check
         if (this.options.stoploss === true) {
             const fetchedSafetyBroadcast = await this.fetchSafetyBroadcast(positionSide, 'stoploss');
             if (fetchedSafetyBroadcast) {
@@ -184,35 +212,6 @@ module.exports = class SafetyBroadcast {
             };
         }
 
-        if (this.options.takeProfit === true) {
-            const fetchedSafetyBroadcast = await this.fetchSafetyBroadcast(positionSide, 'take_profit');
-            if (fetchedSafetyBroadcast) {
-                if (!retrievedPosition.takeProfitPrice) {
-                    const withinTimeRange = (presentTime -  fetchedSafetyBroadcast.time) < (this.options.maxTime * 1000 * 60);
-                    const allowedPrice = presentPrice < parseFloat(fetchedSafetyBroadcast.price);
-                    if (withinTimeRange && allowedPrice) {
-                        retrievedPosition.takeProfitPrice = fetchedSafetyBroadcast.price;
-                    }
-                }
-                if (retrievedPosition.takeProfitPrice) {
-                    if (presentPrice > retrievedPosition.takeProfitPrice) {
-                        safetyResult.setSignal('close');
-                        safetyResult.mergeDebug({
-                            closingBy: 'Take Profit Hit',
-                            currentPrice:  presentPrice,
-                            takeProfitPrice: retrievedPosition.takeProfitPrice,
-                            positionSide
-                        })
-                    } else {
-                        if (safetyResult.getSignal() && safetyResult.getSignal() !== 'take_profit')  {
-                            // Stoploss is taken of higher preference to Take Profit
-                        } else {
-                            safetyResult.setOrderAdvice('take_profit', retrievedPosition.takeProfitPrice)
-                        }
-                    }
-                }
-            };
-        }
         await this.storePosition(retrievedPosition);
         return safetyResult;
     }
