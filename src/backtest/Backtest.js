@@ -25,6 +25,7 @@ class Backtest {
 			leverage: lev,
 			exchangeFee: echFee,
 			maximumDrawdown: 0,
+			maximumDrawdownAmount: 0,
 			maximumProfit: 0,
 			maximumLoss: 0,
 			amount,
@@ -257,10 +258,14 @@ class Backtest {
 	}
 
 	handleDrawdownStats() {
-		const { maximumBalance, maximumDrawdown, balance} = this.state;
+		const { maximumBalance, maximumDrawdown, balance, maximumDrawdownAmount} = this.state;
 		const presentDrawdown = ((maximumBalance - balance) / maximumBalance) * 100;
+		const presentDrawdownAmount = maximumBalance - balance;
 		if (presentDrawdown > maximumDrawdown) {
 			this.state.maximumDrawdown = parseFloat(presentDrawdown.toFixed(2));
+		}
+		if (presentDrawdownAmount > maximumDrawdownAmount) {
+			this.state.maximumDrawdownAmount = presentDrawdownAmount;
 		}
 	}
 
