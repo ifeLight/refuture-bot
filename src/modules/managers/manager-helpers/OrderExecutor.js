@@ -151,12 +151,17 @@ class OrderExecutor {
             if (!position) {
                 const orderTypesToClose = ['stop', 'stop_market', 'take_profit', 'take_profit_market'];
                 let openOrders = await exchangePair.getActiveOrders();
+                let thereWas = false;
                 if (openOrders && Array.isArray(openOrders) && openOrders.length > 0) {
                     for (const order of openOrders) {
                         const {id, type} = order;
                         if (orderTypesToClose.includes(type)) {
+                            thereWas = true;
                             await exchangePair.cancelActiveOrders(id);
                         }
+                    }
+                    if (thereWas) {
+                        await this.delay();
                     }
                 }
             }
