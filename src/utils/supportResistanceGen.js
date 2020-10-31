@@ -13,14 +13,14 @@ module.exports = ({candles, candleDepth = 5, candleSizeDiff = 1, minMatch = 2} )
     const acceptableCandleHeight = averageHeight * candleSizeDiff
     const averageHeightHalf = acceptableCandleHeight / 2;
 
-    const firstPrice = pivotPoints && pivotPoints[0] ? pivotPoints[0] : 0
-    const line = {
-        price: firstPrice,
-        members: [firstPrice],
-        weight: 1
-    }
+    // const firstPrice = pivotPoints && pivotPoints[0] ? pivotPoints[0] : 0
+    // const line = {
+    //     price: firstPrice,
+    //     members: [firstPrice],
+    //     weight: 1
+    // }
 
-    const lines = [line]
+    const lines = []
 
     if (!candles) return;
 
@@ -45,6 +45,12 @@ module.exports = ({candles, candleDepth = 5, candleSizeDiff = 1, minMatch = 2} )
     } 
 
     const filteredLines = lines.filter((line) => line.members.length >= minMatch);
-    const sortedLines = filteredLines.sort((a,b) => a.price - b.price);
+    const reMapForMedian = filteredLines.map((line) => {
+        const {members, price, weight} = line;
+        const resorted = members.sort((a,b) => a-b);
+        const newPrice = resorted[Math.ceil((members.length / 2) - 1)];
+        return {price: newPrice, members: resorted, weight};
+    })
+    const sortedLines = reMapForMedian.sort((a,b) => a.price - b.price);
     return sortedLines;
 }
