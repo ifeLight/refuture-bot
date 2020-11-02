@@ -268,6 +268,17 @@ module.exports = class {
         }
     }
 
+    getRecommendedTakeProfit (candles, price, signal) {
+        const { recommendedTakeProfitStep } = this.options;
+        const averageHeight = this.getAverageHeight(candles);
+        if (signal === 'short') {
+            return price + (recommendedTakeProfitStep * averageHeight);
+        }
+        if (signal === 'long') {
+            return price - (recommendedTakeProfitStep * averageHeight);
+        }
+    }
+
     isCandleDirection(candle, direction = 'long') {
         const {open, close} = candle;
         if (direction == 'long') {
@@ -501,6 +512,8 @@ module.exports = class {
         return {
             period: '5m',
             candleDepth: 5,
+            candleSizeDiff: 1,
+            minMatch: 1,
             length: 100,
             longRSI: 14,
             shortRSI: 6,
@@ -527,6 +540,7 @@ module.exports = class {
             onlyReversal: false,
             onlyRebounce: false,
             recommendedStoplossStep: 2,
+            recommendedTakeProfitStep: 5,
             useIndicatorFilter: false, // Use an Indicator like the sma to filter out Some signals
             indicatorFilterPeriod: 60,
             indicatorFilter: 'ema',
