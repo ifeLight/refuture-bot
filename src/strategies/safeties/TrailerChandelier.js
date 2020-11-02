@@ -226,8 +226,12 @@ module.exports = class TrailerChandelier {
         return true;
     }
 
+    getStorageKey () {
+        return `trailer_chandelier${this.isBacktest ? '_bt': ''}`;
+    }
+
     async retrievePosition (entryPrice, positionSide) {
-        const storageKey = `trailer_chandelier_${this.isBacktest ? '_bt': ''}`;
+        const storageKey = this.getStorageKey();
         const retrievedPosition = await this.safetyPeriod.storage.get(storageKey);
         if (retrievedPosition && retrievedPosition.hasOwnProperty('entryPrice') && retrievedPosition.hasOwnProperty('positionSide')) {
             if (retrievedPosition.entryPrice === entryPrice && retrievedPosition.positionSide === positionSide) {
@@ -246,7 +250,7 @@ module.exports = class TrailerChandelier {
     }
 
     async storePosition(data) {
-        const storageKey = `trailer_chandelier_${this.isBacktest ? '_bt': ''}`;
+        const storageKey = this.getStorageKey();
         await this.safetyPeriod.storage.set(storageKey, data);
     }
     
