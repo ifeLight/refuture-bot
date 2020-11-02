@@ -4,6 +4,7 @@ var cors = require('cors')
 const HyperCtrl = require('./controllers/Hyper');
 const BacktestCtrl = require('./controllers/Backtest');
 const CandlesCtrl = require('./controllers/Candles');
+const StrategyCtl = require('./controllers/Strategy')
 
 const api = express();
 
@@ -19,5 +20,10 @@ api.get('/backtest/:id', BacktestCtrl.getBacktest);
 
 //Candles Endpoint
 api.get('/candles', CandlesCtrl.getCandles);
+
+// Strategy List
+api.get('/strategies/indicators', StrategyCtl.getIndicators);
+api.get('/strategies/safeties', StrategyCtl.getSafeties);
+api.get('/strategies/insurances', StrategyCtl.getInsurances)
 
 module.exports = api;
