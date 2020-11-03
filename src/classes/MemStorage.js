@@ -1,8 +1,8 @@
-const { AsyncNedb } = require('nedb-async')
+const memDB = require('../providers/MemDB')
 
 class MemStorage {
     constructor (exchangeName, symbol) {
-        this.db = new AsyncNedb();
+        this.db = memDB;
         this.exchangeName = exchangeName;
         this.symbol = symbol;
     }
@@ -19,7 +19,7 @@ class MemStorage {
 
     async set (key, value) {
         const personalisedKey = this.personaliseKey(key);
-        const res = await this.db.asyncUpdate({key: personalisedKey}, {value}, {upsert: true, multi: true});
+        const res = await this.db.asyncUpdate({key: personalisedKey}, {key:personalisedKey, value}, {upsert: true, multi: true});
         return Boolean(res);
     }
 

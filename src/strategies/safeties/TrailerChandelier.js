@@ -97,6 +97,14 @@ module.exports = class TrailerChandelier {
         const averageHeight = this.getAverageHeight(lastFiveCandles)
         const {exitLong, exitShort} = lastResult;
 
+        // console.log('---------------------');
+        // console.log(`Exit Long: ${exitLong}`)
+        // console.log(`Exit Short: ${exitShort}`)
+        // console.log(`Last Candle Open: ${lastCandle.open}`)
+        // console.log(`Last Candle close: ${lastCandle.close}`)
+        // console.log(retrievedPosition)
+        // console.log('---------------------')
+
         if (positionSide === 'LONG') {
             if (retrievedPosition.initialCorrectSide === false || retrievedPosition.initialCorrectSide === null) {
                 if (lastCandle.open > exitLong && lastCandle.close > exitLong) {
