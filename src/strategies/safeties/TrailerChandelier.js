@@ -7,6 +7,8 @@ class TrailerPosition {
         this.stoplossPrice = null;
         this.initialCorrectSide = null;
         this.exitPrice = null;
+        this.initialCorrectSide2 = null,
+        this.exitPrice2 = null;
     }
 }
 
@@ -83,69 +85,100 @@ module.exports = class TrailerChandelier {
     }
 
     async handlePosition(entryPrice, positionSide, candles) {
+        const { double } = this.options;
         let safetyResult = this.safetyPeriod.createEmptySignal();
-        const retrievedPosition = await this.retrievePosition(entryPrice, positionSide);
         const presentTime = this.safetyPeriod.getTime();
         const presentPrice = this.presentPrice;
-        const {multiplier, chandelier: chandelierPeriod, useStoploss, stoplossSteps, dynamic} = this.options;
+
+        let majorResult = await this.runChandelier(entryPrice, positionSide, candles)
+        if (majorResult.stoploss) {
+            safetyResult.setOrderAdvice('close', majorResult.stoploss);
+        }
+
+        if (double) {
+            let minorResult = await this.runChandelier(entryPrice, positionSide, candles, false);
+            let isPositive = positionSide == 'LONG' ? presentPrice > entryPrice: positionSide == 'SHORT'? presentPrice < entryPrice: false;
+            if (isPositive) {
+                if (minorResult.close) {
+                    safetyResult.setSignal('close');
+                    safetyResult.mergeDebug({...minorResult.debug});
+                }
+            } else {
+                if (majorResult.close) {
+                    safetyResult.setSignal('close');
+                    safetyResult.mergeDebug({...majorResult.debug});
+                }
+            }
+
+        } else{
+            if (majorResult.close) {
+                safetyResult.setSignal('close');
+                safetyResult.mergeDebug({...majorResult.debug});
+            }
+        }
+        
+        return safetyResult;
+    }
+
+    async runChandelier(entryPrice, positionSide, candles, main = true) {
+        const retrievedPosition = await this.retrievePosition(entryPrice, positionSide);
+        const initialCorrectSideKey = main ? 'initialCorrectSide': 'initialCorrectSide2';
+        const exitPriceKey = main ? 'initialCorrectSide': 'initialCorrectSide2';
+        const {multiplier, multiplier2,  chandelier: chandelierPeriod, chandelier2, useStoploss, stoplossSteps, dynamic} = this.options;
+        let multiplierToUse = main ? multiplier : multiplier2;
+        let periodToUse = main ? chandelierPeriod : chandelier2;
         let input = this.generateCandlesticksInputs(candles);
-        input = {...input, multiplier, period: chandelierPeriod}
+        input = {...input, multiplier: multiplierToUse, period: periodToUse}
         const result = chandelierexit(input);
         const lastResult = result[result.length - 1];
         const lastCandle = candles[candles.length - 1];
         const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         const averageHeight = this.getAverageHeight(lastFiveCandles)
         const {exitLong, exitShort} = lastResult;
-
-        // console.log('---------------------');
-        // console.log(`Exit Long: ${exitLong}`)
-        // console.log(`Exit Short: ${exitShort}`)
-        // console.log(`Last Candle Open: ${lastCandle.open}`)
-        // console.log(`Last Candle close: ${lastCandle.close}`)
-        // console.log(retrievedPosition)
-        // console.log('---------------------')
-
+        const finalResult = {};
+        finalResult.debug = {};
+        
         if (positionSide === 'LONG') {
-            if (retrievedPosition.initialCorrectSide === false || retrievedPosition.initialCorrectSide === null) {
+            if (retrievedPosition[initialCorrectSideKey] === false || retrievedPosition[initialCorrectSideKey] === null) {
                 if (lastCandle.open > exitLong && lastCandle.close > exitLong) {
-                    retrievedPosition.initialCorrectSide = true;
+                    retrievedPosition[initialCorrectSideKey] = true;
                 } else {
-                    retrievedPosition.initialCorrectSide = false;
+                    retrievedPosition[initialCorrectSideKey] = false;
                 }
             }
 
-            if (retrievedPosition.initialCorrectSide === true) {
-                if (useStoploss === true) {
+            if (retrievedPosition[initialCorrectSideKey] === true) {
+                if (useStoploss === true && main) {
                     const newStoploss = exitLong - (averageHeight * stoplossSteps)
                     if (!retrievedPosition.stoplossPrice) {
                         retrievedPosition.stoplossPrice = newStoploss;
-                        safetyResult.setOrderAdvice('stoploss', newStoploss);
+                        finalResult.stoploss = newStoploss
                     } else {
                         if (retrievedPosition.stoplossPrice < newStoploss) {
                             retrievedPosition.stoplossPrice = newStoploss;
-                            safetyResult.setOrderAdvice('stoploss', newStoploss);
+                            finalResult.stoploss = newStoploss
                         }
                     }
                 }
 
-                if (!retrievedPosition.exitPrice) {
-                    retrievedPosition.exitPrice = exitLong;
+                if (!retrievedPosition[exitPriceKey]) {
+                    retrievedPosition[exitPriceKey] = exitLong;
                 }
-                if (retrievedPosition.exitPrice) {
+                if (retrievedPosition[exitPriceKey]) {
                     if (!dynamic) {
-                        if (exitLong > retrievedPosition.exitPrice) {
-                            retrievedPosition.exitPrice = exitLong;
+                        if (exitLong > retrievedPosition[exitPriceKey]) {
+                            retrievedPosition[exitPriceKey] = exitLong;
                         }
                     } else {
-                        retrievedPosition.exitPrice = exitLong;
+                        retrievedPosition[exitPriceKey] = exitLong;
                     }
-                    if (lastCandle.open < retrievedPosition.exitPrice && lastCandle.close < retrievedPosition.exitPrice){
-                        safetyResult.setSignal('close');
-                        safetyResult.mergeDebug({
-                            exitPrice: retrievedPosition.exitPrice,
+                    if (lastCandle.open < retrievedPosition[exitPriceKey] && lastCandle.close < retrievedPosition[exitPriceKey]){
+                        finalResult.close = true;
+                        finalResult.debug = {
+                            [exitPriceKey]: retrievedPosition[exitPriceKey],
                             lastCandleOpen: lastCandle.open,
                             lastCandleClose: lastCandle.close,
-                        });
+                        }
                     }
                 }
             }
@@ -153,53 +186,53 @@ module.exports = class TrailerChandelier {
         }
 
         if (positionSide === 'SHORT') {
-            if (retrievedPosition.initialCorrectSide === false || retrievedPosition.initialCorrectSide === null) {
+            if (retrievedPosition[initialCorrectSideKey] === false || retrievedPosition[initialCorrectSideKey] === null) {
                 if (lastCandle.open < exitShort && lastCandle.close < exitShort) {
-                    retrievedPosition.initialCorrectSide = true;
+                    retrievedPosition[initialCorrectSideKey] = true;
                 } else {
-                    retrievedPosition.initialCorrectSide = false;
+                    retrievedPosition[initialCorrectSideKey] = false;
                 }
             }
 
-            if (retrievedPosition.initialCorrectSide === true) {
+            if (retrievedPosition[initialCorrectSideKey] === true) {
                 if (useStoploss === true) {
                     const newStoploss = exitShort + (averageHeight * stoplossSteps)
                     if (!retrievedPosition.stoplossPrice) {
                         retrievedPosition.stoplossPrice = newStoploss;
-                        safetyResult.setOrderAdvice('stoploss', newStoploss);
+                        finalResult.stoploss = newStoploss
                     } else {
                         if (retrievedPosition.stoplossPrice > newStoploss) {
                             retrievedPosition.stoplossPrice = newStoploss;
-                            safetyResult.setOrderAdvice('stoploss', newStoploss);
+                            finalResult.stoploss = newStoploss
                         }
                     }
                 }
 
-                if (!retrievedPosition.exitPrice) {
-                    retrievedPosition.exitPrice = exitShort;
+                if (!retrievedPosition[exitPriceKey]) {
+                    retrievedPosition[exitPriceKey] = exitShort;
                 }
-                if (retrievedPosition.exitPrice) {
+                if (retrievedPosition[exitPriceKey]) {
                     if (!dynamic) {
-                        if (exitShort < retrievedPosition.exitPrice) {
-                            retrievedPosition.exitPrice = exitShort;
+                        if (exitShort < retrievedPosition[exitPriceKey]) {
+                            retrievedPosition[exitPriceKey] = exitShort;
                         }
                     } else {
-                        retrievedPosition.exitPrice = exitShort;
+                        retrievedPosition[exitPriceKey] = exitShort;
                     }
-                    if (lastCandle.open > retrievedPosition.exitPrice && lastCandle.close > retrievedPosition.exitPrice){
-                        safetyResult.setSignal('close');
-                        safetyResult.mergeDebug({
-                            exitPrice: retrievedPosition.exitPrice,
+                    if (lastCandle.open > retrievedPosition[exitPriceKey] && lastCandle.close > retrievedPosition[exitPriceKey]){
+                        finalResult.close = true;
+                        finalResult.debug = {
+                            [exitPriceKey]: retrievedPosition[exitPriceKey],
                             lastCandleOpen: lastCandle.open,
                             lastCandleClose: lastCandle.close,
-                        });
+                        }
                     }
                 }
             }
 
         }
         await this.storePosition(retrievedPosition);
-        return safetyResult;
+        return finalResult;
     }
 
     getAverageHeight(candles) {
@@ -267,7 +300,10 @@ module.exports = class TrailerChandelier {
             period: '5m',
             length: 100,
             multiplier: 3,
-            chandelier: 5,
+            chandelier: 10,
+            double: false,
+            multiplier2: 2,
+            chandelier2:  22,
             useStoploss: false,
             stoplossSteps: 2, //The steps to give away from the chandelier as stoploss for sudden change
             dynamic: false, //For both movement exit, as chandelier changes - Very critical to be false
