@@ -5,7 +5,7 @@ const {
     tweezerbottom, tweezertop,
     shootingstar, threeblackcrows,
     threewhitesoldiers, bearishengulfingpattern,
-    abandonedbaby, eveningdojistar,
+    abandonedbaby, eveningdojistar, bullish, bearish,
 } = require('technicalindicators');
 
 const TI = require('technicalindicators');
@@ -293,38 +293,40 @@ module.exports = class {
         const lastThreeCandles = this.generateCandlesticksInputs(candles, 3);
         const lastFiveCandles = this.generateCandlesticksInputs(candles, 5);
 
+        const res = {}
+
         //Bullish Pattren
-        this.bullishengulfingpattern = bullishengulfingpattern(lastTwoCandles);
-        this.threewhitesoldiers = threewhitesoldiers(lastThreeCandles);
-        this.tweezerbottom = tweezerbottom(lastFiveCandles);
-        this.bullishhammerstick = bullishhammerstick(lastCandle);
-        this.abandonedbaby = abandonedbaby(lastThreeCandles);
+        res.bullishengulfingpattern = bullishengulfingpattern(lastTwoCandles);
+        res.threewhitesoldiers = threewhitesoldiers(lastThreeCandles);
+        res.tweezerbottom = tweezerbottom(lastFiveCandles);
+        res.bullishhammerstick = bullishhammerstick(lastCandle);
+        res.abandonedbaby = abandonedbaby(lastThreeCandles);
 
         //Bearish Pattern
-        this.bearishengulfingpattern = bearishengulfingpattern(lastTwoCandles);
-        this.threeblackcrows = threeblackcrows(lastThreeCandles);
-        this.tweezertop = tweezertop(lastFiveCandles);
-        this.shootingstar = shootingstar(lastFiveCandles);
-        this.eveningdojistar = eveningdojistar(lastThreeCandles)
-
+        res.bearishengulfingpattern = bearishengulfingpattern(lastTwoCandles);
+        res.threeblackcrows = threeblackcrows(lastThreeCandles);
+        res.tweezertop = tweezertop(lastFiveCandles);
+        res.shootingstar = shootingstar(lastFiveCandles);
+        res.eveningdojistar = eveningdojistar(lastThreeCandles);
+        return res;
     }
 
     isBullishPatternFormed(candles) {
-        this.calculateCandleStickPattern(candles)
         const lastCandle = candles[candles.length - 1]
         const isDirectionLong = this.isCandleDirection(lastCandle);
-        const cond1 = this.bullishengulfingpattern || this.threewhitesoldiers ;
-        const cond2 = this.bullishhammerstick || this.abandonedbaby;
-        return (cond1 || cond2) && isDirectionLong;
+        // const res = this.calculateCandleStickPattern(candles)
+        // const cond1 = res.bullishengulfingpattern || res.threewhitesoldiers ;
+        // const cond2 = res.bullishhammerstick || res.abandonedbaby;
+        return bullish(this.generateCandlesticksInputs(candles, 10)) && isDirectionLong;
     }
 
     isBearishPatternFormed(candles) {
-        this.calculateCandleStickPattern(candles);
         const lastCandle = candles[candles.length - 1]
         const isDirectionShort = this.isCandleDirection(lastCandle, 'short');
-        const cond1 = this.bearishengulfingpattern || this.threeblackcrows ;
-        const cond2 = this.shootingstar || this.eveningdojistar;
-        return (cond1 || cond2) && isDirectionShort;
+        // const res = this.calculateCandleStickPattern(candles)
+        // const cond1 = res.bearishengulfingpattern || res.threeblackcrows ;
+        // const cond2 = res.shootingstar || res.eveningdojistar;
+        return bearish(this.generateCandlesticksInputs(candles, 10)) && isDirectionShort;
     }
     
 
