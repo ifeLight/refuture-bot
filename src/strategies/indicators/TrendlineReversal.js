@@ -418,10 +418,6 @@ module.exports = class {
         const toRunLong = this.toRun(candles, 'long');
         const toRunShort = this.toRun(candles, 'short');
 
-        // console.log(`To run long; ${toRunLong}`);
-        // console.log(`To run short; ${toRunShort}`);
-        // console.log('------------------')
-
         //Checking to Buy long on Upper Line
         if (signalInUpperLineLong && toRunLong && !onlyRebounce) {
             let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'long');
@@ -512,9 +508,6 @@ module.exports = class {
         }
 
         if (useMACD === true) {
-            // console.log(`Signal: ${signal} - status: ${this.macdCrossoverCheck(candles, signal)}`);
-            // console.log('---------------');
-            // console.log('------------------')
             if(!this.macdCrossoverCheck(candles, signal)) return false;
         }
 

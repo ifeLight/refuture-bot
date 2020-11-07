@@ -50,6 +50,11 @@ module.exports = class SignalResult {
     return this._signal;
   }
 
+  removeAllOrderAdvices () {
+    this._orderAdvice = undefined;
+    this._orderAdvices = [];
+  }
+
   setOrderAdvice(signal, price) {
     if (!this._acceptableAdvices.includes(signal)) {
       throw `Invalid signal:${signal}`;
