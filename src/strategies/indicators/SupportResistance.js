@@ -29,7 +29,7 @@ module.exports = class {
 
     async period(indicatorPeriod, options) {
         try {
-            const { period: candlePeriod, length, longRSI, shortRSI, useRSI, candleDepth} = options;
+            const { period: candlePeriod, length, longRSI, shortRSI, useRSI} = options;
             this.options = options;
             this.longRSI = longRSI;
             this.shortRSI = shortRSI,
@@ -37,8 +37,8 @@ module.exports = class {
             this.indicatorPeriod = indicatorPeriod;
             this.candlePeriod = candlePeriod;
             
-            const lastPrice = await indicatorPeriod.getLastPrice();
-            const lastSignal = indicatorPeriod.getLastSignal();
+            // const lastPrice = await indicatorPeriod.getLastPrice();
+            // const lastSignal = indicatorPeriod.getLastSignal();
             const presentTime = indicatorPeriod.getTime();
             const candles = indicatorPeriod.indicatorBuilder.get('candles');
 
