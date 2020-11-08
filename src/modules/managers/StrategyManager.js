@@ -288,30 +288,35 @@ class StrategyManager {
             const { symbol, exchange: exchangeName, tick = 5} = strat;
             const key = `${symbol}_${exchangeName}_${tick}`;
             try {
-                const date = new Date();
-                // const seconds = date.getSeconds();
-                const minutes = date.getMinutes();
-                let presentRunNumber; 
-                for (let i = minutes ; i >= -60; i--) {
-                    if ( Math.abs(i % tick) === 0) {
-                        presentRunNumber = Math.abs(i);
-                        break;
-                    }  
-                }
-                let probableNextNumber = presentRunNumber + tick;
-                let nextRunNumber = probableNextNumber < 60 ? probableNextNumber : probableNextNumber - 60;
-                let lastRunNumber = lastRunNumbers[key];
-                if (lastRunNumber === undefined || lastRunNumber === null) {
-                    lastRunNumbers[key] = presentRunNumber;
-                    lastRunNumber = presentRunNumber;
-                }
-                if (presentRunNumber !== lastRunNumber) {
-                    await delay(600); // Added delay so that the Latest candle Could be added
-                    await self.runIndicatorStrategyUnit(strat);
-                    lastRunNumbers[key] = presentRunNumber;
-                    self.indicatorCounter(symbol, exchangeName);
+                if (tick != 0) {
+                    const date = new Date();
+                    // const seconds = date.getSeconds();
+                    const minutes = date.getMinutes();
+                    let presentRunNumber; 
+                    for (let i = minutes ; i >= -60; i--) {
+                        if ( Math.abs(i % tick) === 0) {
+                            presentRunNumber = Math.abs(i);
+                            break;
+                        }  
+                    }
+                    let probableNextNumber = presentRunNumber + tick;
+                    let nextRunNumber = probableNextNumber < 60 ? probableNextNumber : probableNextNumber - 60;
+                    let lastRunNumber = lastRunNumbers[key];
+                    if (lastRunNumber === undefined || lastRunNumber === null) {
+                        lastRunNumbers[key] = presentRunNumber;
+                        lastRunNumber = presentRunNumber;
+                    }
+                    if (presentRunNumber !== lastRunNumber) {
+                        await delay(600); // Added delay so that the Latest candle Could be added
+                        await self.runIndicatorStrategyUnit(strat);
+                        lastRunNumbers[key] = presentRunNumber;
+                        self.indicatorCounter(symbol, exchangeName);
+                    } else {
+                        await delay(2000);
+                    }
                 } else {
-                    await delay(2000);
+                    await self.runIndicatorStrategyUnit(strat);
+                    await delay(500);
                 }
                 await self.runSafetiesStrategyUnit(strat);
                 self.counter(symbol, exchangeName, counterPeriodLog);
