@@ -288,28 +288,6 @@ module.exports = class {
         return true;
     }
 
-    getRecommendedStopLoss (candles, price, signal) {
-        const { recommendedStoplossStep } = this.options;
-        const averageHeight = this.getAverageHeight(candles);
-        if (signal === 'short') {
-            return price + (recommendedStoplossStep * averageHeight);
-        }
-        if (signal === 'long') {
-            return price - (recommendedStoplossStep * averageHeight);
-        }
-    }
-
-    getRecommendedTakeProfit (candles, price, signal) {
-        const { recommendedTakeProfitStep } = this.options;
-        const averageHeight = this.getAverageHeight(candles);
-        if (signal === 'short') {
-            return price + (recommendedTakeProfitStep * averageHeight);
-        }
-        if (signal === 'long') {
-            return price - (recommendedTakeProfitStep * averageHeight);
-        }
-    }
-
     isCandleDirection(candle, direction = 'long') {
         const {open, close} = candle;
         if (direction == 'long') {
@@ -412,7 +390,7 @@ module.exports = class {
     }
 
     signals(presentPrice, lines, candles) {
-        const { allowableSpace } = this.options;
+        const { allowableSpace, stoplossSteps } = this.options;
         const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         const lastCandle = candles[candles.length -1];
         const activeLine = this.getActiveLine(presentPrice, lines);
@@ -436,7 +414,7 @@ module.exports = class {
             } else {
                 takeProfit = (averageSpace + activePrice) - averageCandleBody;
             }
-            stoploss = Math.min(...activeLine.members) - averageCandleHeight;
+            stoploss = Math.min(...activeLine.members) - (averageCandleHeight * stoplossSteps);
         }
         if (isCandleBelow) {
             if (lowerLine) {
@@ -444,7 +422,7 @@ module.exports = class {
             } else {
                 takeProfit = (activePrice - averageSpace) + averageCandleBody;
             }
-            stoploss = Math.max(...activeLine.members) + averageCandleHeight;
+            stoploss = Math.max(...activeLine.members) + (averageCandleHeight * stoplossSteps);
         }
 
         return {long, short, takeProfit, stoploss};
@@ -547,8 +525,8 @@ module.exports = class {
             useADXAdvancing: false,
             onlyReversal: false,
             onlyRebounce: false,
-            recommendedStoplossStep: 2,
-            recommendedTakeProfitStep: 5,
+            stoplossSteps: 2,
+            takeProfitSteps: 5,
             useIndicatorFilter: false, // Use an Indicator like the sma to filter out Some signals
             indicatorFilterPeriod: 60,
             indicatorFilter: 'ema',
