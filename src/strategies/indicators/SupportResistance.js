@@ -389,8 +389,44 @@ module.exports = class {
         return { upperLine, lowerLine};
     }
 
+    isTradeSafe (signal, presentPrice, stoploss, takeProfit) {
+        // This is to check the Risk reward Ratio;
+        const { pobableLeverage, probableFee } = this.options;
+        const sampleAmount = 10;
+        const samepleAmountLeveraged = sampleAmount * pobableLeverage;
+        const minimumAllowedStoplossPercentage = 100 / pobableLeverage;
+        if (signal == 'long') {
+            const rawProfit = (((takeProfit - presentPrice) / presentPrice) * samepleAmountLeveraged);
+            const rawProfitFee = ((samepleAmountLeveraged + rawProfit) * (probableFee / 100)) * 2;
+            const calcProfit = rawProfit - rawProfitFee;
+            if (rawProfitFee >= rawProfit) return false;
+            const rawLoss = (((presentPrice - stoploss) / stoploss) * samepleAmountLeveraged);
+            const rawLossFee = ((samepleAmountLeveraged) * (probableFee / 100)) * 2;
+            const calcLoss = rawLoss + rawLossFee;
+            const profitToLossRatio = calcProfit / calcLoss;
+            if (profitToLossRatio < 1) return false;
+            const stoplossPerc = ((presentPrice - stoploss) / stoploss) * 100; 
+            if (stoplossPerc >= minimumAllowedStoplossPercentage) return false;
+        }
+
+        if (signal == 'short') {
+            const rawProfit = (((presentPrice - takeProfit) / takeProfit) * samepleAmountLeveraged);
+            const rawProfitFee = ((samepleAmountLeveraged + rawProfit) * (probableFee / 100)) * 2;
+            if (rawProfitFee >= rawProfit) return false;
+            const calcProfit = rawProfit - rawProfitFee;
+            const rawLoss = (((stoploss - presentPrice) / presentPrice) * samepleAmountLeveraged);
+            const rawLossFee = ((samepleAmountLeveraged) * (probableFee / 100)) * 2;
+            const calcLoss = rawLoss + rawLossFee;
+            const profitToLossRatio = calcProfit / calcLoss;
+            if (profitToLossRatio < 1) return false;
+            const stoplossPerc = ((stoploss - presentPrice) / presentPrice) * 100; 
+            if (stoplossPerc >= minimumAllowedStoplossPercentage) return false;
+        }
+        return true;
+    }
+
     signals(presentPrice, lines, candles) {
-        const { allowableSpace, stoplossSteps } = this.options;
+        const { allowableSpace, stoplossSteps, pobableLeverage, probableFee } = this.options;
         const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         const lastCandle = candles[candles.length -1];
         const activeLine = this.getActiveLine(presentPrice, lines);
@@ -405,8 +441,8 @@ module.exports = class {
         // The Allowable space is One third of the Space
         const isLastcandleWithinAllowableSpace = (Math.abs(lastCandle.close - presentPrice) / averageSpace) < (allowableSpace / 100);
         const miniCheck = isLastcandleWithinAllowableSpace && isCandlesTouchingLine
-        const long = miniCheck & isCandleAbove;
-        const short = miniCheck && isCandleBelow;
+        let long = miniCheck & isCandleAbove;
+        let short = miniCheck && isCandleBelow;
         let takeProfit, stoploss;
         if (isCandleAbove) {
             if (upperLine) {
@@ -415,6 +451,10 @@ module.exports = class {
                 takeProfit = (averageSpace + activePrice) - averageCandleBody;
             }
             stoploss = Math.min(...activeLine.members) - (averageCandleHeight * stoplossSteps);
+            const isTradeSafe = this.isTradeSafe('long', presentPrice, stoploss, takeProfit);
+            if (!isTradeSafe){
+                long = false;
+            }
         }
         if (isCandleBelow) {
             if (lowerLine) {
@@ -423,8 +463,11 @@ module.exports = class {
                 takeProfit = (activePrice - averageSpace) + averageCandleBody;
             }
             stoploss = Math.max(...activeLine.members) + (averageCandleHeight * stoplossSteps);
+            const isTradeSafe = this.isTradeSafe('short', presentPrice, stoploss, takeProfit);
+            if (!isTradeSafe){
+                short = false;
+            }
         }
-
         return {long, short, takeProfit, stoploss};
     }
 
@@ -530,6 +573,8 @@ module.exports = class {
             useIndicatorFilter: false, // Use an Indicator like the sma to filter out Some signals
             indicatorFilterPeriod: 60,
             indicatorFilter: 'ema',
+            probableFee: 0.1,
+            pobableLeverage: 1
         }
     }
 
