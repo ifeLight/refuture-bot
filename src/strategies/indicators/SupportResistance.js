@@ -354,6 +354,12 @@ module.exports = class {
         return averageHeight;
     }
 
+    averageCandleBody (candles) {
+        const heights = candles.map(candle => (Math.abs(candle.open - candle.close)));
+        const averageHeight = heights.reduce((pre, total) => (total + pre)) / heights.length;
+        return averageHeight;
+    }
+
     lastCandleAbovePrice(price, candles) {
         const candle = Array.isArray(candles) ? candles[candles.length -1] : candles;
         return candle.open > price && candle.close > price;
@@ -385,95 +391,99 @@ module.exports = class {
         return activeLine;
     }
 
-    signalToLong() {
+    getUpperLowerLine(line, lines) {
+        const price = line.price;
+        let indexOfPrice = 0;
+        let upperLine = null;
+        let lowerLine = null;
+        lines.forEach((line, index)  => {
+            if (line.price == price) {
+                indexOfPrice = index;
+            }
+        });
         
+        if (lines[indexOfPrice + 1]) {
+            upperLine = lines[indexOfPrice + 1]
+        }
+        if (lines[indexOfPrice - 1]) {
+            lowerLine = lines[indexOfPrice - 1]
+        }
+        return { upperLine, lowerLine};
+    }
+
+    signals(presentPrice, lines, candles) {
+        const { allowableSpace } = this.options;
+        const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
+        const lastCandle = candles[candles.length -1];
+        const activeLine = this.getActiveLine(presentPrice, lines);
+        const activePrice = activeLine.price;
+        const {upperLine, lowerLine} = this.getUpperLowerLine(activeLine, lines);
+        const isCandleAbove = this.lastCandleAbovePrice(activePrice, candles);
+        const isCandleBelow = this.lastCandleBelowPrice(activePrice, candles);
+        const isCandlesTouchingLine = this.isCandlesTouchingPrice(activePrice, lastFiveCandles);
+        const averageSpace = this.avaerageSpaceBetweenLines(lines);
+        const averageCandleBody = this.averageCandleBody(candles);
+        const averageCandleHeight = this.getAverageHeight(candles);
+        // The Allowable space is One third of the Space
+        const isLastcandleWithinAllowableSpace = (Math.abs(lastCandle.close - presentPrice) / averageSpace) < (allowableSpace / 100);
+        const miniCheck = isLastcandleWithinAllowableSpace && isCandlesTouchingLine
+        const long = miniCheck & isCandleAbove;
+        const short = miniCheck && isCandleBelow;
+        let takeProfit, stoploss;
+        if (isCandleAbove) {
+            if (upperLine) {
+                takeProfit = upperLine.price -  averageCandleBody;
+            } else {
+                takeProfit = (averageSpace + activePrice) - averageCandleBody;
+            }
+            stoploss = Math.min(...activeLine.members) - averageCandleHeight;
+        }
+        if (isCandleBelow) {
+            if (lowerLine) {
+                takeProfit = lowerLine.price +  averageCandleBody;
+            } else {
+                takeProfit = (activePrice - averageSpace) + averageCandleBody;
+            }
+            stoploss = Math.max(...activeLine.members) + averageCandleHeight;
+        }
+
+        return {long, short, takeProfit, stoploss};
     }
 
     async calculateSignal(candles) {
         const {onlyReversal: onlyReversalConfig, onlyRebounce: onlyRebounceConfig} = this.options;
         const presentPrice = await this.indicatorPeriod.getLastPrice();
-        //Last Five Candles
-        const lastFiveCandles = candles.slice(candles.length - 5, candles.length);
         const lines = await this.fetchLines();
         const onlyReversal = onlyReversalConfig === true;
         const onlyRebounce = onlyRebounceConfig === true;
-        
         if (lines.length < 2) return this.indicatorPeriod.createEmptySignal();
-
         const toRunLong = this.toRun(candles, 'long');
         const toRunShort = this.toRun(candles, 'short');
+        const signalResult = this.indicatorPeriod.createEmptySignal();
 
-        const activeLine = this.getActiveLine(presentPrice, lines);
+        const {long, short, stoploss, takeProfit } = this.signals(presentPrice, lines, candles);
+        const safetyAllowed = (toRunShort && short) || (toRunLong && long);
 
-
-        //Checking to Buy long on Upper Line
-        if (signalInUpperLineLong && toRunLong && !onlyRebounce) {
-            let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'long');
-            await this.indicatorPeriod.safetyBroadcast(recommendedStoploss, 'LONG', 'stoploss')
-            return this.indicatorPeriod.createSignal('long', {
-                signalInUpperLineLong,
-                stoplossRecommended : recommendedStoploss
-            });
+        if (stoploss & safetyAllowed) {
+            await this.indicatorPeriod.safetyBroadcast(stoploss, long ? 'LONG': 'SHORT', 'stoploss');
+            signalResult.addOrderAdvice('stoploss', stoploss);
+        }
+        if (takeProfit && safetyAllowed) {
+            await this.indicatorPeriod.safetyBroadcast(takeProfit, long ? 'LONG': 'SHORT', 'take_profit')
+            signalResult.addOrderAdvice('take_profit', takeProfit);
         }
 
-        // Checking To buy Short on UpperLine
-        if (signalInUpperLineShort && toRunShort && !onlyReversal) {
-            let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, upperLine, 'short');
-            await this.indicatorPeriod.safetyBroadcast(recommendedStoploss, 'SHORT', 'stoploss')
-            return this.indicatorPeriod.createSignal('short', {
-                signalInUpperLineShort,
-                stoplossRecommended : recommendedStoploss
-            });
+        if (long && toRunLong) {
+            signalResult.setSignal('long');
+            signalResult.mergeDebug({takeProfit, stoploss})
         }
 
-
-        //Checking to Buy long on Lower Line
-        if (signalInLowerLineLong  && toRunLong && !onlyReversal) {
-            let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'long');
-            await this.indicatorPeriod.safetyBroadcast(recommendedStoploss, 'LONG', 'stoploss')
-            return this.indicatorPeriod.createSignal('long', {
-                signalInLowerLineLong,
-                stoplossRecommended : recommendedStoploss
-            });
+        if (toRunShort && short) {
+            signalResult.setSignal('short');
+            signalResult.mergeDebug({takeProfit, stoploss})
         }
 
-        // Checking To buy Short on LowerLine
-        if (signalInLowerLineShort && toRunShort && !onlyRebounce) {
-            let recommendedStoploss = this.getRecommendedStopLoss(lastFiveCandles, lowerLine, 'short');
-            await this.indicatorPeriod.safetyBroadcast(recommendedStoploss, 'SHORT', 'stoploss')
-            return this.indicatorPeriod.createSignal('short', {
-                signalInLowerLineShort,
-                stoplossRecommended : recommendedStoploss
-            });
-        }
-
-        if (!signalInLowerLineLong && !signalInLowerLineShort) {
-            // Check the Validity of the lowerLine
-            const stillValid = this.lineValidityCheck(lowerLine, lastFiveCandles);
-            if (!stillValid || !lowerLine) {
-                generatedLines = generateLines(generateLinesConfig);
-                if (generatedLines.lowerLines[0]) {
-                    lowerLine = generatedLines.lowerLines[0];
-                    await this.storeLine(lowerLine, 'lower')
-                }
-            }
-        }
-
-        if (!signalInUpperLineLong && !signalInUpperLineShort) {
-            // Check the Validity of the upperLine
-            const stillValid = this.lineValidityCheck(upperLine, lastFiveCandles);
-            if (!stillValid || !upperLine) {
-                generatedLines = generateLines(generateLinesConfig);
-                if (generatedLines.upperLines[0]) {
-                    upperLine = generatedLines.upperLines[0];
-                    await this.storeLine(upperLine, 'upper');
-                }
-            }
-        }
-
-        // Return Empty, when no Signal Generated
-        return this.indicatorPeriod.createEmptySignal();
-
+        return signalResult;
     }
 
     toRun(candles, signal = 'long') {
@@ -510,6 +520,7 @@ module.exports = class {
             period: '5m',
             candleDepth: 5,
             candleSizeDiff: 1,
+            allowableSpace: 33,
             minMatch: 1,
             length: 100,
             longRSI: 14,
