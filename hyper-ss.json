@@ -1,0 +1,50 @@
+{
+    "optimize": "balance",
+    "exchange": "binance_futures",
+    "symbol": "SUSHI/USDT",
+    "orderType": "market",
+    "indicator": {
+        "name": "trendline-reversal",
+        "options": {
+            "period": "5m",
+            "useIndicatorFilter": true,
+            "length": 100,
+            "candleDepth": 5,
+            "shortEMA": 5,
+            "longEMA": 20,
+            "useEMACrossover": true,
+            "shortEMA2": 3,
+            "longEMA2": 5,
+            "useEMACrossover2": true,
+            "indicatorFilterPeriod": 60
+        }
+    },
+    "startDate": "2020-10-01:02:45",
+    "endDate": "2020-10-27:05:45",
+    "leverage": 5,
+    "toLog": false,
+    "fee": 0.06,
+    "amount": 1000,
+    "maximumIteration": 300,
+    "safeties": "",
+    "useDefaultSafety": true,
+    "noInterruption": true,
+    "period": "5m",
+    "takeProfit": 1.5,
+    "stopLoss": 0.7,
+    "useMemory": true,
+    "backfillPeriods": "5m",
+    "backfillSpace": 510,
+    "space": {
+        "period": "h.choice(['5m'])",
+        "stopLoss": "h.quniform(0.5,3,0.5)",
+        "takeProfit": "h.quniform(0.5,1,0.5)",
+        "indicator.options.length": "h.quniform(100,500,100)",
+        "indicator.options.candleDepth": "h.quniform(3,20,1)",
+        "indicator.options.indicatorFilterPeriod": "h.quniform(20,80,10)",
+       "leverage":  "h.quniform(20,25,5)"
+    },
+    "override": {
+        "indicator.options.period": "period"
+    }
+}

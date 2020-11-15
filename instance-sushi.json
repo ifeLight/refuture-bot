@@ -1,0 +1,27 @@
+[{
+    "symbol" : "SUSHI/USDT",
+    "exchange": "binance",
+    "trade": {
+        "amount": 0.001,
+        "order_type": "market",
+        "leverage": 2
+    },
+    "strategies": {
+        "indicators": [
+            {
+                "name": "simple",
+                "options": {
+                    "period": "5m"
+                }
+            }
+        ],
+        "safeties": [
+            {
+                "name": "stop-simple",
+                "options": {
+                    "limit": 1
+                }
+            }
+        ]
+    }
+}]

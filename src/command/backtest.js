@@ -50,6 +50,17 @@ module.exports = async function ({
             useMemory: backtestConfig.useMemory === true ? true: false,
             backfillSpace: backtestConfig.backfillSpace || 220,
         }
+
+        // Last Days Parameter Overrides all Existing Parameters
+        if (backtestConfig.lastDays && parseInt(backtestConfig.lastDays)) {
+            let numberOfDays = parseInt(backtestConfig.lastDays)
+            const startD = new Date();
+            startD.setDate(startD.getDate() - numberOfDays);
+            parameters.startDate = startD.toISOString();
+            parameters.endDate = new Date().toISOString();
+        }
+
+
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {
             throw new Error('Start date should be lesser than End Date')
         }

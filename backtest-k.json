@@ -1,0 +1,48 @@
+{
+    "exchange": "binance_futures",
+    "symbol": "ETH/USDT",
+    "orderType": "market",
+    "indicator": {
+        "name": "support-resistance",
+        "options": {
+            "period": "5m",
+            "length": 2000,
+            "candleSizeDiff": 1,
+            "allowableSpace": 10,
+            "stoplossSteps" : 3,
+            "useIndicatorFilter": true,
+            "indicatorFilterPeriod": 60,
+            "minMatch": 1,
+            "candleDepth": 30,
+            "shortEMA": 5,
+            "longEMA": 20,
+            "useEMACrossover": true,
+            "shortEMA2": 3,
+            "longEMA2": 5,
+            "useEMACrossover2": true
+        }
+    },
+    "leverage": 10,
+    "startDate": "2020-10-22:10:45",
+    "endDate": "2020-10-26:23:45",
+    "toLog": true,
+    "fee": 0.06,
+    "amount": 1000,
+    "safeties": [
+        {
+            "name": "safety-broadcast",
+            "options": {
+                "stoploss": true,
+                "takeProfit": true
+            }
+        }
+    ],
+    "useDefaultSafety": false,
+    "noInterruption": true,
+    "period": "5m",
+    "takeProfit": 1,
+    "stopLoss": 0.5,
+    "useMemory": true,
+    "backfillPeriods": "5m",
+    "backfillSpace": 2000
+}

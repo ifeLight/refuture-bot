@@ -54,7 +54,8 @@ module.exports = async function ({configFile}) {
             backfillSpace,
             override = {},
             backtestArgmin = false,
-            backtestArgmax = true
+            backtestArgmax = true,
+            lastDays,
         } = totalConfig;
 
         spaceObj = {...spaceObj}
@@ -90,6 +91,15 @@ module.exports = async function ({configFile}) {
         
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {
             throw new Error('Start date should be lesser than End Date')
+        }
+
+        // Last Days Parameter Overrides all Existing Parameters
+        if (lastDays && parseInt(lastDays)) {
+            let numberOfDays = parseInt(lastDays)
+            const startD = new Date();
+            startD.setDate(startD.getDate() - numberOfDays);
+            parameters.startDate = startD.toISOString();
+            parameters.endDate = new Date().toISOString();
         }
 
         const backTestService = new BactestService();
