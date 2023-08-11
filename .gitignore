@@ -254,3 +254,20 @@ backtest-result.json
 
 # Hyper parameters result
 var/hyper-results/*
+
+# Ignore app to be ignored files
+src/app/.rej
+src/app/*.rej
+src/app/*.orig
+src/app/bin/
+src/app/node_modules/
+src/app/vuesax-laravel-starter/node_modules/
+src/app/temp/
+src/app/versions/
+src/app/*.zip
+src/app/bin
+src/app/package-lock.json
+src/app/docs/.vuepress/dist/
+src/app/yarn.lock
+src/app/yarn-error.log
+src/app/vuexy-shell-scripts

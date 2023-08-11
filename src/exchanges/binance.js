@@ -17,6 +17,7 @@ module.exports = class BinanceExchange {
         this.logger = logger;
         this.ccxt = ccxt;
         this.name = 'binance';
+        this._enabledSocket = false;
     }
 
     async init(config) {
@@ -38,14 +39,20 @@ module.exports = class BinanceExchange {
             this.logger.warn(`Binance: Unable to load markets: ${error.message}`);
         }
 
+    }
+
+    async enableSocket() {
         try {
-            await this.exchange.checkRequiredCredentials();
-            await this.userWebsocket();
+            if (!this._enabledSocket) {
+                await this.exchange.checkRequiredCredentials();
+                await this.userWebsocket();
+                this._enabledSocket = true;
+            }
         } catch (error) {
             this.logger.info(`Binance: Incomplete required credentials: ${error.message}`);
         }
-
     }
+
 
     async fetchPairInfo(symbol) {
         try {
@@ -101,12 +108,12 @@ module.exports = class BinanceExchange {
 
     addCandleEvent (symbol, period) {
         const candleEventId = symbol + period; ///To prevent duplicate candle event registration
-        if (!this.candleEventsList) {
-            this.candleEventsList = []
+        if (!this._candleEventsList) {
+            this._candleEventsList = []
         }
         try {
-            if (this.candleEventsList.indexOf(candleEventId) < 0) {
-                this.candleEventsList.push(candleEventId);
+            if (this._candleEventsList.indexOf(candleEventId) < 0) {
+                this._candleEventsList.push(candleEventId);
                 const exchangeName = this.name;
                 const retouchedSymbol = this.retouchSymbol(symbol);
                 this.exchange.binanceApiNode.ws.candles(retouchedSymbol, period, (candle) => {
@@ -150,7 +157,7 @@ module.exports = class BinanceExchange {
             throw error;
         }
     }
-
+    // TODO - Remove event emitter and find an alternative
     addTickerEvent(symbol) {
         try {
             const exchangeName = this.name;
@@ -361,11 +368,8 @@ module.exports = class BinanceExchange {
 
                 if (response.eventType && response.eventType == 'executionReport') {
                     const symbol = self.exchange.markets_by_id[response.symbol]['symbol']
-                    self.throttle('sync_open_orders', syncWebsocketOpenOrders, symbol, 3000);
-                    self.throttle('sync_open_orders', syncWebsocketClosedOrders, symbol, 3000);
-                    //  Changed to throttle
-                    // await self.syncWebsocketOpenOrders(symbol);
-                    // await self.syncWebsocketClosedOrders(symbol);
+                    self.throttle('sync_open_orders', 'syncWebsocketOpenOrders', symbol, 3000);
+                    self.throttle('sync_closed_orders', 'syncWebsocketClosedOrders', symbol, 3000);
                 }
             })
         } catch (error) {
@@ -428,7 +432,7 @@ module.exports = class BinanceExchange {
         const me = this;
         this.throttleTasks[key] = setTimeout(async () => {
           delete me.throttleTasks[key];
-          await func(parameter);
+          await me[func](parameter);
         }, timeout);
       }
 }

@@ -25,16 +25,19 @@ exchangePair.init('binance_futures', 'BTC/USDT');
     try {
         await exchangePair.setup();
         for (const item of Array.from(Array(10).keys())) {
-            const res = await indicatorManager.run('trendline-reversal', exchangePair, {
+            const res = await indicatorManager.run('support-resistance', exchangePair, {
                 period: '5m',
-                length: 500,
+                candleDepth: 5,
+                candleSizeDiff: 1,
+                allowableSpace: 33,
+                minMatch: 1,
+                length: 100,
             });
-    
     
             console.log(res);
         }
 
-        
+        process.exit()
     } catch (error) {
         console.error(error);
     }

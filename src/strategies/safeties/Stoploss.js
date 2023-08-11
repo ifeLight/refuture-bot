@@ -16,8 +16,9 @@ module.exports = class FixedStopLoss {
     async period(safetyPeriod, options, strat) {
         const percentage = options.percentage;
         const isFutures = safetyPeriod.isFutures();
-        const presentPrice = safetyPeriod.getLastPrice();
+        const presentPrice = await safetyPeriod.getLastPrice();
         const isBacktest = (safetyPeriod.getEnvironment()).backtest;
+        let signalResult = safetyPeriod.createEmptySignal();
         if (isFutures || isBacktest) {
             const positions = await safetyPeriod.getPositions();
             if (positions && Array.isArray(positions) && positions.length > 0) {
@@ -27,28 +28,34 @@ module.exports = class FixedStopLoss {
                 const leastShortSidePrice = (entryPrice + (entryPrice * (percentage/100)));
                 if (positionSide === 'LONG') {
                     if (presentPrice < leastLongSidePrice) {
-                        return safetyPeriod.createSignal('close', {
+                        signalResult.setSignal('close');
+                        signalResult.mergeDebug({
                             entryPrice,
                             presentPrice
                         })
+                        return signalResult;
                     }
-                    return (safetyPeriod.createEmptySignal()).setOrderAdvice('close', leastLongSidePrice);
+                    signalResult.setOrderAdvice('stoploss', leastLongSidePrice);
+                    return signalResult;
                 }
                 if (positionSide === 'SHORT') {
                     if (presentPrice > leastShortSidePrice) {
-                        return safetyPeriod.createSignal('close', {
+                        signalResult.setSignal('close');
+                        signalResult.mergeDebug({
                             entryPrice,
                             presentPrice
                         })
+                        return signalResult;
                     }
-                    return (safetyPeriod.createEmptySignal()).setOrderAdvice('close', leastShortSidePrice);
+                    signalResult.setOrderAdvice('stoploss', leastShortSidePrice)
+                    return signalResult;
                 }
             }
         }
 
         if (!isFutures && !isBacktest) {
             const {amount, currency_amount} = strat.trade;
-            let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
+            let tradeAmount = amount ? Number(amount) : Number(presentPrice) / Number(currency_amount);
             const baseCurrency = (safetyPeriod.getPairInfo()).base;
             let baseBalance = await safetyPeriod.getBalance(baseCurrency);
             const totalBalance = baseBalance.locked + baseBalance.free;
@@ -67,12 +74,15 @@ module.exports = class FixedStopLoss {
                 const { price: entryPrice  } = latestClosedOrder;
                 const leastPrice = (entryPrice - (entryPrice * (percentage/100)))
                 if (presentPrice < leastPrice) {
-                    return safetyPeriod.createSignal('close', {
-                        entryPrice,
-                        presentPrice
-                    }) 
+                    signalResult.setSignal('close');
+                        signalResult.mergeDebug({
+                            entryPrice,
+                            presentPrice
+                        })
+                        return signalResult;
                 }
-                return (safetyPeriod.createEmptySignal()).setOrderAdvice('close', leastPrice);
+                signalResult.setOrderAdvice('close', leastPrice)
+                return signalResult;
             }
 
         }

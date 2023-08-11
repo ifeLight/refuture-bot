@@ -5,19 +5,28 @@ const config =  require('config');
 class ExchangeManager {
     constructor(eventEmitter, logger) {
         const exchangedir = path.join(__dirname, '../../', 'exchanges');
-        const exchangeObject = requireAll(exchangedir);
-        const exchanges = {};
-        Object.keys(exchangeObject).forEach((key) => {
+        this.exchangeObject = requireAll(exchangedir);
+        this.exchanges = {};
+        this.logger = logger;
+        this.eventEmitter = eventEmitter;
+        this.setupDone = false;
+    }
+
+    async setup() {
+        const exchangeObject = this.exchangeObject;
+        const exchangeKeys = Object.keys(exchangeObject);
+        const {logger, eventEmitter} = this;
+        for (const key of exchangeKeys) {
             try {
                 let theExchange = new exchangeObject[key](eventEmitter, logger);
-                theExchange.init(config)
+                await theExchange.init(config)
                 let theExchangeName = theExchange.name;
-                exchanges[theExchangeName] = theExchange;
+                this.exchanges[theExchangeName] = theExchange;
             } catch (error) {
                 logger.error(`Exchange Manager: Error loading exchanges (${error.message})`);
             }
-        })
-        this.exchanges = exchanges;
+        }
+        this.setupDone = true;
     }
 
     find(exchangeName) {

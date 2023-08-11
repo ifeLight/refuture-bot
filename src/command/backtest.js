@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 
 const BactestService = require('../services/Backtest');
+const BacktestModel = require('../models/Backtest')
 
 module.exports = async function ({
     configFile,
@@ -46,14 +47,28 @@ module.exports = async function ({
             safeties: safety || backtestConfig.safeties || [],
             useDefaultSafety: useDefaultSafety ? useDefaultSafety : backtestConfig.hasOwnProperty('useDefaultSafety') && backtestConfig.useDefaultSafety == false ? backtestConfig.useDefaultSafety : true,
             backfillPeriods: backfillPeriods || backtestConfig.backfillPeriods || backtestConfig.period || period|| '15m',
+            useMemory: backtestConfig.useMemory === true ? true: false,
+            backfillSpace: backtestConfig.backfillSpace || 220,
         }
+
+        // Last Days Parameter Overrides all Existing Parameters
+        if (backtestConfig.lastDays && parseInt(backtestConfig.lastDays)) {
+            let numberOfDays = parseInt(backtestConfig.lastDays)
+            const startD = new Date();
+            startD.setDate(startD.getDate() - numberOfDays);
+            parameters.startDate = startD.toISOString();
+            parameters.endDate = new Date().toISOString();
+        }
+
+
         if(new Date(parameters.startDate) >= new Date(parameters.endDate)) {
             throw new Error('Start date should be lesser than End Date')
         }
         
         try {
             const backTestService = new BactestService();
-            await backTestService.start(parameters);
+            const result = await backTestService.start(parameters);
+            await BacktestModel.create(result);
             process.exit();
         } catch (error) {
             console.error("Backtest Service Failed while running");

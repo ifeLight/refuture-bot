@@ -8,7 +8,7 @@ const {
     eveningdojistar, piercingline
 } = require('technicalindicators');
 
-class TrailerClass {
+class TrailerFibonacci {
     constructor (entryPrice, positionSide) {
         this.entryPrice = entryPrice;
         this.positionSide = positionSide;
@@ -18,7 +18,7 @@ class TrailerClass {
 
 module.exports = class Trailer {
     getName() {
-        return 'trailer';
+        return 'trailer-fibonacci';
     }
 
     async init(storage, period) {
@@ -40,7 +40,7 @@ module.exports = class Trailer {
         this.lossConfig = lossConfig;
         this.profitConfig = profitConfig;
         const isFutures = safetyPeriod.isFutures();
-        const presentPrice = safetyPeriod.getLastPrice();
+        const presentPrice = await safetyPeriod.getLastPrice();
         this.presentPrice = presentPrice;
         this.checkCandles = safetyPeriod.indicatorBuilder.get('checkCandles');
         // This is for  function to request for a closure
@@ -61,7 +61,7 @@ module.exports = class Trailer {
     
             if (!isFutures && !isBacktest) {
                 const {amount, currency_amount} = strat.trade;
-                let tradeAmount = amount ? Number(amount) : Number(safetyPeriod.getLastPrice()) / Number(currency_amount);
+                let tradeAmount = amount ? Number(amount) : Number(presentPrice) / Number(currency_amount);
                 const baseCurrency = (safetyPeriod.getPairInfo()).base;
                 let baseBalance = await safetyPeriod.getBalance(baseCurrency);
                 const totalBalance = baseBalance.locked + baseBalance.free;
@@ -185,10 +185,12 @@ module.exports = class Trailer {
                 })
             }
         }
-        return (this.safetyPeriod.createEmptySignal({
-                trailPrice,
-                presentPrice
-        })).setOrderAdvice('close', trailPrice)
+        let signalResult = this.safetyPeriod.createEmptySignal({
+            trailPrice,
+            presentPrice
+        })
+        signalResult.setOrderAdvice('close', trailPrice)
+        return signalResult;
     }
 
     starter() {
@@ -421,12 +423,12 @@ module.exports = class Trailer {
     }
 
     async storePosition (data) {
-        const storageKey = `trailer${this.isBacktest ? '_bt': ''}`;
+        const storageKey = `trailer_fibonacci${this.isBacktest ? '_bt': ''}`;
         await this.safetyPeriod.storage.set(storageKey, data);
     }
 
     async retrievePosition (entryPrice, positionSide) {
-        const storageKey = `trailer${this.isBacktest ? '_bt': ''}`;
+        const storageKey = `trailer_fibonacci${this.isBacktest ? '_bt': ''}`;
         const retrievedPosition = await this.safetyPeriod.storage.get(storageKey);
         if (retrievedPosition && retrievedPosition.hasOwnProperty('entryPrice') && retrievedPosition.hasOwnProperty('positionSide')) {
             if (retrievedPosition.entryPrice === entryPrice && retrievedPosition.positionSide === positionSide) {

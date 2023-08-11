@@ -19,6 +19,10 @@ module.exports = class BinanceFuturesExchange {
         this.logger = logger;
         this.name = 'binance_futures';
         this.isFutures = true;
+        this._enabledSocket = false;
+        this.tickers = {};
+        this.orderBooks = {};
+        this.markPrices = {};
     }
 
     async init(config) {
@@ -45,13 +49,18 @@ module.exports = class BinanceFuturesExchange {
             this.logger.warn(`Binance Futures: Unable to load markets: ${error.message}`);
         }
 
+    }
+
+    async enableSocket() {
         try {
-            await this.exchange.checkRequiredCredentials();
-            await this.initUserWebsocket();
+            if (!this._enabledSocket) {
+                await this.exchange.checkRequiredCredentials();
+                await this.initUserWebsocket();
+                this._enabledSocket = true;
+            }
         } catch (error) {
             this.logger.info(`Binance Futures: Incomplete required credentials: ${error.message}`)
         }
-
     }
 
     async fetchPairInfo(symbol) {
@@ -110,12 +119,12 @@ module.exports = class BinanceFuturesExchange {
     addCandleEvent (symbol, period) {
         const self = this;
         const candleEventId = symbol + period; ///To prevent duplicate candle event registration
-        if (!this.candleEventsList) {
-            this.candleEventsList = []
+        if (!this._candleEventsList) {
+            this._candleEventsList = []
         }
         try {
-            if (this.candleEventsList.indexOf(candleEventId) < 0) {
-                this.candleEventsList.push(candleEventId);
+            if (this._candleEventsList.indexOf(candleEventId) < 0) {
+                this._candleEventsList.push(candleEventId);
                 const exchangeName = this.name;
                 const retouchedSymbol = this.retouchSymbol(symbol);
                 const query = retouchedSymbol.toLowerCase() + '@kline_' + period;
@@ -142,21 +151,26 @@ module.exports = class BinanceFuturesExchange {
 
     async fetchTicker (symbol) {
         try {
-            const tickerFromExchange = await this.exchange.fetchTicker(symbol);
-            const {
-                bid: bidPrice,
-                ask: askPrice,
-                bidVolume: bidQty,
-                askVolume: askQty,
-                last: lastPrice
-            } = tickerFromExchange;
-            return new Ticker({
-                bidPrice,
-                askPrice,
-                bidQty,
-                askQty,
-                lastPrice
-            }) 
+            if (!this.tickers[symbol]) {
+                const tickerFromExchange = await this.exchange.fetchTicker(symbol);
+                let {
+                    bid: bidPrice,
+                    ask: askPrice,
+                    bidVolume: bidQty,
+                    askVolume: askQty,
+                    last: lastPrice
+                } = tickerFromExchange;
+
+                const ticker = new Ticker({
+                    bidPrice: bidPrice ? bidPrice: lastPrice,
+                    askPrice: askPrice ? askPrice: lastPrice,
+                    bidQty,
+                    askQty,
+                    lastPrice
+                });
+                this.tickers[symbol] = ticker;
+            }
+            return this.tickers[symbol];
         } catch (error) {
             this.logger.warn(`Binance Futures: Unable to fetch Ticker [${symbol}] (${error.message})`);
             return undefined;
@@ -185,7 +199,7 @@ module.exports = class BinanceFuturesExchange {
                     askQty,
                     lastPrice: Number(((Number(bidPrice) + Number(askPrice)) / 2).toFixed(priceDecimalPlaces))
                 }) 
-                self.eventEmitter.emit(`ticker_${exchangeName}_${symbol}`, newTicker);
+                self.tickers[symbol] = newTicker;
             })
         } catch (error) {
             this.logger.warn(`Binance Futures: Unable to add Ticker Event [${symbol}] (${error.message})`);
@@ -194,10 +208,13 @@ module.exports = class BinanceFuturesExchange {
 
     async fetchMarkPrice(symbol) {
         try {
-            const retouchedSymbol = this.retouchSymbol(symbol);
-            this.addMarkPriceEvent(symbol);
-            const {markPrice} = await this.exchange.nodeBinanceApi.futuresMarkPrice( retouchedSymbol )
-            return markPrice
+            if (!this.markPrices[symbol]) {
+                const retouchedSymbol = this.retouchSymbol(symbol);
+                const {markPrice} = await this.exchange.nodeBinanceApi.futuresMarkPrice( retouchedSymbol );
+                this.addMarkPriceEvent(symbol);
+                this.markPrices[symbol] = markPrice
+            }
+            return this.markPrices[symbol];
         } catch (error) {
             this.logger.warn(`Binance Futures: Unable to fetch Mark Price [${symbol}] (${error.message})`);
         }
@@ -208,10 +225,10 @@ module.exports = class BinanceFuturesExchange {
             const self = this;
             const exchangeName = this.name;
             const retouchedSymbol = this.retouchSymbol(symbol);
-            this.exchange.nodeBinanceApi.futuresMarkPriceStream(retouchedSymbol, function (stream) {
+            this.exchange.nodeBinanceApi.futuresMarkPriceStream(retouchedSymbol, (stream) => {
                 const {markPrice} = stream;
-                self.eventEmitter.emit(`markprice_${exchangeName}_${symbol}`, markPrice);
-            })
+                this.markPrices[symbol] = markPrice;
+            });
         } catch (error) {
             this.logger.warn(`Binance Futures: Unable to add Mark Price Event [${symbol}] (${error.message})`);
         }
@@ -219,25 +236,28 @@ module.exports = class BinanceFuturesExchange {
 
     async fetchOrderBook (symbol) {
         try {
-            const orderBookFromExchange = await this.exchange.fetchOrderBook(symbol);
-            let {
-                bids, asks
-            } = orderBookFromExchange;
+           if (!this.orderBooks[symbol]) {
+                const orderBookFromExchange = await this.exchange.fetchOrderBook(symbol);
+                let {
+                    bids, asks
+                } = orderBookFromExchange;
 
-            bids = bids.map((bid) => {
-                return {
-                    price: Number(bid[0]),
-                    quantity: Number(bid[1])
-                }
-            })
+                bids = bids.map((bid) => {
+                    return {
+                        price: Number(bid[0]),
+                        quantity: Number(bid[1])
+                    }
+                })
 
-            asks = asks.map((ask) => {
-                return {
-                    price: Number(ask[0]),
-                    quantity: Number(ask[1])
-                }
-            })
-            return new OrderBook(bids, asks) 
+                asks = asks.map((ask) => {
+                    return {
+                        price: Number(ask[0]),
+                        quantity: Number(ask[1])
+                    }
+                })
+                this.orderBooks[symbol] = new OrderBook(bids, asks);
+           }
+           return this.orderBooks[symbol];
         } catch (error) {
             this.logger.warn(`Binance Futures: Unable to fetch order book [${symbol}] (${error.message})`);
             return undefined
@@ -272,7 +292,7 @@ module.exports = class BinanceFuturesExchange {
                 })
 
                 const newOrderBook = new OrderBook(bids, asks);
-                self.eventEmitter.emit(`orderbook_${exchangeName}_${symbol}`, newOrderBook);
+                this.orderBooks[symbol] = newOrderBook;
             })
         } catch (error) {
             this.logger.error(`Binance Futures: Unable to add order book event [${symbol}] (${error.message})`);
@@ -282,7 +302,6 @@ module.exports = class BinanceFuturesExchange {
     async fetchBalance(asset) {
         try {
             if (!this.balances) {
-                await this.initUserWebsocket();
                 const fetchedBalances = (await this.exchange.fetchBalance()).info.assets;
                 this.balances = {}; //To trigger the balance Websocket event
                 fetchedBalances.forEach(bal => {
@@ -306,17 +325,20 @@ module.exports = class BinanceFuturesExchange {
                 symbol: retouchedSymbol,
                 leverage: leverageNumber
             });
-            this._leverage = leverage;
+            if (!this._leverage) {
+                this._leverage = {};
+            }
+            this._leverage[symbol] = leverage;
             return res;
         } catch (error) {
             this.logger.error(`Binance Futures: Unable to change leverage [${symbol}:${leverage}] (${error.message})`);
         }
     }
 
-    async getLeverage(symbol) {
+    getLeverage(symbol) {
         try {
-            if (this._leverage) return this._leverage;
-            throw new Error('Leverage not set');
+            if (this._leverage && this._leverage[symbol]) return this._leverage[symbol];
+            return undefined;
         } catch (error) {
             this.logger.error(`Binance Futures: Unable to fetch leverage [${symbol}] (${error.message})`);
             return undefined;
@@ -343,14 +365,26 @@ module.exports = class BinanceFuturesExchange {
             return;
         }
     }
+
+    async createOrder (symbol, type, side, amount, price, params) {
+        try {
+            const order = await this.exchange.createOrder(symbol, type, side, amount, price, params);
+            return order;
+        } catch (error) {
+            this.logger.info(`Binance Futures: Unable to create Custom (${type}) Order [${symbol}:${side}:${amount}:${price}] (${error.message})`);
+            return;
+        }
+    }
     async fetchActiveOrders(symbol) {
         try {
             if (!this.openOrders || (this.openOrders && !this.openOrders[symbol])) {
                 this.openOrders = {};
                 const fetchedOrders = await this.exchange.fetchOpenOrders(symbol);
                 const symbolOrders = fetchedOrders.map((order) => {
+                    const stopPrice = order.info.stopPrice;
                     return new Order({
                         ...order,
+                        stopPrice,
                         time: order.timestamp
                     })
                 })
@@ -472,13 +506,15 @@ module.exports = class BinanceFuturesExchange {
             if (message.e && message.e.toUpperCase() === 'ORDER_TRADE_UPDATE') {
                 const order = message.o;
                 // await self.syncWebsocketOrders(order); //Added Throttler
-                self.throttle('syncwebsocket_orders_key', self.syncWebsocketOrders, order, 3000);
+                self.websocketQuickOrderUpdate(order);
+                self.throttle('syncwebsocket_orders_key', 'syncWebsocketOrders', order, 4000);
             }
 
             if (message.e && message.e.toUpperCase() === 'ACCOUNT_UPDATE') {
                 const {B: balances, P: positions} = message.a;
                 self.syncWebsocketBalances(balances);
-                self.throttle('syncwebsocket_position_key', self.syncWebsocketPositions);
+                self.websocketQuickPositionsUpdate(positions);
+                self.throttle('syncwebsocket_position_key', 'syncWebsocketPositions', null, 2000);
                 // await self.syncWebsocketPositions(); // Added throttler
             }
           }
@@ -511,11 +547,11 @@ module.exports = class BinanceFuturesExchange {
         bals.forEach((bal) => {
             const { a: asset, cw: free, wb: total} = bal;
             const locked = Number(total) - Number(free);
-            if (!self.balances) {
-                self.balances = {};
+            if (!this.balances) {
+                this.balances = {};
             }
-            self.balances[asset] = new Balance(asset, free, locked)
-        })
+            this.balances[asset] = new Balance(asset, free, locked);
+        });
       }
 
       async syncWebsocketOrders (order) {
@@ -532,20 +568,23 @@ module.exports = class BinanceFuturesExchange {
             const fetchedOpenOrders = await this.exchange.fetchOpenOrders(symbol);
             const fetchedClosedOrders = await this.exchange.fetchClosedOrders(symbol);
             const symbolOpenOrders = fetchedOpenOrders.map((order) => {
+                const stopPrice = order.info.stopPrice;
                 return new Order({
                     ...order,
+                    stopPrice,
                     time: order.timestamp
                 })
             });
             const symbolClosedOrders = fetchedClosedOrders.map((order) => {
+                const stopPrice = order.info.stopPrice;
                 return new Order({
                     ...order,
+                    stopPrice,
                     time: order.timestamp
                 })
             });
             this.closedOrders[symbol] = symbolClosedOrders;
             this.openOrders[symbol] =  symbolOpenOrders;
-            
         } catch (error) {
             this.logger.info(`Binance Futures: Failed to sync websocket orders (${error.message})`)
         }
@@ -554,19 +593,27 @@ module.exports = class BinanceFuturesExchange {
       async syncWebsocketPositions () {
           try {
             const self = this;
+            this.positions = {};
             const response = await this.exchange.fapiPrivateGetPositionRisk();
-            const mappedPositions = response.map((pos) => {
-                const { symbol: symbolId, positionAmt: positionAmount} = pos;
+            const filteredPositions = response.filter((position) => {
+                const {positionAmt, entryPrice} = position;
+                if (parseFloat(positionAmt) === 0) return false;
+                if (parseFloat(entryPrice) === 0) return false;
+                return true;
+            })
+            const mappedPositions = filteredPositions.map((pos) => {
+                const { symbol: symbolId, positionAmt: positionAmount, entryPrice, liquidationPrice} = pos;
                 const asset = symbolId.split('USDT')[0];
                 const sym = asset + '/' + 'USDT';
+                let positionSide = parseFloat(entryPrice) < parseFloat(liquidationPrice) ? 'SHORT' :'LONG';
                 return new Position({
                     ...pos,
                     symbol: sym,
                     positionAmount,
+                    positionSide
                 });
             });
 
-            this.positions = {};
             mappedPositions.forEach((pos) => {
                 const { symbol } = pos;
                 if (this.positions[symbol] && Array.isArray(this.positions[symbol])) {
@@ -580,23 +627,110 @@ module.exports = class BinanceFuturesExchange {
           }
       }
 
-      throttle(key, func, parameter = null, timeout = 1000) {
-        if (!this.throttleTasks) {
-            this.throttleTasks = {};
+        websocketQuickPositionsUpdate(positions) {
+            const filteredPositions = positions.filter((position) => {
+                const {pa: positionAmount, ep: entryPrice} = position;
+                if (parseFloat(positionAmount) === 0) return false;
+                if (parseFloat(entryPrice) === 0) return false;
+                return true;
+            });
+            this.positions = {}
+            filteredPositions.forEach((position) => {
+                const {pa: positionAmount, ep: entryPrice, up: unRealizedProfit, s: exchangeSymbol} = position;
+                let positionSide = parseFloat(positionAmount) > 0 ? 'LONG' : 'SHORT';
+                const asset = exchangeSymbol.split('USDT')[0];
+                const symbol = asset + '/' + 'USDT';
+                const leverage = this.getLeverage(symbol);
+                const newPositionUpdate = new Position({symbol, positionAmount, entryPrice, unRealizedProfit, positionSide, leverage})
+                if (!this.positions[symbol]) {
+                    this.positions[symbol] = [newPositionUpdate]
+                } else if (this.positions[symbol] && Array.isArray(this.positions[symbol])) {
+                    this.positions[symbol].push(newPositionUpdate);
+                }
+            });
         }
-    
-        if (key in this.throttleTasks) {
-          this.logger.debug(`Throttler clear existing event: ${key} - ${timeout}ms`);
-    
-          clearTimeout(this.throttleTasks[key]);
-          delete this.throttleTasks[key];
+
+        websocketQuickOrderUpdate(order) {
+            const stillOpen = ['NEW', 'PARTIALLY_FILLED'];
+            const nowClosed = ['FILLED'];
+
+            const {s: exchangeSymbol, } = order;
+            const side = order.S.toLowerCase();
+            const time = parseInt(order.T);
+            const id = String(order.i);
+            const price = parseFloat(order.p);
+            const status = stillOpen.indexOf(order.X) > -1 ? 'open': 'closed';
+            const type = order.o.toLowerCase();
+            const amount = parseFloat(order.q);
+            const filled = parseFloat(order.z)
+            const remaining = amount - filled;
+            const asset = exchangeSymbol.split('USDT')[0];
+            const symbol = asset + '/' + 'USDT';
+            const stopPrice = Number(order.sp);
+
+            if (!this.openOrders) {
+                this.openOrders = {};
+            }
+
+            if (!this.closedOrders) {
+                this.closedOrders = {};
+            }
+
+            const updatedOrder = new Order({
+                side, time, id, type, price, status, symbol, amount, filled, remaining, stopPrice
+            });
+
+            //Remove a open order by id
+            function openOrdersRemoveById (self, symbol, id) {
+                if (self.openOrders[symbol] && Array.isArray(self.openOrders[symbol])) {
+                    self.openOrders[symbol] = self.openOrders[symbol].filter(order => order.id != id);
+                }
+            }
+
+            // For Open Orders
+            if (stillOpen.indexOf(order.X) > -1 ) {
+                if (this.openOrders[symbol] && Array.isArray(this.openOrders[symbol])) {
+                    openOrdersRemoveById(this, symbol, id);
+                    this.openOrders[symbol].push(updatedOrder);
+                }  else {
+                    this.openOrders[symbol] = [updatedOrder];
+                }
+            }
+
+            // For Incomplete or Canceled Order
+            if (order.X === 'CANCELED' || order.X === 'EXPIRED') {
+                openOrdersRemoveById(this, symbol, id);
+            }
+
+            //For closed order
+            const stillAllowed = (order.X === 'CANCELED' || order.X === 'EXPIRED') && (filled > 0);
+            if (nowClosed.indexOf(order.X) > -1 || stillAllowed) {
+                openOrdersRemoveById(this, symbol, id)
+                if (this.closedOrders[symbol] && Array.isArray(this.closedOrders[symbol])) {
+                    this.closedOrders[symbol].push(updatedOrder);
+                } else {
+                    this.closedOrders[symbol] = [updatedOrder];
+                }
+            }
         }
-    
-        const me = this;
-        this.throttleTasks[key] = setTimeout(async () => {
-          delete me.throttleTasks[key];
-          await func(parameter);
-        }, timeout);
-      }
+
+        throttle(key, func, parameter = null, timeout = 1000) {
+            if (!this.throttleTasks) {
+                this.throttleTasks = {};
+            }
+        
+            if (key in this.throttleTasks) {
+            this.logger.debug(`Throttler clear existing event: ${key} - ${timeout}ms`);
+        
+            clearTimeout(this.throttleTasks[key]);
+            delete this.throttleTasks[key];
+            }
+        
+            const me = this;
+            this.throttleTasks[key] = setTimeout(async () => {
+            delete me.throttleTasks[key];
+            await me[func](parameter);
+            }, timeout);
+        }
 
 }

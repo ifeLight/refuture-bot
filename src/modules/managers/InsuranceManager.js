@@ -100,7 +100,7 @@ class InsuranceManager {
                     insuranceResult = await this.run(insurance, currentSignalResult, exchangePair, null, strat);
                 } else if (typeof insurance === 'object') {
                     const { name, options} = insurance;
-                    insuranceResult = await this.safetyManager.run(name, currentSignalResult, exchangePair, options, strat);
+                    insuranceResult = await this.run(name, currentSignalResult, exchangePair, options, strat);
                 }
                 currentSignalResult = insuranceResult;
             }

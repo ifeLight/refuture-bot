@@ -3,6 +3,7 @@ const clc = require('cli-color');
 const IndicatorManager = require('../modules/managers/IndicatorManager');
 const SafetyManager = require('../modules/managers/SafetyManager');
 const ExchangePair = require('../backtest/ExchangePair');
+const CandlesRepository = require('../modules/repository/CandlesRepository')
 
 const logger = require('../backtest/utils/logger');
 const eventEmitter = require('../backtest/utils/eventEmitter');
@@ -12,7 +13,7 @@ const timeCalc = require('../backtest/utils/timeCalc');
 
 const periodToTimeDiff = require('../utils/periodToTimeDiff');
 
-const { candlesRepository, exchangeManager } = require('./preService')
+const { exchangeManager } = require('./preService')
 
 class Backtest {
     constructor() {
@@ -20,6 +21,7 @@ class Backtest {
         this.eventEmitter = eventEmitter;
         this.exchangeManager = exchangeManager;
         this.exchangePair = new ExchangePair(eventEmitter, logger, exchangeManager);
+        const candlesRepository = new CandlesRepository(eventEmitter, logger, true);
         this.candlesRepository = candlesRepository;
         this.indicatorManager = new IndicatorManager({
             candlesRepository,
@@ -59,7 +61,9 @@ class Backtest {
             useDefaultSafety,
             safeties,
             backfillPeriods,
+            backfillSpace = 220,
             toLog = true,
+            useMemory
         } = parameters;
 
         let indicatorName, indicatorOptions;
@@ -69,10 +73,20 @@ class Backtest {
         const log = this.log;
         this.toLog = toLog === undefined ? true: toLog;
         this.state = {};
-        this.safeties = []
+        this.safeties = [];
+        this.backfillSpace = backfillSpace;
+
+        if (!this.exchangeManager.setupDone) {
+            this.log(clc.white.bgBlack('setting up Exchange Manager.....'))
+            await this.exchangeManager.setup();
+            this.log(clc.white.bgBlack('Exchange Manager set up Done'))
+        }
 
         // Let Candles Repository knows its runnind a Backtest
-        candlesRepository.setBacktest(false);
+        this.candlesRepository.setBacktest(true);
+
+        //Set Using of Memory
+        this.candlesRepository.useMemory(useMemory);
 
         // Checking Indicator
         this.log(clc.white.bgBlack('Checking Indicator.....'))
@@ -175,12 +189,25 @@ class Backtest {
         if (this.toLog) {
             drawChart(result);
         }
-        candlesRepository.setBacktest(false);
+        this.candlesRepository.setBacktest(false);
+        this.candlesRepository.useMemory(false);
+
+        const { balance } = result;
+        
+        result.safeties = safeties;
+        result.roi = ((parseFloat(balance) - parseFloat(amount)) / parseFloat(amount)) * 100;
+        result.indicators = indicator;
+        result.symbol = symbol;
+        result.exchange = exchangeName;
+        result.orderType = orderType;
+        result.startDate = new Date(startDate);
+        result.endDate = new Date(endDate);
+        result.period = period;
         return result;
     }
 
     async backfill ({period, exchangeName, exchange, symbol, startDate, endDate}) {
-        const startTime = new Date((new Date(startDate)).getTime() - (periodToTimeDiff(period) * 220));
+        const startTime = new Date((new Date(startDate)).getTime() - (periodToTimeDiff(period) * this.backfillSpace));
         const endTime = new Date(endDate);
         const log = this.log;
         this.log(clc.white.bgBlack('Backfiling Candles.....'))
@@ -225,7 +252,12 @@ class Backtest {
         self.candlesRepository.setDefaultToDate(time);
         const signalResult = await self.indicatorManager.run(self.indicatorName, self.exchangePair, self.indicatorOptions);
         if (!signalResult || (signalResult && !signalResult.getSignal())) {
-            // Do nothing
+            const advices = signalResult.getOrderAdvices();
+            if (advices) {
+                for (const advice of advices) {
+                    this.setSafetyAdvice(advice, price);
+                }
+            }
         } else if (signalResult.getSignal() && signalResult.getSignal() === 'long') {
             this.openPosition(time, price, 'long');
             self.state.lastSignal = 'long';
@@ -268,7 +300,12 @@ class Backtest {
        
             const signalResult = await self.safetymanager.run(safetyName, self.exchangePair, safetyOptions);
             if (!signalResult || (signalResult && !signalResult.getSignal())) {
-                // Do nothing
+                const advices = signalResult.getOrderAdvices();
+                if (advices) {
+                    for (const advice of advices) {
+                        this.setSafetyAdvice(advice, price);
+                    }
+                }
             } else if (signalResult.getSignal() && signalResult.getSignal() === 'long') {
                 this.openPosition(time, price, 'long');
             } else if (signalResult.getSignal() && signalResult.getSignal() === 'short') {
@@ -276,8 +313,6 @@ class Backtest {
                 this.openPosition(time, price, positionType);
             } else if (signalResult.getSignal() && signalResult.getSignal() === 'close') {
                 this.closePosition(time, price, safetyName);
-                // console.log('close');
-                // console.log('');
             }
         }
     }

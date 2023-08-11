@@ -14,12 +14,14 @@ module.exports = async function (instanceFilePath) {
     
     async function runTradeServices (instances) {
         const tradeService = new Trader();
-        tradeService.start(instances);
+        await tradeService.start(instances);
     };
 
     try {
         await runTradeServices(instances);
+        process.exit();
     } catch (error) {
-        console.error("Trade Service Failed while running")
+        console.error("Trade Service Failed while running");
+        process.exit();
     }
 }

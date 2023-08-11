@@ -1,5 +1,6 @@
 const SignalResult = require('../../../classes/SignalResult');
 const Storage = require('../../../classes/Storage');
+const MemStorage = require('../../../classes/MemStorage')
 
 module.exports = class IndicatorPeriod {
     constructor (logger) {
@@ -9,7 +10,9 @@ module.exports = class IndicatorPeriod {
         this.exchangePair = exchangePair;
         this.indicatorBuilder = indicatorBuilder;
         const { exchangeName, symbol } = exchangePair
-        this.storage = new Storage(exchangeName, symbol);
+        const environment = this.getEnvironment();
+        const isBacktest = environment.backtest;
+        this.storage = isBacktest ? new MemStorage(exchangeName, symbol) : new Storage(exchangeName, symbol);
         this.SignalResult = SignalResult;
         try {
             if (!this.indicatorBuilder.isBuilt()) {
@@ -29,24 +32,24 @@ module.exports = class IndicatorPeriod {
         return this.indicatorBuilder.get(name);
     }
 
-    getLastPrice() {
-        return this.exchangePair.getLastPrice();
+    async getLastPrice() {
+        return (await this.exchangePair.getLastPrice());
     } 
 
     getLastSignal() {
         return this.exchangePair.getlastSignal()
     } 
 
-    getTicker() {
-        return this.exchangePair.getTicker();
+    async getTicker() {
+        return (await this.exchangePair.getTicker());
     }
 
-    getOrderBook () {
-        return this.exchangePair.getOrderBook();
+    async getOrderBook () {
+        return (await this.exchangePair.getOrderBook());
     }
 
-    getMarkPrice() {
-        return this.exchangePair.getMarkPrice();
+    async getMarkPrice() {
+        return (await this.exchangePair.getMarkPrice());
     }
 
     createSignal(signal, debug = {}) {
@@ -64,6 +67,32 @@ module.exports = class IndicatorPeriod {
     getEnvironment() {
         return this.exchangePair.getEnvironment()
     }
+    createAdvice(signal, price) {
+        return this.SignalResult.createAdvice(signal, price)
+    }
 
+    async safetyBroadcast (price, side = 'LONG', type = 'stoploss') {
+        const backtestKeyToAdd = (this.exchangePair.getEnvironment()).backtest === true ? ':bt': ''
+        const key = `${side}:${type}${backtestKeyToAdd}`;
+        await this.storage.set(key, {
+            time: this.getTime(),
+            side,
+            type,
+            price
+        });
+    }
+    
+    async getSafetyBroadcast (side, type) {
+        const backtestKeyToAdd = (this.exchangePair.getEnvironment()).backtest === true ? ':bt': ''
+        const key = `${side}:${type}${backtestKeyToAdd}`;
+        const result = await this.storage.get(key);
+        return result;
+    }
+
+    getExchangePairKey () {
+        const symbol = this.symbol;
+        const exchangeName = this.exchangeName;
+        return `${exchangeName}:${symbol}`;
+    }
 
 }

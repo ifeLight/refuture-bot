@@ -1,7 +1,11 @@
-const pForever = require('p-forever');
+const config = require('config')
+// const cron = require('node-cron');
+// // const CronJob = require('cron').CronJob;
+
+// // const schedule = require('node-schedule');
 
 const IndicatorManager = require('./IndicatorManager');
-const PolicyManger = require('./PolicyManager');
+const PolicyManager = require('./PolicyManager');
 const InsuranceManager = require('./InsuranceManager');
 const SafetyManager = require('./SafetyManager');
 const WatchdogManager = require('./WatchdogManager');
@@ -10,6 +14,8 @@ const OrderExecutor = require('./manager-helpers/OrderExecutor')
 const ExchangePair = require('../pair/ExchangePair');
 
 const SignalResult = require('../../classes/SignalResult');
+const QueueLock = require("../../classes/QueueLock")
+const IntervalEvent = require('../../classes/IntervalEvent')
 
 class StrategyManager {
     constructor ({eventEmitter, logger, notifier, exchangeManager, candlesRepository }) {
@@ -19,7 +25,10 @@ class StrategyManager {
         this._list = [];
         this._exchangePairs = [];
         this.exchangeManager = exchangeManager;
-        this.candlesRepository = candlesRepository
+        this.candlesRepository = candlesRepository;
+        this.indicatorJobs = [];
+        this.queueLock = new QueueLock();
+        this.intervalEvent = new IntervalEvent(this.eventEmitter);
     }
 
     async init() {
@@ -102,7 +111,7 @@ class StrategyManager {
         exchangePair.init(exchangeName, symbol);
         await exchangePair.setup();
         if (leverage) {
-            await exchangePair.setLeverage(leverage)
+            await exchangePair.setLeverage(parseInt(leverage))
         }
         this._exchangePairs[`${exchangeName}:${symbol}`] = exchangePair;
         return exchangePair;
@@ -194,7 +203,8 @@ class StrategyManager {
     } 
 
     async runIndicatorStrategyUnit(strat) {
-        const { symbol, exchange: exchangeName, insurances} = strat;
+        const { symbol, exchange: exchangeName, strategies} = strat;
+        const {insurances} = strategies;
         let exchangePair;
         if (this.getExchangePair(exchangeName, symbol)) {
             exchangePair = this.getExchangePair(exchangeName, symbol)
@@ -208,30 +218,141 @@ class StrategyManager {
         await this.orderExecutor.execute(signalResult, exchangePair, strat);
     }
 
-    runStrategies() {
+    counter(symbol, exchangeName, interval = 10) {
+        if (!this._counterObj) {
+            this._counterObj = {}
+        }
+        const key = `${symbol}_${exchangeName}`;
+        if (!this._counterObj[key]){
+            this._counterObj[key] = 0;
+        }
+        if (this._counterObj[key] % interval === 0) {
+            console.log(`Strategy Running [${key}]: ${this._counterObj[key]} - Interval (${interval})`)
+        }
+        this._counterObj[key]++;
+    }
+
+    indicatorCounter(symbol, exchangeName) {
+        if (!this._indCounterObj) {
+            this._indCounterObj = {}
+        }
+        const key = `${symbol}_${exchangeName}`;
+        if (!this._indCounterObj[key]){
+            this._indCounterObj[key] = 0;
+        }
+        console.log(`Indicator Running [${key}]: ${this._indCounterObj[key]} - ${new Date().toLocaleString()}` )
+        this._indCounterObj[key]++;
+    }
+
+    runIndicatorFromeEvent(strat) {
+        const { symbol, exchange: exchangeName} = strat;
+        this.queueLock.close(symbol, exchangeName);
+        this.runIndicatorStrategyUnit(strat)
+        .then(() => {
+            this.queueLock.open(symbol, exchangeName);
+            this.indicatorCounter(symbol, exchangeName);
+        })
+        .catch((error) => {
+            this.queueLock.open(symbol, exchangeName);
+            this.logger.error(`Indicator Forever Interval: Error in Running this Interval [${exchangeName}:${symbol}] (${error.message})`);
+        })
+    }
+
+    async runStrategies() {
+        const counterPeriodLog = config.get('strategy.counterPeriodLog');
+        const executionType = config.get('strategy.executionType');
         const list = this.getList();
         const self = this;
-        list.forEach(async (strat) => {
+        const lastRunNumbers = {}
+
+        const delay = (time) => {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve()
+                }, time);
+            });
+        };
+
+        // Run Initials
+        for (const strat of list) {
             const { symbol, exchange: exchangeName} = strat;
-            await this.runIndicatorsInitials(strat);
-            pForever(async (i) => {
+            try {
+                await this.runIndicatorsInitials(strat);
+                await this.runSafetiesInitials(strat);
+            } catch (error) {
+                self.logger.error(`Initial Forever Loop: Error in the loop Initalization [${exchangeName}:${symbol}] (${error.message})`)
+            }
+        }
+
+        async function runStrat(strat)  {
+            const { symbol, exchange: exchangeName, tick = 5} = strat;
+            const key = `${symbol}_${exchangeName}_${tick}`;
+            try {
+                if (tick != 0) {
+                    const date = new Date();
+                    // const seconds = date.getSeconds();
+                    const minutes = date.getMinutes();
+                    let presentRunNumber; 
+                    for (let i = minutes ; i >= -60; i--) {
+                        if ( Math.abs(i % tick) === 0) {
+                            presentRunNumber = Math.abs(i);
+                            break;
+                        }  
+                    }
+                    let probableNextNumber = presentRunNumber + tick;
+                    let nextRunNumber = probableNextNumber < 60 ? probableNextNumber : probableNextNumber - 60;
+                    let lastRunNumber = lastRunNumbers[key];
+                    if (lastRunNumber === undefined || lastRunNumber === null) {
+                        lastRunNumbers[key] = presentRunNumber;
+                        lastRunNumber = presentRunNumber;
+                    }
+                    if (presentRunNumber !== lastRunNumber) {
+                        await delay(600); // Added delay so that the Latest candle Could be added
+                        await self.runIndicatorStrategyUnit(strat);
+                        lastRunNumbers[key] = presentRunNumber;
+                        self.indicatorCounter(symbol, exchangeName);
+                    } else {
+                        await delay(2000);
+                    }
+                } else {
+                    await self.runIndicatorStrategyUnit(strat);
+                    await delay(500);
+                }
+                await self.runSafetiesStrategyUnit(strat);
+                self.counter(symbol, exchangeName, counterPeriodLog);
+            } catch (error) {
+                self.logger.warn(`Forever  safety Loop: Error in the loop [${exchangeName}:${symbol}] (${error.message})`);
+            }
+        }
+
+        function parallelExec ()  {
+            return new Promise((resolve, reject) => {
                 try {
-                    await this.runIndicatorStrategyUnit(strat);
+                    list.forEach(async (strat) => {
+                       while (true) {
+                        await runStrat(strat);
+                       }
+                    })
                 } catch (error) {
-                    self.logger.warn(`Indicator Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`)
+                    reject(error.message);
                 }
             });
+        }
 
-            await this.runSafetiesInitials(strat);
-            pForever(async (i) => {
-                try {
-                    await this.runSafetiesStrategyUnit(strat);
-                } catch (error) {
-                    self.logger.warn(`Safety Loop: {Loop: ${i}} Error in the loop [${exchangeName}:${symbol}] (${error.message})`)
+        async function seriesExec() {
+            while (true) {
+                for (const strat of list) {
+                    await runStrat(strat);
                 }
-            });
-        });
+            }
+        }
 
+        if (executionType == 'parallel') {
+            await parallelExec();
+        } else {
+            await seriesExec();
+        }
+        console.log('DONE...')
     }
 
 }

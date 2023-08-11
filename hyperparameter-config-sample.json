@@ -2,10 +2,24 @@
     "optimize": "balance",
     "exchange": "binance_futures",
     "symbol": "ETH/USDT",
+    "orderType": "market",
     "indicator": "trendline-reversal",
     "leverage": 5,
-    "startDate": "2020-09-17:10:45",
-    "endDate": "2020-09-17:19:45",
+    "toLog": false,
     "fee": 0.06,
-    "amount": 1000
+    "amount": 1000,
+    "maximumIteration": 5,
+    "safeties": "",
+    "useDefaultSafety": true,
+    "noInterruption": true,
+    "period": "5m",
+    "takeProfit": 1.5,
+    "stopLoss": 0.7,
+    "useMemory": true,
+    "backfillPeriods": "5m,15m,30m",
+    "backFillSpace": 220,
+    "space": {
+        "period": "h.choice(['5m','15m', '30m'])",
+        "stopLoss": "h.choice([0.7, 1.2, 2])"
+    }
 }

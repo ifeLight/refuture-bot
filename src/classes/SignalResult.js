@@ -9,6 +9,9 @@ module.exports = class SignalResult {
     this._debug = {};
     this._signal = undefined;
     this._tag = undefined;
+    this._orderAdvice = undefined;
+    this._orderAdvices = [];
+    this._acceptableAdvices = ['long', 'short', 'close', 'stoploss', 'take_profit'];
   }
 
   mergeDebug(debug) {
@@ -47,18 +50,41 @@ module.exports = class SignalResult {
     return this._signal;
   }
 
+  removeAllOrderAdvices () {
+    this._orderAdvice = undefined;
+    this._orderAdvices = [];
+  }
+
   setOrderAdvice(signal, price) {
-    if (!['long', 'short', 'close'].includes(signal)) {
+    if (!this._acceptableAdvices.includes(signal)) {
       throw `Invalid signal:${signal}`;
     }
+    this.addOrderAdvice(signal, price)
+  }
+
+  getOrderAdvice() {
+    return this._orderAdvice;
+  }
+
+  addOrderAdvice(signal, price) {
+    if (!this._acceptableAdvices.includes(signal)) {
+      throw `Invalid signal:${signal}`;
+    }
+    const findIndex = this._orderAdvices.findIndex(advice => advice.signal == signal);
+    if (findIndex === -1) {
+      this._orderAdvices.push({signal, price});
+    } else {
+      this._orderAdvices[findIndex] = {signal, price};
+    }
+
     this._orderAdvice = {
       signal,
       price
     }
   }
 
-  getOrderAdvice() {
-    return this._orderAdvice;
+  getOrderAdvices() {
+    return this._orderAdvices;
   }
 
   static createSignal(signal, debug = {}) {
@@ -75,6 +101,12 @@ module.exports = class SignalResult {
 
     result.mergeDebug(debug);
 
+    return result;
+  }
+
+  static createAdvice(signal, price) {
+    const result = new SignalResult();
+    result.setOrderAdvice(signal, price);
     return result;
   }
 };
